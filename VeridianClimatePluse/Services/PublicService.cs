@@ -1,0 +1,865 @@
+using HealthIntelligence.Common.Implementation;
+using HealthIntelligence.Common.Interface;
+using HealthIntelligence.Common.Models;
+using HealthIntelligence.Data;
+using HealthIntelligence.Dtos.chatDto;
+using HealthIntelligence.Dtos.CommonDto;
+using HealthIntelligence.Dtos.PublicDto;
+using HealthIntelligence.IServices;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using System.Text.Json;
+
+namespace HealthIntelligence.Services
+{
+    [AllowAnonymous]
+    public class PublicService : IPublicService
+    {
+        private readonly ApplicationDbContext _context;
+        private readonly IAppLogger _appLogger;
+        private readonly IWebHostEnvironment _env;
+        private readonly IMemoryCache _cache;
+        private readonly ICommonService _commonService;
+        private readonly IAIAnalyzeService _aIAnalyzeService;
+        private readonly IConfiguration _configuration;
+        public PublicService(
+            ApplicationDbContext context,
+            IAppLogger appLogger,
+            IWebHostEnvironment env,
+            IMemoryCache cache,
+            ICommonService commonService,
+            IAIAnalyzeService aIAnalyzeService,
+            IConfiguration configuration)
+        {
+            _context = context;
+            _appLogger = appLogger;
+            _env = env;
+            _cache = cache;
+            _commonService = commonService;
+            _aIAnalyzeService = aIAnalyzeService;
+            _configuration = configuration;
+        }
+        public async Task<ResultResponseDto<List<PartnerCountryResponseDto>>> getAllCountries()
+        {
+            try
+            {
+                var result = await _context.Countries.Where(c => c.IsActive && !c.IsDeleted).
+                 Select(c => new PartnerCountryResponseDto
+                 {
+                     CountryID = c.CountryID,                     
+                     CountryName = c.CountryName,
+                     CountryCode = c.CountryCode,
+                     Continent = c.Continent,
+                     
+                 }).OrderBy(x => x.CountryName).ToListAsync();
+
+                return ResultResponseDto<List<PartnerCountryResponseDto>>.Success(result, new string[] { "get All Countries successfully" });
+            }
+            catch (Exception ex)
+            {
+                await _appLogger.LogAsync("Error Occure in getAllCountries", ex);
+                return ResultResponseDto<List<PartnerCountryResponseDto>>.Failure(new string[] { "There is an error please try later" });
+            }
+        }
+        public async Task<ResultResponseDto<PartnerCountryFilterResponse>> GetPartnerCountriesFilterRecord()
+        {
+            try
+            {
+                // Fetch all active Countries once
+                var activeCountries = await _context.Countries
+                    .Where(x => !x.IsDeleted)
+                    .ToListAsync();
+
+                var res = new PartnerCountryFilterResponse
+                {
+                    Countries = activeCountries.Select(x=>x.CountryName)
+                        .Distinct()
+                        .ToList(),
+
+                    //Countries = activeCountries
+                    //    .Select(x => new PartnerCountryDto
+                    //    {
+                    //        CountryID = x.CountryID,
+                    //        CountryName = x.CountryName
+                    //    })
+                    //    .ToList(),
+
+                    Regions = activeCountries
+                        .Select(x => x.Region)
+                        .Where(r => !string.IsNullOrEmpty(r))
+                        .Distinct()
+                        .ToList()
+                };
+
+                return ResultResponseDto<PartnerCountryFilterResponse>.Success(
+                    res,
+                    new List<string> { "Get Countries history successfully" }
+                );
+            }
+            catch (Exception ex)
+            {
+                await _appLogger.LogAsync("Error Occured in GetPartnerCountriesFilterRecord", ex);
+                return ResultResponseDto<PartnerCountryFilterResponse>.Failure(
+                    new string[] { "Failed to get Partner country filter data" }
+                );
+            }
+        }
+
+        public async Task<ResultResponseDto<List<PillarResponseDto>>> GetAllPillarAsync()
+        {
+            try
+            {
+                var res =  (await _commonService.GetPillars())
+                .OrderBy(p => p.DisplayOrder)
+                .Select(x => new PillarResponseDto
+                {
+                    DisplayOrder = x.DisplayOrder,
+                    PillarID = x.PillarID,
+                    PillarName = x.PillarName,
+                    ImagePath = x.ImagePath
+                }).ToList();
+                return ResultResponseDto<List<PillarResponseDto>>.Success(res, new List<string> { "Get Countries history successfully" });
+
+            }
+            catch (Exception ex)
+            {
+                await _appLogger.LogAsync("Error Occure in GetAllPillarAsync", ex);
+                return ResultResponseDto<List<PillarResponseDto>>.Failure(new string[] { "Failed to get Piilar detail" });
+            }
+        }
+        public async Task<PaginationResponse<PartnerCountryResponseDto>> GetPartnerCountries(PartnerCountryRequestDto request)
+        {
+            try
+            {
+                var year = DateTime.Now.Year;
+
+
+                var cityQuery =
+                   from c in _context.Countries.Where(x => !request.CountryID.HasValue || x.CountryID == request.CountryID)
+                   join uc in _context.UserCountryMappings on c.CountryID equals uc.CountryID into ucg
+                   from uc in ucg.DefaultIfEmpty()
+                   join a in _context.Assessments on uc.UserCountryMappingID equals a.UserCountryMappingID into ag
+                   from a in ag.DefaultIfEmpty()
+                   join pa in _context.PillarAssessments.Where(x=> !request.PillarID.HasValue || x.PillarID == request.PillarID) 
+                   on a.AssessmentID equals pa.AssessmentID into pag
+                   from pa in pag.DefaultIfEmpty()
+                   join r in _context.AssessmentResponses on pa.PillarAssessmentID equals r.PillarAssessmentID into rg
+                   from r in rg.DefaultIfEmpty()
+                   where !c.IsDeleted && 
+                    (uc == null || !uc.IsDeleted) &&
+                    (a == null || a.UpdatedAt.Year == year) 
+                   group r by new
+                   {
+                       c.CountryID,                       
+                       c.CountryCode,
+                       c.Image,
+                       c.Continent,
+                       c.CountryName,
+                       c.Region,
+                       EvaluatorCount = _context.UserCountryMappings
+                                           .Count(x => x.CountryID == c.CountryID && !x.IsDeleted)
+                   }
+                   into g
+                   select new PartnerCountryResponseDto
+                   {
+                       CountryID = g.Key.CountryID,
+                       Continent = g.Key.Continent,
+                       CountryName = g.Key.CountryName,
+                       CountryCode = g.Key.CountryCode,
+                       Region = g.Key.Region,                       
+                       Image = g.Key.Image,
+                       Score = (decimal)g.Sum(x => (int?)x.Score ?? 0) / (g.Key.EvaluatorCount == 0 ? 1 : g.Key.EvaluatorCount),
+                       HighScore = g.Max(x=>(int?)x.Score ?? 0),
+                       LowerScore = g.Min(x => (int?)x.Score ?? 0),
+                       Progress = ((decimal)g.Sum(x => (int?)x.Score ?? 0)) / ((g.Key.EvaluatorCount == 0 ? 1 : g.Key.EvaluatorCount) * g.Count()),
+                   };
+
+                if (!string.IsNullOrWhiteSpace(request.Country))
+                {
+                    cityQuery = cityQuery.Where(c => c.CountryName.Contains(request.Country));
+                }
+
+                // Only filter by Region if a value is provided
+                if (!string.IsNullOrWhiteSpace(request.Region))
+                {
+                    cityQuery = cityQuery.Where(c => c.Region != null && c.Region.Contains(request.Region));
+                }
+
+                var response = await cityQuery.ApplyPaginationAsync(request);
+
+                return response;
+
+            }
+            catch (Exception ex)
+            {
+                await _appLogger.LogAsync("Error Occure in GetCountriesProgressByUserId", ex);
+                return new();
+            }
+        }
+
+        public async Task<CountryCityResponse> GetCountriesAndCountries_WithStaleSupport()
+        {
+            try
+            {
+                string jsonFilePath = Path.Combine(_env.WebRootPath, "data\\countries_cache.json");
+                if (!File.Exists(jsonFilePath))
+                    return new CountryCityResponse(); // ? NEVER return null
+
+                var json = await File.ReadAllTextAsync(jsonFilePath);
+
+                var data = JsonSerializer.Deserialize<CountryCityResponse>(json);
+
+                return data ?? new CountryCityResponse();
+            }
+            catch (Exception ex)
+            {
+                // ? Optional: log error
+                // _logger.LogError(ex, "Failed to load country-city file");
+
+                return new CountryCityResponse(); // ? Safe fallback
+            }
+        }
+
+        public async Task<ResultResponseDto<List<PromotedPillarsResponseDto>>> GetPromotedCountries()
+        {
+            const string cacheKey = "GetPromotedCountries";
+
+            try
+            {
+                if (_cache.TryGetValue(cacheKey, out List<PromotedPillarsResponseDto> cachedData))
+                {
+                    return ResultResponseDto<List<PromotedPillarsResponseDto>>.Success(
+                        cachedData,
+                        new List<string> { "Promoted Countries fetched successfully" });
+                }
+
+                int currentYear = DateTime.UtcNow.Year;
+
+                var admin = await _context.Users
+                    .AsNoTracking()
+                    .Where(x => x.Role == Models.UserRole.Admin)
+                    .Select(x => new
+                    {
+                        x.UserID,
+                        x.Role
+                    })
+                    .FirstOrDefaultAsync();
+
+                int userId = admin?.UserID ?? 0;
+                int role = (int)(admin?.Role ?? Models.UserRole.Admin);
+
+                var pillarScores = await _commonService.GetCountriesProgressAsync(userId, role, currentYear);
+
+                int[] selectedPillars = { 1, 4, 7, 15, 22 };
+                pillarScores = pillarScores.Where(x => selectedPillars.Contains(x.PillarID)).ToList();
+
+                var topCountriesByPillar = pillarScores
+                    .GroupBy(x => x.PillarID)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.OrderByDescending(y => y.ScoreProgress)
+                              .Take(3)
+                              .ToList()
+                    );
+
+                var countryIds = topCountriesByPillar
+                    .SelectMany(x => x.Value)
+                    .Select(x => x.CountryID)
+                    .Distinct()
+                    .ToList();
+
+                var scoreLookup = pillarScores
+                    .GroupBy(x => new { x.CountryID, x.PillarID })
+                    .ToDictionary(
+                        g => (g.Key.CountryID, g.Key.PillarID),
+                        g => g.First().ScoreProgress
+                    );
+
+                var result = await _context.AIPillarScores
+                    .AsNoTracking()
+                    .Where(x =>
+                        x.Year == currentYear &&
+                        countryIds.Contains(x.CountryID) &&
+                        selectedPillars.Contains(x.PillarID) &&
+                        x.Country.IsActive &&
+                        !x.Country.IsDeleted)
+                    .GroupBy(x => new
+                    {
+                        x.PillarID,
+                        x.Pillar.PillarName,
+                        x.Pillar.DisplayOrder,
+                        x.Pillar.ImagePath
+                    })
+                    .Select(g => new PromotedPillarsResponseDto
+                    {
+                        PillarID = g.Key.PillarID,
+                        PillarName = g.Key.PillarName,
+                        DisplayOrder = g.Key.DisplayOrder,
+                        ImagePath = g.Key.ImagePath,
+
+                        Countries = g
+                            .OrderByDescending(x => x.AIProgress)
+                            .Select(c => new PromotedCountryResponseDto
+                            {
+                                CountryID = c.CountryID,
+                                CountryName = c.Country.CountryName,
+                                CountryCode = c.Country.CountryCode,
+                                Continent = c.Country.Continent,
+                                Region = c.Country.Region,
+                                Image = c.Country.Image,
+                                Description = c.EvidenceSummary,
+                                ScoreProgress = 0 
+                            })
+                            .ToList()
+                    })
+                    .OrderBy(x => x.DisplayOrder)
+                    .ToListAsync();
+
+                foreach (var pillar in result)
+                {
+                    foreach (var country in pillar.Countries)
+                    {
+                        if (scoreLookup.TryGetValue(
+                            (country.CountryID, pillar.PillarID),
+                            out var score))
+                        {
+                            country.ScoreProgress = score;
+                        }
+                    }
+
+                    pillar.Countries = pillar.Countries
+                        .OrderByDescending(x => x.ScoreProgress)
+                        .Take(3)
+                        .ToList();
+                }
+
+                _cache.Set(cacheKey, result, new MemoryCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5),
+                    SlidingExpiration = TimeSpan.FromMinutes(2),
+                    Priority = CacheItemPriority.High
+                });
+
+                return ResultResponseDto<List<PromotedPillarsResponseDto>>.Success(
+                    result,
+                    new List<string> { "Promoted Countries fetched successfully" });
+            }
+            catch (Exception ex)
+            {
+                await _appLogger.LogAsync("Error Occurred in GetPromotedCountries", ex);
+
+                return ResultResponseDto<List<PromotedPillarsResponseDto>>.Failure(
+                    new[] { "Failed to get promoted Countries" });
+            }
+        }
+
+        public async Task<ResultResponseDto<List<PillarDmiResultDto>>> GetPillarsDmi()
+        {
+            const string cacheKey = "GetPillarsDmi";
+
+            try
+            {
+                // ? Try get from cache
+                if (_cache.TryGetValue(cacheKey, out List<PillarDmiResultDto> cachedData))
+                {
+                    return ResultResponseDto<List<PillarDmiResultDto>>.Success(
+                        cachedData,
+                        new List<string> { "Pillars Dmi fetched successfully" }
+                    );
+                }
+
+                int currentYear = DateTime.Now.Year;
+
+                var data = await _context.AiPillarStatsLast4MonthsView
+                     .AsNoTracking()
+                     .ToListAsync();
+
+                var pillars = (await _commonService.GetPillars()).ToDictionary(x => x.PillarID);
+
+                var result = data
+                    .GroupBy(x => new { x.PillarID })
+                    .Select(g =>
+                    {
+                        var pillar = pillars.GetValueOrDefault(g.Key.PillarID);
+
+                        var ordered = g.OrderByDescending(x => x.MonthNo).ToList();
+
+                        var m = ordered.Select(g => g.MonthNo).Distinct().ToList();
+
+                        decimal p_t = m.Count > 0 ? ordered.Where(x=>x.MonthNo == m.ElementAtOrDefault(0)).Average(x=>x.ScoreProgress) : 0m;
+                        decimal p_t1 = m.Count > 1 ? ordered.Where(x => x.MonthNo == m.ElementAtOrDefault(1)).Average(x => x.ScoreProgress) : 0m;
+                        decimal p_t2 = m.Count > 2 ? ordered.Where(x => x.MonthNo == m.ElementAtOrDefault(2)).Average(x => x.ScoreProgress) : 0m;
+                        decimal p_t3 = m.Count > 3 ? ordered.Where(x => x.MonthNo == m.ElementAtOrDefault(3)).Average(x => x.ScoreProgress) : 0m;
+
+
+                        decimal dmi =
+                        (
+                            (0.5m * (p_t - p_t1)) +
+                            (0.3m * (p_t1 - p_t2)) +
+                            (0.2m * (p_t2 - p_t3))
+                        ) / 20m;
+
+                        dmi = Math.Max(-1m, Math.Min(1m, dmi));
+
+                        return new PillarDmiResultDto
+                        {
+                            PillarID = g.Key.PillarID,
+                            PillarName = pillar?.PillarName ?? "",
+                            DisplayOrder = pillar?.DisplayOrder ?? 0,
+                            Angle = dmi * 180,
+                            PEMDM_t = dmi
+                        };
+                    })
+                    .OrderBy(x => x.PillarID)
+                    .ToList();
+
+                _cache.Set(cacheKey, result, new MemoryCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
+                    SlidingExpiration = TimeSpan.FromMinutes(5),
+                    Priority = CacheItemPriority.High
+                });
+
+                return ResultResponseDto<List<PillarDmiResultDto>>.Success(
+                    result,
+                    new List<string> { "Pillars Dmi fetched successfully" }
+                );
+            }
+            catch (Exception ex)
+            {
+                await _appLogger.LogAsync("Error Occurred in GetPillarsDmi", ex);
+                return ResultResponseDto<List<PillarDmiResultDto>>.Failure(
+                    new[] { "Failed to get promoted pillars" }
+                );
+            }
+        }
+
+        #region Emerging Trends and Issues Cache Management
+            
+        private static readonly JsonSerializerOptions EmergingTrendsCloneOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
+        private static string EmergingTrendsCacheKey(int countryCount) =>
+            $"EmergingTrendsAndIssues_{countryCount}";
+
+        private static string EmergingTrendsStaleCacheKey(int countryCount) =>
+            $"EmergingTrendsAndIssues_Stale_{countryCount}";
+
+        private TimeSpan EmergingTrendsCacheDuration =>
+            TimeSpan.FromHours(_configuration.GetValue("EmergingTrendsCache:CacheExpirationHours", 12));
+
+        private TimeSpan EmergingTrendsStaleCacheDuration =>
+            TimeSpan.FromHours(_configuration.GetValue("EmergingTrendsCache:StaleCacheExpirationHours", 168));
+
+        private static bool IsEmergingTrendsCacheValid(EmergingTrendsResult? data) =>
+            data?.Countries?.Any(c =>
+                !string.IsNullOrWhiteSpace(c.Country) &&
+                !string.IsNullOrWhiteSpace(c.SourceUrl)) == true;
+
+        private static EmergingTrendsResult CloneEmergingTrendsResult(EmergingTrendsResult data) =>
+            JsonSerializer.Deserialize<EmergingTrendsResult>(
+                JsonSerializer.Serialize(data, EmergingTrendsCloneOptions),
+                EmergingTrendsCloneOptions
+            ) ?? new EmergingTrendsResult();
+
+        private bool TryGetEmergingTrendsFromCache(
+            int countryCount,
+            out EmergingTrendsResult? result,
+            bool allowStale = false)
+        {
+            result = null;
+
+            if (_cache.TryGetValue(EmergingTrendsCacheKey(countryCount), out EmergingTrendsResult? cached))
+            {
+                if (IsEmergingTrendsCacheValid(cached))
+                {
+                    result = CloneEmergingTrendsResult(cached!);
+                    return true;
+                }
+
+                _cache.Remove(EmergingTrendsCacheKey(countryCount));
+            }
+
+            if (allowStale
+                && _cache.TryGetValue(EmergingTrendsStaleCacheKey(countryCount), out EmergingTrendsResult? stale)
+                && IsEmergingTrendsCacheValid(stale))
+            {
+                result = CloneEmergingTrendsResult(stale!);
+                return true;
+            }
+
+            return false;
+        }
+
+        private void SetEmergingTrendsCache(
+            int countryCount,
+            EmergingTrendsResult data,
+            bool updateStale = true)
+        {
+            var primarySnapshot = CloneEmergingTrendsResult(data);
+            var cacheOptions = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = EmergingTrendsCacheDuration,
+                Priority = CacheItemPriority.NeverRemove
+            };
+            _cache.Set(EmergingTrendsCacheKey(countryCount), primarySnapshot, cacheOptions);
+
+            if (updateStale)
+            {
+                _cache.Set(
+                    EmergingTrendsStaleCacheKey(countryCount),
+                    CloneEmergingTrendsResult(primarySnapshot),
+                    new MemoryCacheEntryOptions
+                    {
+                        AbsoluteExpirationRelativeToNow = EmergingTrendsStaleCacheDuration,
+                        Priority = CacheItemPriority.NeverRemove
+                    }
+                );
+            }
+        }
+
+        private bool PreserveEmergingTrendsCacheOnRefreshFailure(int countryCount)
+        {
+            if (!TryGetEmergingTrendsFromCache(countryCount, out var lastGood, allowStale: true)
+                || lastGood == null)
+            {
+                return false;
+            }
+
+            // Re-write both cache entries so TTLs are extended and snapshots stay isolated.
+            SetEmergingTrendsCache(countryCount, lastGood, updateStale: true);
+            return true;
+        }
+
+        public async Task<ResultResponseDto<EmergingTrendsResult>> GetEmergingTrendsAndIssues()
+        {
+            try
+            {
+                var countryCount = _configuration.GetValue("EmergingTrendsCache:CountryCount", 8);
+
+                if (TryGetEmergingTrendsFromCache(countryCount, out var cachedResult, allowStale: true)
+                    && cachedResult != null)
+                {
+                    var fromPrimary = _cache.TryGetValue(
+                        EmergingTrendsCacheKey(countryCount),
+                        out EmergingTrendsResult _);
+
+                    return ResultResponseDto<EmergingTrendsResult>.Success(
+                        cachedResult,
+                        new List<string>
+                        {
+                            fromPrimary
+                                ? "Emerging trends and issues fetched successfully from cache."
+                                : "Emerging trends and issues fetched successfully from last known data."
+                        }
+                    );
+                }
+
+                return ResultResponseDto<EmergingTrendsResult>.Failure(
+                    new[]
+                    {
+                        "Emerging trends feed is being updated. Please try again shortly."
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                await _appLogger.LogAsync(
+                    "An error occurred while processing the GetEmergingTrendsAndIssues request.",
+                    ex
+                );
+
+                return ResultResponseDto<EmergingTrendsResult>.Failure(
+                    new[]
+                    {
+                        "An error occurred while processing your request. Please try again later."
+                    }
+                );
+            }
+        }
+
+        public async Task<bool> RefreshEmergingTrendsCacheAsync(
+            int countryCount,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                countryCount = _configuration.GetValue("EmergingTrendsCache:CountryCount", countryCount);
+
+                var enriched = await FetchAndEnrichEmergingTrendsAsync(countryCount, cancellationToken);
+
+                if (IsEmergingTrendsCacheValid(enriched))
+                {
+                    SetEmergingTrendsCache(countryCount, enriched!);
+                    return true;
+                }
+
+                return PreserveEmergingTrendsCacheOnRefreshFailure(countryCount);
+            }
+            catch (Exception ex)
+            {
+                await _appLogger.LogAsync(
+                    "An error occurred while refreshing the emerging trends cache.",
+                    ex
+                );
+
+                return PreserveEmergingTrendsCacheOnRefreshFailure(countryCount);
+            }
+        }
+
+        private async Task<EmergingTrendsResult?> FetchAndEnrichEmergingTrendsAsync(
+            int countryCount,
+            CancellationToken cancellationToken = default)
+        {
+            var result = await _aIAnalyzeService.GetEmergingTrendsAndIssues(countryCount);
+
+            if (result == null || result.Success != true || result.Result == null)
+            {
+                return null;
+            }
+
+            if (!IsEmergingTrendsCacheValid(result.Result))
+            {
+                return null;
+            }
+
+            var countryCodes = result.Result.Countries
+                .Select(c => c.CountryCode?.Trim().ToLower())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToList();
+
+            var countries = result.Result.Countries
+                .Select(c => c.Country?.Trim().ToLower())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToList();
+
+            var countryLookup = await _context.Countries
+                .AsNoTracking()
+                .Where(c =>
+                    c.IsActive &&
+                    !c.IsDeleted &&
+                    (
+                        countryCodes.Contains(c.CountryCode.ToLower()) ||
+                        countries.Contains(c.CountryName.ToLower())
+                    ))
+                .Select(c => new
+                {
+                    CountryCode = c.CountryCode.ToLower(),
+                    CountryName = c.CountryName.ToLower(),
+                    c.Image,
+                    c.Region,
+                    c.Continent,
+                    c.CountryID
+                })
+                .ToListAsync(cancellationToken);
+
+            foreach (var trendCountry in result.Result.Countries)
+            {
+                var countryCode = trendCountry.CountryCode?.Trim().ToLower();
+                var countryName = trendCountry.Country?.Trim().ToLower();
+
+                var matchedCountry = countryLookup.FirstOrDefault(x =>
+                    x.CountryCode == countryCode ||
+                    x.CountryName == countryName);
+
+                trendCountry.ImagePath = matchedCountry?.Image ?? "";
+            }
+
+            return result.Result;
+        }
+
+        #endregion Emerging Trends
+        public async Task<ResultResponseDto<PillarLiveSignalsResult>> GetPillarLiveSignals()
+        {
+            const string cacheKey = "PillarLiveSignals";
+
+            try
+            {
+                if (_cache.TryGetValue(cacheKey, out PillarLiveSignalsResult cachedResult))
+                {
+                    return ResultResponseDto<PillarLiveSignalsResult>.Success(
+                        cachedResult,
+                        new List<string>
+                        {
+                            "Pillar live signals fetched successfully from cache."
+                        }
+                    );
+                }
+
+                var result = await _aIAnalyzeService.GetPillarLiveSignals();
+
+                if (result == null || result.Success != true)
+                {
+                    return ResultResponseDto<PillarLiveSignalsResult>.Failure(
+                        new[]
+                        {
+                            result?.Message ??
+                            "Failed to fetch pillar live signals."
+                        }
+                    );
+                }
+
+                var pillarLookup = await _commonService.GetPillars();
+
+                foreach (var pillarCard in result.Result.Pillars)
+                {
+                    var matched = pillarLookup.FirstOrDefault(p => p.PillarID == pillarCard.PillarId);
+                    pillarCard.PillarName = matched?.PillarName ?? $"Pillar {pillarCard.PillarId}";
+                    pillarCard.ImagePath = matched?.ImagePath ?? "";
+                }
+
+                result.Result.Pillars = result.Result.Pillars
+                    .OrderBy(p =>
+                    {
+                        var order = pillarLookup.FirstOrDefault(x => x.PillarID == p.PillarId)?.DisplayOrder;
+                        return order ?? p.PillarId;
+                    })
+                    .ToList();
+
+                _cache.Set(
+                    cacheKey,
+                    result.Result,
+                    new MemoryCacheEntryOptions
+                    {
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(12),
+                        SlidingExpiration = TimeSpan.FromHours(10),
+                        Priority = CacheItemPriority.High
+                    }
+                );
+
+                return ResultResponseDto<PillarLiveSignalsResult>.Success(
+                    result.Result,
+                    new List<string>
+                    {
+                        "Pillar live signals fetched successfully."
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                await _appLogger.LogAsync(
+                    "An error occurred while processing the GetPillarLiveSignals request.",
+                    ex
+                );
+
+                return ResultResponseDto<PillarLiveSignalsResult>.Failure(
+                    new[]
+                    {
+                        "An error occurred while processing your request. Please try again later."
+                    }
+                );
+            }
+        }
+
+        public async Task<ResultResponseDto<ROSEWPublicDashboardDto>> GetResilienceScorecard()
+        {
+            int dashboardModeId = 3;
+        
+            try
+            {
+                var dashboardMode = await _context.DashboardModes
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.DashboardModeID == dashboardModeId);
+
+                if (dashboardMode == null)
+                {
+                    return ResultResponseDto<ROSEWPublicDashboardDto>.Failure(new[] { "Dashboard configuration not found." });
+                }
+
+                var mappings = await _context.DashboardModeKPIMappings
+                .AsNoTracking()
+                .Where(x => x.DashboardModeID == dashboardModeId && x.IsActive && !x.IsDeleted)
+                .ToListAsync(); 
+
+                if (!mappings.Any())
+                {
+                    return ResultResponseDto<ROSEWPublicDashboardDto>.Failure(new[] { "Dashboard KPI mappings not found." });
+                }
+
+                var interpretations = await _context.DashboardInterpretations
+                    .AsNoTracking()
+                    .Where(x => x.DashboardModeID == dashboardModeId)
+                    .ToListAsync();
+
+                var spResults = await _commonService.GetDashboardModeResults(1, 1, dashboardModeId);
+                var spResultsByQuestion = spResults
+                    .Where(x => x.QuestionID.HasValue)
+                    .GroupBy(x => x.QuestionID!.Value)
+                    .ToDictionary(g => g.Key, g => g.Average(x => x.AiQuestionScore));
+
+
+                var questions = new List<ROSEWPublicQuestionDto>();
+
+                foreach (var mapping in mappings)
+                {
+                    spResultsByQuestion.TryGetValue(mapping.QuestionID, out var totalScore);
+                     var Score = (decimal)totalScore.GetValueOrDefault();
+                    var questionScore = new ROSEWPublicQuestionDto
+                    {
+                        QuestionDescription = mapping.Description ?? "",
+                        Condition = interpretations.FirstOrDefault(i => i.MaxRange >= Score && i.MinRange <= Score)?.Condition ?? "Moderate Stress (Watch)"
+                    };
+                    questions.Add(questionScore);
+                }
+
+                var spResultsByCountry = spResults
+                    .Where(x => x.CountryID.HasValue)
+                    .GroupBy(x => x.CountryID!.Value)
+                        .ToDictionary(g => g.Key, g => g.Average(x => x.AiQuestionScore)).OrderByDescending(x=>x.Value).Take(3);
+
+
+                var dbCountries = _context.Countries.Where(x=> spResultsByCountry.Select(k=>k.Key).Contains(x.CountryID)).ToList();
+                var countries = new List<ROSEWPublicCountryDto>();
+
+                foreach (var country in spResultsByCountry)
+                {
+                    var Score = (decimal)country.Value.GetValueOrDefault();
+                    var countryScore = new ROSEWPublicCountryDto
+                    {
+                        Country = dbCountries.FirstOrDefault(x=>x.CountryID == country.Key)?.CountryName ?? "",
+                        UpdatedAt = DateTime.UtcNow,
+                        Condition = interpretations.FirstOrDefault(i => i.MaxRange >= Score && i.MinRange <= Score)?.Condition ?? "Moderate Stress (Watch)"
+                    };
+                    countries.Add(countryScore);
+                }
+
+
+                var overAllScore = spResultsByQuestion.Any() ? (decimal?)spResultsByQuestion?.Select(x => x.Value)?.Average() : 0m;
+
+                var response = new ROSEWPublicDashboardDto
+                {
+                    Score = overAllScore ?? 0m,
+                    UpdatedAt = spResults.Max(x => x.AiUpdatedAt),
+                    OverallCondition = interpretations.FirstOrDefault(i => i.MaxRange >= (overAllScore ?? 0m) && i.MinRange <= (overAllScore ?? 0m))?.Condition ?? "Moderate Stress (Watch)",
+                    Countries = countries,
+                    Questions = questions
+
+                };
+
+                return ResultResponseDto<ROSEWPublicDashboardDto>.Success(response, new[] { "Response get successfully" });
+            }
+            catch (Exception ex)
+            {
+                await _appLogger.LogAsync($"Error in GetDashboardMode for mode {dashboardModeId}", ex);
+                return ResultResponseDto<ROSEWPublicDashboardDto>.Failure(new[] { "There is an error, please try later" });
+            }
+        }       
+    }
+}
+
+public class CountryCityResponse
+{
+    public bool error { get; set; }
+    public string msg { get; set; }
+    public List<CountryData> data { get; set; }
+}
+
+public class CountryData
+{
+    public string Country { get; set; }
+    public List<string> Countries { get; set; }
+}
+

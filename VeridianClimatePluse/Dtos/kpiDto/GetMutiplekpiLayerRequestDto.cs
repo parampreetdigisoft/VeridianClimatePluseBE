@@ -1,0 +1,9 @@
+namespace HealthIntelligence.Dtos.kpiDto
+{
+    public class GetMutiplekpiLayerRequestDto
+    {
+        public int LayerID { get; set; }
+        public List<int> CountryIDs { get; set; } 
+        public int Year { get; set; } = DateTime.Now.Year;
+    }
+}
