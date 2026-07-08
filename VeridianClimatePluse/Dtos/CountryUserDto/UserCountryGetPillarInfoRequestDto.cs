@@ -1,6 +1,6 @@
-using HealthIntelligence.Enums;
+using VeridianClimatePulse.Enums;
 
-namespace HealthIntelligence.Dtos.CountryUserDto
+namespace VeridianClimatePulse.Dtos.CountryUserDto
 {
     public class UserCountryGetPillarInfoRequestDto
     {

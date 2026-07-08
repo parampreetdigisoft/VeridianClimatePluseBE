@@ -1,13 +1,13 @@
 
 using Microsoft.Extensions.Caching.Memory;
-using HealthIntelligence.Common.Interface;
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Data;
-using HealthIntelligence.Dtos.chatDto;
-using HealthIntelligence.IServices;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Common.Interface;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Data;
+using VeridianClimatePulse.Dtos.chatDto;
+using VeridianClimatePulse.IServices;
+using VeridianClimatePulse.Models;
 
-namespace HealthIntelligence.Services
+namespace VeridianClimatePulse.Services
 {
     public class ChatService : IChatService
     {

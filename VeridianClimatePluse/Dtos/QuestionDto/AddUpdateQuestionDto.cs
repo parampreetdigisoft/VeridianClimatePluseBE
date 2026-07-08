@@ -1,7 +1,7 @@
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Models;
 using System.Text.Json.Serialization;
 
-namespace HealthIntelligence.Dtos.QuestionDto
+namespace VeridianClimatePulse.Dtos.QuestionDto
 {
     public class AddUpdateQuestionDto
     {

@@ -1,6 +1,6 @@
 using Microsoft.Data.SqlClient;
 
-namespace HealthIntelligence.Common.Middlware
+namespace VeridianClimatePulse.Common.Middlware
 {
     public class ErrorLoggingMiddleware
     {

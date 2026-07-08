@@ -1,6 +1,6 @@
-using HealthIntelligence.IServices;
+using VeridianClimatePulse.IServices;
 
-namespace HealthIntelligence.Backgroundjob
+namespace VeridianClimatePulse.Backgroundjob
 {
     public class AiJobService : BackgroundService
     {

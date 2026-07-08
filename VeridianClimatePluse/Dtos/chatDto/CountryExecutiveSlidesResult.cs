@@ -1,4 +1,4 @@
-namespace HealthIntelligence.Dtos.chatDto
+namespace VeridianClimatePulse.Dtos.chatDto
 {
     public class PerformanceSummary
     {

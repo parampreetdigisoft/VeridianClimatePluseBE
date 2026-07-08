@@ -1,8 +1,8 @@
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Dtos.dashboard;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Dtos.dashboard;
+using VeridianClimatePulse.Models;
 
-namespace HealthIntelligence.IServices
+namespace VeridianClimatePulse.IServices
 {
     public interface ISignalDashboardService
     {

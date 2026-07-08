@@ -1,14 +1,14 @@
 
 using AssessmentPlatform.Dtos.AiDto;
 using AssessmentPlatform.Models;
-using HealthIntelligence.Common.Interface;
-using HealthIntelligence.Dtos.AiDto;
-using HealthIntelligence.IServices;
-using HealthIntelligence.Models;
-using static HealthIntelligence.Services.AIComputationService;
+using VeridianClimatePulse.Common.Interface;
+using VeridianClimatePulse.Dtos.AiDto;
+using VeridianClimatePulse.IServices;
+using VeridianClimatePulse.Models;
+using static VeridianClimatePulse.Services.AIComputationService;
 
 
-namespace HealthIntelligence.Services
+namespace VeridianClimatePulse.Services
 {
     /// <summary>
     /// Facade that delegates to <see cref="PdfGeneratorService"/> or
@@ -35,9 +35,9 @@ namespace HealthIntelligence.Services
             List<KpiChartItem> kpis,
             List<PeerCountryHistoryReportDto> peercountry,
             UserRole userRole,
-        HealthIntelligence.IServices.DocumentFormat format = HealthIntelligence.IServices.DocumentFormat.Pdf)
+        VeridianClimatePulse.IServices.DocumentFormat format = VeridianClimatePulse.IServices.DocumentFormat.Pdf)
         {
-             var result = format == HealthIntelligence.IServices.DocumentFormat.Docx
+             var result = format == VeridianClimatePulse.IServices.DocumentFormat.Docx
                 ? _docx.GenerateCountryDetailsDocx(country, pillars, kpis, peercountry, userRole)
                 : _pdf.GenerateCountryDetailsPdf(country, pillars, kpis, peercountry, userRole);
 
@@ -47,8 +47,8 @@ namespace HealthIntelligence.Services
         public Task<byte[]> GeneratePillarDetails(
             AiCountryPillarResponse pillarData,
             UserRole userRole,
-            HealthIntelligence.IServices.DocumentFormat format = HealthIntelligence.IServices.DocumentFormat.Pdf)
-            => format == HealthIntelligence.IServices.DocumentFormat.Docx
+            VeridianClimatePulse.IServices.DocumentFormat format = VeridianClimatePulse.IServices.DocumentFormat.Pdf)
+            => format == VeridianClimatePulse.IServices.DocumentFormat.Docx
                 ? _docx.GeneratePillarDetailsDocx(pillarData, userRole)
                 : _pdf.GeneratePillarDetailsPdf(pillarData, userRole);
 
@@ -57,8 +57,8 @@ namespace HealthIntelligence.Services
             Dictionary<int, List<AiCountryPillarResponse>> pillarsDict,
             List<KpiChartItem> kpis,
             UserRole userRole,
-            HealthIntelligence.IServices.DocumentFormat format = HealthIntelligence.IServices.DocumentFormat.Pdf)
-            => format == HealthIntelligence.IServices.DocumentFormat.Docx
+            VeridianClimatePulse.IServices.DocumentFormat format = VeridianClimatePulse.IServices.DocumentFormat.Pdf)
+            => format == VeridianClimatePulse.IServices.DocumentFormat.Docx
                 ? _docx.GenerateAllCountriesDetailsDocx(countries, pillarsDict, kpis, userRole)
                 : _pdf.GenerateAllCountriesDetailsPdf(countries, pillarsDict, kpis, userRole);
     }

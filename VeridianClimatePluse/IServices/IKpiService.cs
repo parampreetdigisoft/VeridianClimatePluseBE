@@ -1,11 +1,11 @@
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Dtos.CommonDto;
-using HealthIntelligence.Dtos.CountryUserDto;
-using HealthIntelligence.Dtos.kpiDto;
-using HealthIntelligence.Enums;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Dtos.CommonDto;
+using VeridianClimatePulse.Dtos.CountryUserDto;
+using VeridianClimatePulse.Dtos.kpiDto;
+using VeridianClimatePulse.Enums;
+using VeridianClimatePulse.Models;
 
-namespace HealthIntelligence.IServices
+namespace VeridianClimatePulse.IServices
 {
     public interface IKpiService
     {

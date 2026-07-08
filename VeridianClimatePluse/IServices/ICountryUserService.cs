@@ -1,15 +1,15 @@
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Dtos.AiDto;
-using HealthIntelligence.Dtos.AssessmentDto;
-using HealthIntelligence.Dtos.CountryDto;
-using HealthIntelligence.Dtos.CommonDto;
-using HealthIntelligence.Dtos.kpiDto;
-using HealthIntelligence.Dtos.PublicDto;
-using HealthIntelligence.Enums;
-using HealthIntelligence.Models;
-using HealthIntelligence.Dtos.CountryUserDto;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Dtos.AiDto;
+using VeridianClimatePulse.Dtos.AssessmentDto;
+using VeridianClimatePulse.Dtos.CountryDto;
+using VeridianClimatePulse.Dtos.CommonDto;
+using VeridianClimatePulse.Dtos.kpiDto;
+using VeridianClimatePulse.Dtos.PublicDto;
+using VeridianClimatePulse.Enums;
+using VeridianClimatePulse.Models;
+using VeridianClimatePulse.Dtos.CountryUserDto;
 
-namespace HealthIntelligence.IServices
+namespace VeridianClimatePulse.IServices
 {
     public interface ICountryUserService
     {

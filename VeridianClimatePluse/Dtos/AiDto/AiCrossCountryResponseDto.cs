@@ -1,4 +1,4 @@
-namespace HealthIntelligence.Dtos.AiDto
+namespace VeridianClimatePulse.Dtos.AiDto
 {
     public class AiCrossCountryResponseDto
     {

@@ -1,19 +1,19 @@
 
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using HealthIntelligence.Common.Interface;
-using HealthIntelligence.Common.Models.settings;
-using HealthIntelligence.Dtos.AiDto;
-using HealthIntelligence.IServices;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Common.Interface;
+using VeridianClimatePulse.Common.Models.settings;
+using VeridianClimatePulse.Dtos.AiDto;
+using VeridianClimatePulse.IServices;
+using VeridianClimatePulse.Models;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using SkiaSharp;
 using System.Text;
-using static HealthIntelligence.Services.AIComputationService;
+using static VeridianClimatePulse.Services.AIComputationService;
 
-namespace HealthIntelligence.Common.Implementation
+namespace VeridianClimatePulse.Common.Implementation
 {
     public partial class PdfGeneratorService : IPdfGeneratorService
     {

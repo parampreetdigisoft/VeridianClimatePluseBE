@@ -2,22 +2,22 @@ using AssessmentPlatform.Dtos.AiDto;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using HealthIntelligence.Backgroundjob;
-using HealthIntelligence.Common.Implementation;
-using HealthIntelligence.Common.Interface;
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Common.Models.settings;
-using HealthIntelligence.Data;
-using HealthIntelligence.Dtos.AiDto;
-using HealthIntelligence.Dtos.CommonDto;
-using HealthIntelligence.Dtos.CountryDto;
-using HealthIntelligence.IServices;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Backgroundjob;
+using VeridianClimatePulse.Common.Implementation;
+using VeridianClimatePulse.Common.Interface;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Common.Models.settings;
+using VeridianClimatePulse.Data;
+using VeridianClimatePulse.Dtos.AiDto;
+using VeridianClimatePulse.Dtos.CommonDto;
+using VeridianClimatePulse.Dtos.CountryDto;
+using VeridianClimatePulse.IServices;
+using VeridianClimatePulse.Models;
 using System.Linq.Expressions;
 using System.Net;
 using System.Text.RegularExpressions;
 
-namespace HealthIntelligence.Services
+namespace VeridianClimatePulse.Services
 {
     public class AIComputationService : IAIComputationService
     {
@@ -1555,7 +1555,7 @@ namespace HealthIntelligence.Services
 
                         int? score = response.AIScore != null ? (int?)Math.Round(response.AIScore.Value, 0) : null;
 
-                        var option = qustion.QuestionOptions.FirstOrDefault(x => x.ScoreValue == score);
+                        var option = qustion.QuestionOptions.FirstOrDefault(x => x.ScoreValue == score.ToString());
                         if (option == null)
                             continue;
 

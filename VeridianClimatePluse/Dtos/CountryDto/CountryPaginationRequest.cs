@@ -1,6 +1,6 @@
-using HealthIntelligence.Dtos.CommonDto;
+using VeridianClimatePulse.Dtos.CommonDto;
 
-namespace HealthIntelligence.Dtos.CountryDto
+namespace VeridianClimatePulse.Dtos.CountryDto
 {
     public class CountryPaginationRequest: PaginationRequest
     {

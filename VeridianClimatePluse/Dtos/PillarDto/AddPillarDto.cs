@@ -1,4 +1,4 @@
-namespace HealthIntelligence.Dtos.PillarDto
+namespace VeridianClimatePulse.Dtos.PillarDto
 {
     public class AddPillarDto
     {

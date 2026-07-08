@@ -1,7 +1,7 @@
-using HealthIntelligence.Dtos.CommonDto;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Dtos.CommonDto;
+using VeridianClimatePulse.Models;
 
-namespace HealthIntelligence.Dtos.kpiDto
+namespace VeridianClimatePulse.Dtos.kpiDto
 {
     public class GetAnalyticalLayerRequestDto : PaginationRequest
     {

@@ -1,10 +1,10 @@
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Dtos.AssessmentDto;
-using HealthIntelligence.Dtos.CommonDto;
-using HealthIntelligence.Dtos.dashboard;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Dtos.AssessmentDto;
+using VeridianClimatePulse.Dtos.CommonDto;
+using VeridianClimatePulse.Dtos.dashboard;
+using VeridianClimatePulse.Models;
 
-namespace HealthIntelligence.IServices
+namespace VeridianClimatePulse.IServices
 {
     public interface IAssessmentResponseService
     {

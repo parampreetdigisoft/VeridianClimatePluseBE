@@ -5,21 +5,21 @@ using DocumentFormat.OpenXml.Spreadsheet;
 
 using Microsoft.EntityFrameworkCore;
 
-using HealthIntelligence.Common.Implementation;
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Data;
+using VeridianClimatePulse.Common.Implementation;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Data;
 
-using HealthIntelligence.Dtos.CommonDto;
-using HealthIntelligence.Dtos.CountryUserDto;
-using HealthIntelligence.Dtos.kpiDto;
-using HealthIntelligence.Enums;
-using HealthIntelligence.IServices;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Dtos.CommonDto;
+using VeridianClimatePulse.Dtos.CountryUserDto;
+using VeridianClimatePulse.Dtos.kpiDto;
+using VeridianClimatePulse.Enums;
+using VeridianClimatePulse.IServices;
+using VeridianClimatePulse.Models;
 
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
 
-namespace HealthIntelligence.Services
+namespace VeridianClimatePulse.Services
 {
     public class KpiService : IKpiService
     {

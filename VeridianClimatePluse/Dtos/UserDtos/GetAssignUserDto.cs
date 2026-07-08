@@ -1,4 +1,4 @@
-namespace HealthIntelligence.Dtos.UserDtos
+namespace VeridianClimatePulse.Dtos.UserDtos
 {
     public class GetAssignUserDto : UserIdDto
     {

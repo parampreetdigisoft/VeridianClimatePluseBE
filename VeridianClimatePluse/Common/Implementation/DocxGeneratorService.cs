@@ -16,13 +16,13 @@
 
 using SkiaSharp;
 using DocumentFormat.OpenXml;
-using HealthIntelligence.Models;
-using HealthIntelligence.IServices;
-using HealthIntelligence.Dtos.AiDto;
+using VeridianClimatePulse.Models;
+using VeridianClimatePulse.IServices;
+using VeridianClimatePulse.Dtos.AiDto;
 using DocumentFormat.OpenXml.Packaging;
-using HealthIntelligence.Common.Interface;
+using VeridianClimatePulse.Common.Interface;
 using DocumentFormat.OpenXml.Wordprocessing;
-using static HealthIntelligence.Services.AIComputationService;
+using static VeridianClimatePulse.Services.AIComputationService;
 
 // Aliases to avoid clashes with System.Drawing / Wordprocessing
 using A    = DocumentFormat.OpenXml.Drawing;
@@ -30,7 +30,7 @@ using DW   = DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using PIC  = DocumentFormat.OpenXml.Drawing.Pictures;
 using QPDF = QuestPDF.Infrastructure;
 
-namespace HealthIntelligence.Common.Implementation
+namespace VeridianClimatePulse.Common.Implementation
 {
     public sealed partial class DocxGeneratorService : IDocxGeneratorService
     {

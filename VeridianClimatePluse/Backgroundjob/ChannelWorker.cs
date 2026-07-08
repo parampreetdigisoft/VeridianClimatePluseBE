@@ -1,12 +1,12 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using HealthIntelligence.Data;
-using HealthIntelligence.IServices;
-using HealthIntelligence.Models;
-using HealthIntelligence.Services;
+using VeridianClimatePulse.Data;
+using VeridianClimatePulse.IServices;
+using VeridianClimatePulse.Models;
+using VeridianClimatePulse.Services;
 using System.Collections.Concurrent;
 
-namespace HealthIntelligence.Backgroundjob
+namespace VeridianClimatePulse.Backgroundjob
 {
     public class ChannelWorker : BackgroundService
     {

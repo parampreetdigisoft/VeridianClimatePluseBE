@@ -1,16 +1,16 @@
-using HealthIntelligence.Common.Interface;
-using HealthIntelligence.Common.Models.settings;
-using HealthIntelligence.Common.Models.views;
-using HealthIntelligence.Data;
-using HealthIntelligence.Dtos.CountryDto;
-using HealthIntelligence.IServices;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Common.Interface;
+using VeridianClimatePulse.Common.Models.settings;
+using VeridianClimatePulse.Common.Models.views;
+using VeridianClimatePulse.Data;
+using VeridianClimatePulse.Dtos.CountryDto;
+using VeridianClimatePulse.IServices;
+using VeridianClimatePulse.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
-namespace HealthIntelligence.Common.Implementation
+namespace VeridianClimatePulse.Common.Implementation
 {
     public class CommonService : ICommonService
     {

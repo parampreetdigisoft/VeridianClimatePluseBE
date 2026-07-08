@@ -1,9 +1,9 @@
 
-using HealthIntelligence.Dtos.AiDto;
-using HealthIntelligence.Models;
-using static HealthIntelligence.Services.AIComputationService;
+using VeridianClimatePulse.Dtos.AiDto;
+using VeridianClimatePulse.Models;
+using static VeridianClimatePulse.Services.AIComputationService;
 
-namespace HealthIntelligence.IServices
+namespace VeridianClimatePulse.IServices
 {
     /// <summary>
     /// Output format for document generation.

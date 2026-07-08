@@ -2,16 +2,16 @@
 using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using HealthIntelligence.Dtos.CountryUserDto;
-using HealthIntelligence.Dtos.kpiDto;
-using HealthIntelligence.Enums;
-using HealthIntelligence.IServices;
-using HealthIntelligence.Models;
-using HealthIntelligence.Services;
+using VeridianClimatePulse.Dtos.CountryUserDto;
+using VeridianClimatePulse.Dtos.kpiDto;
+using VeridianClimatePulse.Enums;
+using VeridianClimatePulse.IServices;
+using VeridianClimatePulse.Models;
+using VeridianClimatePulse.Services;
 
 using System.Security.Claims;
 
-namespace HealthIntelligence.Controllers
+namespace VeridianClimatePulse.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]

@@ -1,4 +1,4 @@
-namespace HealthIntelligence.Dtos.EmailExistDto
+namespace VeridianClimatePulse.Dtos.EmailExistDto
 {
     public class EmailExistRequestDto
     {

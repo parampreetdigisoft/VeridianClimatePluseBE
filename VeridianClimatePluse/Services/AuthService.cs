@@ -5,26 +5,26 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
-using HealthIntelligence.Common.Implementation;
-using HealthIntelligence.Common.Interface;
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Common.Models.settings;
-using HealthIntelligence.Data;
-using HealthIntelligence.Dtos.CountryDto;
-using HealthIntelligence.Dtos.CountryUserDto;
-using HealthIntelligence.Dtos.EmailExistDto;
-using HealthIntelligence.Dtos.UserDtos;
-using HealthIntelligence.Enums;
-using HealthIntelligence.IServices;
-using HealthIntelligence.Models;
-using HealthIntelligence.Views.EmailModels;
+using VeridianClimatePulse.Common.Implementation;
+using VeridianClimatePulse.Common.Interface;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Common.Models.settings;
+using VeridianClimatePulse.Data;
+using VeridianClimatePulse.Dtos.CountryDto;
+using VeridianClimatePulse.Dtos.CountryUserDto;
+using VeridianClimatePulse.Dtos.EmailExistDto;
+using VeridianClimatePulse.Dtos.UserDtos;
+using VeridianClimatePulse.Enums;
+using VeridianClimatePulse.IServices;
+using VeridianClimatePulse.Models;
+using VeridianClimatePulse.Views.EmailModels;
 
 using System.Data;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
-namespace HealthIntelligence.Services
+namespace VeridianClimatePulse.Services
 {
     public class AuthService : IAuthService
     {

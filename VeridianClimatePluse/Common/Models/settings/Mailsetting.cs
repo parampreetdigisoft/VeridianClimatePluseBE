@@ -1,4 +1,4 @@
-namespace HealthIntelligence.Common.Models.settings
+namespace VeridianClimatePulse.Common.Models.settings
 {
     public class Mailsetting
     {

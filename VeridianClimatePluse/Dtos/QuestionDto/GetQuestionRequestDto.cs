@@ -1,6 +1,6 @@
-using HealthIntelligence.Dtos.CommonDto;
+using VeridianClimatePulse.Dtos.CommonDto;
 
-namespace HealthIntelligence.Dtos.QuestionDto
+namespace VeridianClimatePulse.Dtos.QuestionDto
 {
     public class GetQuestionRequestDto : PaginationRequest
     {

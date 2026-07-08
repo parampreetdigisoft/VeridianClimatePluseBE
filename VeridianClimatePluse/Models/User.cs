@@ -1,7 +1,7 @@
-using HealthIntelligence.Enums;
+using VeridianClimatePulse.Enums;
 using System;
 
-namespace HealthIntelligence.Models
+namespace VeridianClimatePulse.Models
 {
     public enum UserRole { Admin = 1, Analyst = 2, Evaluator = 3, CountryUser = 4 }
     public class User

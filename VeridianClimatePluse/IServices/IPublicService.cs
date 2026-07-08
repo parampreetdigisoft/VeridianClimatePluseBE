@@ -1,9 +1,9 @@
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Dtos.chatDto;
-using HealthIntelligence.Dtos.CommonDto;
-using HealthIntelligence.Dtos.PublicDto;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Dtos.chatDto;
+using VeridianClimatePulse.Dtos.CommonDto;
+using VeridianClimatePulse.Dtos.PublicDto;
 
-namespace HealthIntelligence.IServices
+namespace VeridianClimatePulse.IServices
 {
     public interface IPublicService
     {

@@ -1,7 +1,7 @@
-using HealthIntelligence.Dtos.CommonDto;
+using VeridianClimatePulse.Dtos.CommonDto;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
-namespace HealthIntelligence.Common.Implementation
+namespace VeridianClimatePulse.Common.Implementation
 {
     public static class QueryableExtensions
     {

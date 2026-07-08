@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 
-namespace HealthIntelligence
+namespace VeridianClimatePulse
 {
     public class Program
     {

@@ -1,6 +1,6 @@
-using HealthIntelligence.Dtos.CountryDto;
+using VeridianClimatePulse.Dtos.CountryDto;
 
-namespace HealthIntelligence.Dtos.UserDtos
+namespace VeridianClimatePulse.Dtos.UserDtos
 {
     public class GetUserByRoleResponse : PublicUserResponse
     {

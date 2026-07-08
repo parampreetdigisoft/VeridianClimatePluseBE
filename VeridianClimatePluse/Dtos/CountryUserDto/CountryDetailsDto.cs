@@ -1,4 +1,4 @@
-namespace HealthIntelligence.Dtos.CountryUserDto
+namespace VeridianClimatePulse.Dtos.CountryUserDto
 {
     public class CountryDetailsDto
     {

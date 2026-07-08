@@ -1,4 +1,4 @@
-namespace HealthIntelligence.Models
+namespace VeridianClimatePulse.Models
 {
     public class AnalyticalLayerPillarMapping
     {

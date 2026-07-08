@@ -1,12 +1,12 @@
 using AssessmentPlatform.Models;
 
 using Microsoft.EntityFrameworkCore;
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Dtos.CountryDto;
-using HealthIntelligence.Models;
-using HealthIntelligence.Common.Models.views;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Dtos.CountryDto;
+using VeridianClimatePulse.Models;
+using VeridianClimatePulse.Common.Models.views;
 
-namespace HealthIntelligence.Data
+namespace VeridianClimatePulse.Data
 {
     public class ApplicationDbContext : DbContext
     {

@@ -1,4 +1,4 @@
-namespace HealthIntelligence.Dtos.CountryDto
+namespace VeridianClimatePulse.Dtos.CountryDto
 {
     public class ExportCountryWithOptionDto
     {

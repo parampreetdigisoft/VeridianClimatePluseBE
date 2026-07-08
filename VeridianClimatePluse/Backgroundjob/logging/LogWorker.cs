@@ -1,6 +1,6 @@
-using HealthIntelligence.Data;
-using HealthIntelligence.Models;
-namespace HealthIntelligence.Backgroundjob.logging
+using VeridianClimatePulse.Data;
+using VeridianClimatePulse.Models;
+namespace VeridianClimatePulse.Backgroundjob.logging
 {
     public class LogWorker : BackgroundService
     {

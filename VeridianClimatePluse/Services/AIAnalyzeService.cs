@@ -1,12 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using HealthIntelligence.Common.Implementation;
-using HealthIntelligence.Common.Models.settings;
-using HealthIntelligence.Data;
-using HealthIntelligence.Dtos.chatDto;
-using HealthIntelligence.IServices;
-using HealthIntelligence.Common.Interface;
-namespace HealthIntelligence.Services
+using VeridianClimatePulse.Common.Implementation;
+using VeridianClimatePulse.Common.Models.settings;
+using VeridianClimatePulse.Data;
+using VeridianClimatePulse.Dtos.chatDto;
+using VeridianClimatePulse.IServices;
+using VeridianClimatePulse.Common.Interface;
+namespace VeridianClimatePulse.Services
 {
     public class AIAnalyzeService : IAIAnalyzeService
     {

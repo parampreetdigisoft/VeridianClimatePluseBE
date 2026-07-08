@@ -1,4 +1,4 @@
-namespace HealthIntelligence.IServices
+namespace VeridianClimatePulse.IServices
 {
     public interface IAppLogger
     {

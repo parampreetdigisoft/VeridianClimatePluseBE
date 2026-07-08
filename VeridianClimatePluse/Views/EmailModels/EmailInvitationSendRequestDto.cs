@@ -1,4 +1,4 @@
-namespace HealthIntelligence.Views.EmailModels
+namespace VeridianClimatePulse.Views.EmailModels
 {
     public class EmailInvitationSendRequestDto
     {

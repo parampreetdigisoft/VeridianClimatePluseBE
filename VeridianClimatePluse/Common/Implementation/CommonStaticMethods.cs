@@ -1,4 +1,7 @@
-namespace HealthIntelligence.Common.Implementation
+using System.ComponentModel;
+using VeridianClimatePulse.Enums;
+
+namespace VeridianClimatePulse.Common.Implementation
 {
     public class CommonStaticMethods
     {

@@ -1,14 +1,14 @@
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Common.Models.settings;
-using HealthIntelligence.Data;
-using HealthIntelligence.Dtos.PaymentDto;
-using HealthIntelligence.IServices;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Common.Models.settings;
+using VeridianClimatePulse.Data;
+using VeridianClimatePulse.Dtos.PaymentDto;
+using VeridianClimatePulse.IServices;
+using VeridianClimatePulse.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Stripe;
 using Stripe.Checkout;
-namespace HealthIntelligence.Services
+namespace VeridianClimatePulse.Services
 {
     public class PaymentService : IPaymentService
     {

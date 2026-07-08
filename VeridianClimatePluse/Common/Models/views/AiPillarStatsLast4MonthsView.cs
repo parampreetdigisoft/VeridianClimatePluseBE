@@ -1,4 +1,4 @@
-namespace HealthIntelligence.Common.Models
+namespace VeridianClimatePulse.Common.Models
 {
     public class AiPillarStatsLast4MonthsView
     {

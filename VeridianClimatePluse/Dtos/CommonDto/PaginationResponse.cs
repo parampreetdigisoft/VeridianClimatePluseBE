@@ -1,4 +1,4 @@
-namespace HealthIntelligence.Dtos.CommonDto
+namespace VeridianClimatePulse.Dtos.CommonDto
 {
     public class PaginationResponse<T>
     {

@@ -2,21 +2,21 @@ using AssessmentPlatform.Models;
 using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using HealthIntelligence.Backgroundjob;
-using HealthIntelligence.Common.Implementation;
-using HealthIntelligence.Common.Interface;
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Common.Models.settings;
-using HealthIntelligence.Data;
-using HealthIntelligence.Dtos.AssessmentDto;
-using HealthIntelligence.Dtos.CountryDto;
-using HealthIntelligence.Dtos.CommonDto;
-using HealthIntelligence.IServices;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Backgroundjob;
+using VeridianClimatePulse.Common.Implementation;
+using VeridianClimatePulse.Common.Interface;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Common.Models.settings;
+using VeridianClimatePulse.Data;
+using VeridianClimatePulse.Dtos.AssessmentDto;
+using VeridianClimatePulse.Dtos.CountryDto;
+using VeridianClimatePulse.Dtos.CommonDto;
+using VeridianClimatePulse.IServices;
+using VeridianClimatePulse.Models;
 using System.Data;
 using System.Linq.Expressions;
 
-namespace HealthIntelligence.Services
+namespace VeridianClimatePulse.Services
 {
     public class CountryService : ICountryService
     {

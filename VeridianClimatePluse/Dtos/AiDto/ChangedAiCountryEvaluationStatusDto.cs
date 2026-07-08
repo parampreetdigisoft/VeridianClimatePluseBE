@@ -1,6 +1,6 @@
-using HealthIntelligence.Backgroundjob;
+using VeridianClimatePulse.Backgroundjob;
 
-namespace HealthIntelligence.Dtos.AiDto
+namespace VeridianClimatePulse.Dtos.AiDto
 {
     public class ChangedAiCountryEvaluationStatusDto
     {

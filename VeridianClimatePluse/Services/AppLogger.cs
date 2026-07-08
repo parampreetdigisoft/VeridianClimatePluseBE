@@ -1,6 +1,6 @@
-using HealthIntelligence.Backgroundjob.logging;
-using HealthIntelligence.IServices;
-namespace HealthIntelligence.Services
+using VeridianClimatePulse.Backgroundjob.logging;
+using VeridianClimatePulse.IServices;
+namespace VeridianClimatePulse.Services
 {
     public class AppLogger : IAppLogger
     {

@@ -1,7 +1,7 @@
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Models;
 using DocumentFormat.OpenXml.Office2010.Excel;
 
-namespace HealthIntelligence.Backgroundjob
+namespace VeridianClimatePulse.Backgroundjob
 {
     public class Download
     {

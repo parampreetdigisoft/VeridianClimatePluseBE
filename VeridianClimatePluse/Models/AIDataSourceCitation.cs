@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace HealthIntelligence.Models
+namespace VeridianClimatePulse.Models
 {
     public class AIDataSourceCitation
     {

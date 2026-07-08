@@ -1,8 +1,8 @@
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Dtos.chatDto;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Dtos.chatDto;
+using VeridianClimatePulse.Models;
 
-namespace HealthIntelligence.IServices
+namespace VeridianClimatePulse.IServices
 {
     public interface IChatService
     {

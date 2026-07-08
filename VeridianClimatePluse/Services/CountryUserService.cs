@@ -2,23 +2,23 @@
 using ClosedXML.Excel;
 using DocumentFormat.OpenXml.Drawing.Charts;
 using Microsoft.EntityFrameworkCore;
-using HealthIntelligence.Common.Implementation;
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Data;
-using HealthIntelligence.Dtos.AiDto;
-using HealthIntelligence.Dtos.AssessmentDto;
-using HealthIntelligence.Dtos.CountryDto;
-using HealthIntelligence.Dtos.CommonDto;
-using HealthIntelligence.Dtos.kpiDto;
-using HealthIntelligence.Dtos.PublicDto;
-using HealthIntelligence.Enums;
-using HealthIntelligence.IServices;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Common.Implementation;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Data;
+using VeridianClimatePulse.Dtos.AiDto;
+using VeridianClimatePulse.Dtos.AssessmentDto;
+using VeridianClimatePulse.Dtos.CountryDto;
+using VeridianClimatePulse.Dtos.CommonDto;
+using VeridianClimatePulse.Dtos.kpiDto;
+using VeridianClimatePulse.Dtos.PublicDto;
+using VeridianClimatePulse.Enums;
+using VeridianClimatePulse.IServices;
+using VeridianClimatePulse.Models;
 using System.Text.RegularExpressions;
-using HealthIntelligence.Dtos.CountryUserDto;
-using HealthIntelligence.Common.Interface;
+using VeridianClimatePulse.Dtos.CountryUserDto;
+using VeridianClimatePulse.Common.Interface;
 
-namespace HealthIntelligence.Services
+namespace VeridianClimatePulse.Services
 {
     public class CountryUserService : ICountryUserService
     {

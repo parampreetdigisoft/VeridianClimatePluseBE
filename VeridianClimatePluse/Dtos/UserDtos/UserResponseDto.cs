@@ -1,7 +1,7 @@
-using HealthIntelligence.Enums;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Enums;
+using VeridianClimatePulse.Models;
 
-namespace HealthIntelligence.Dtos.UserDtos
+namespace VeridianClimatePulse.Dtos.UserDtos
 {
     public class UserResponseDto : PublicUserResponse
     {

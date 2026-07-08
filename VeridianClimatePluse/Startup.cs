@@ -1,17 +1,17 @@
-using HealthIntelligence.Common.DI;
-using HealthIntelligence.Common.Implementation;
-using HealthIntelligence.Common.Middlware;
-using HealthIntelligence.Common.Models.settings;
-using HealthIntelligence.Data;
-using HealthIntelligence.Enums;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Common.DI;
+using VeridianClimatePulse.Common.Implementation;
+using VeridianClimatePulse.Common.Middlware;
+using VeridianClimatePulse.Common.Models.settings;
+using VeridianClimatePulse.Data;
+using VeridianClimatePulse.Enums;
+using VeridianClimatePulse.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using QuestPDF.Infrastructure;
 using System.Text;
 
-namespace HealthIntelligence
+namespace VeridianClimatePulse
 {
     public class Startup
     {

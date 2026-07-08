@@ -1,6 +1,6 @@
 
 
-namespace HealthIntelligence.Dtos.PublicDto
+namespace VeridianClimatePulse.Dtos.PublicDto
 {
     public class PartnerCountryResponseDto : PartnerCountryHistoryResponseDto
     {

@@ -1,6 +1,6 @@
 using System.Threading.Channels;
 
-namespace HealthIntelligence.Backgroundjob.logging
+namespace VeridianClimatePulse.Backgroundjob.logging
 {
     public class LogChannelService
     {

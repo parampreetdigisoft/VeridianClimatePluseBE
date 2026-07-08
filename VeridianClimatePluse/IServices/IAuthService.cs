@@ -1,10 +1,10 @@
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Dtos.CountryDto;
-using HealthIntelligence.Dtos.EmailExistDto;
-using HealthIntelligence.Dtos.UserDtos;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Dtos.CountryDto;
+using VeridianClimatePulse.Dtos.EmailExistDto;
+using VeridianClimatePulse.Dtos.UserDtos;
+using VeridianClimatePulse.Models;
 
-namespace HealthIntelligence.IServices
+namespace VeridianClimatePulse.IServices
 {
     public interface IAuthService
     {

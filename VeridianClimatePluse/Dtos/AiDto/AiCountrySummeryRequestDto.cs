@@ -1,6 +1,6 @@
-using HealthIntelligence.Dtos.CommonDto;
+using VeridianClimatePulse.Dtos.CommonDto;
 
-namespace HealthIntelligence.Dtos.AiDto
+namespace VeridianClimatePulse.Dtos.AiDto
 {
     public class AiCountrySummeryRequestDto : PaginationRequest
     {
@@ -16,7 +16,7 @@ namespace HealthIntelligence.Dtos.AiDto
     public class AiCountrySummeryRequestPdfDto : AiCountryPillarRequestDto
     {
         public int? PillarID { get; set; }
-        public HealthIntelligence.IServices.DocumentFormat Format { get; set; } = HealthIntelligence.IServices.DocumentFormat.Pdf;
+        public VeridianClimatePulse.IServices.DocumentFormat Format { get; set; } = VeridianClimatePulse.IServices.DocumentFormat.Pdf;
         public string ReportType { get; set; } = "ai";
     }
     public class AiCountryPillarRequestDto

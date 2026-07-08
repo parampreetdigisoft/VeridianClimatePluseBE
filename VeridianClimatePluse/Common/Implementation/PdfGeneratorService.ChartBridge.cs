@@ -20,12 +20,12 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 
-using HealthIntelligence.Dtos.AiDto;
+using VeridianClimatePulse.Dtos.AiDto;
 using SkiaSharp;
-using static HealthIntelligence.Services.AIComputationService;
+using static VeridianClimatePulse.Services.AIComputationService;
 using QPDF = QuestPDF.Infrastructure;
 
-namespace HealthIntelligence.Common.Implementation
+namespace VeridianClimatePulse.Common.Implementation
 {
     // ── Option A (RECOMMENDED): Add thin public wrappers to PdfGeneratorService ──
     //

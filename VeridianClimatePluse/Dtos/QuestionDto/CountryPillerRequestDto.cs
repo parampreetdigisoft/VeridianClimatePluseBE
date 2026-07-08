@@ -1,4 +1,4 @@
-namespace HealthIntelligence.Dtos.QuestionDto
+namespace VeridianClimatePulse.Dtos.QuestionDto
 {
     public class CountryPillerRequestDto
     {

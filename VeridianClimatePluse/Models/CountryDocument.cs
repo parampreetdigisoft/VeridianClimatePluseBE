@@ -1,6 +1,6 @@
 using DocumentFormat.OpenXml.Bibliography;
 
-namespace HealthIntelligence.Models
+namespace VeridianClimatePulse.Models
 {
     public class CountryDocument
     {

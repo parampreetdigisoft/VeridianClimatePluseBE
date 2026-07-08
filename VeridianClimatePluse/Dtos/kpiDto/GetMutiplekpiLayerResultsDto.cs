@@ -1,6 +1,6 @@
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Models;
 
-namespace HealthIntelligence.Dtos.kpiDto
+namespace VeridianClimatePulse.Dtos.kpiDto
 {
     public class GetMutiplekpiLayerResultsDto
     {

@@ -1,7 +1,7 @@
-using HealthIntelligence.Dtos.chatDto;
-using HealthIntelligence.Services;
+using VeridianClimatePulse.Dtos.chatDto;
+using VeridianClimatePulse.Services;
 
-namespace HealthIntelligence.IServices
+namespace VeridianClimatePulse.IServices
 {
     public interface IAIAnalyzeService
     {

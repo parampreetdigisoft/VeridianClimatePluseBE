@@ -1,4 +1,4 @@
-namespace HealthIntelligence.Dtos.PaymentDto
+namespace VeridianClimatePulse.Dtos.PaymentDto
 {
     public class CheckoutSessionResponse
     {

@@ -1,6 +1,6 @@
-using HealthIntelligence.Enums;
+using VeridianClimatePulse.Enums;
 
-namespace HealthIntelligence.Dtos.PaymentDto
+namespace VeridianClimatePulse.Dtos.PaymentDto
 {
     public class CreateCheckoutSessionDto
     {

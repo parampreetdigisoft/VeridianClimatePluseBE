@@ -1,4 +1,4 @@
-namespace HealthIntelligence.Dtos.AssessmentDto
+namespace VeridianClimatePulse.Dtos.AssessmentDto
 {
         public class TransferAssessmentRequestDto
         {

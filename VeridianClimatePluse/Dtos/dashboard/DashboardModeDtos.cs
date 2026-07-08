@@ -1,6 +1,6 @@
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Models;
 
-namespace HealthIntelligence.Dtos.dashboard
+namespace VeridianClimatePulse.Dtos.dashboard
 {
     public class DashboardModeResponseDto
     {

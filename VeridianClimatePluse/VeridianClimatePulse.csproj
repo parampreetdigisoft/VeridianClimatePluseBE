@@ -5,9 +5,9 @@
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-	<RootNamespace>HealthIntelligence</RootNamespace>
-	<AssemblyName>HealthIntelligence</AssemblyName>
-	<StartupObject>HealthIntelligence.Program</StartupObject>
+	<RootNamespace>VeridianClimatePulse</RootNamespace>
+	<AssemblyName>VeridianClimatePulse</AssemblyName>
+	<StartupObject>VeridianClimatePulse.Program</StartupObject>
   </PropertyGroup>
 
   <ItemGroup>

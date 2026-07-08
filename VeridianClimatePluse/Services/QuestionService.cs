@@ -1,17 +1,17 @@
 using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using HealthIntelligence.Common.Implementation;
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Common.Models.settings;
-using HealthIntelligence.Data;
-using HealthIntelligence.Dtos.AssessmentDto;
-using HealthIntelligence.Dtos.CommonDto;
-using HealthIntelligence.Dtos.QuestionDto;
-using HealthIntelligence.IServices;
-using HealthIntelligence.Models;
-using System.Text;
-using HealthIntelligence.Common.Interface;
+using VeridianClimatePulse.Common.Implementation;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Data;
+using VeridianClimatePulse.Dtos.AssessmentDto;
+using VeridianClimatePulse.Dtos.CommonDto;
+using VeridianClimatePulse.Dtos.QuestionDto;
+using VeridianClimatePulse.IServices;
+using VeridianClimatePulse.Models;
+using VeridianClimatePulse.Common.Interface;
+using VeridianClimatePulse.Enums;
+
+namespace VeridianClimatePulse.Services
 namespace HealthIntelligence.Services
 {
     public class QuestionService : IQuestionService

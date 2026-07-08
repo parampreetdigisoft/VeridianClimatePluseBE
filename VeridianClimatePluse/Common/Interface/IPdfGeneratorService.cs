@@ -1,10 +1,10 @@
 
 
-using HealthIntelligence.Dtos.AiDto;
-using HealthIntelligence.Models;
-using static HealthIntelligence.Services.AIComputationService;
+using VeridianClimatePulse.Dtos.AiDto;
+using VeridianClimatePulse.Models;
+using static VeridianClimatePulse.Services.AIComputationService;
 
-namespace HealthIntelligence.Common.Interface
+namespace VeridianClimatePulse.Common.Interface
 {
     public interface IPdfGeneratorService
     {

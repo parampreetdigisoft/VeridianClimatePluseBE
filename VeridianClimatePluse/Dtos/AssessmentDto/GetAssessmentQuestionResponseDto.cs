@@ -1,6 +1,6 @@
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Models;
 
-namespace HealthIntelligence.Dtos.AssessmentDto
+namespace VeridianClimatePulse.Dtos.AssessmentDto
 {
     public class GetAssessmentQuestionResponseDto
     {

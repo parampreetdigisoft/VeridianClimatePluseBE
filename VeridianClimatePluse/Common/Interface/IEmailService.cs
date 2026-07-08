@@ -1,4 +1,4 @@
-namespace HealthIntelligence.Common.Interface
+namespace VeridianClimatePulse.Common.Interface
 {
     public interface IEmailService
     {

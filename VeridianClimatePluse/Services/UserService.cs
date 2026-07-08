@@ -1,17 +1,17 @@
 using Microsoft.EntityFrameworkCore;
-using HealthIntelligence.Common.Implementation;
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Data;
-using HealthIntelligence.Dtos.AssessmentDto;
-using HealthIntelligence.Dtos.CommonDto;
-using HealthIntelligence.Dtos.CountryDto;
-using HealthIntelligence.Dtos.UserDtos;
-using HealthIntelligence.Enums;
-using HealthIntelligence.IServices;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Common.Implementation;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Data;
+using VeridianClimatePulse.Dtos.AssessmentDto;
+using VeridianClimatePulse.Dtos.CommonDto;
+using VeridianClimatePulse.Dtos.CountryDto;
+using VeridianClimatePulse.Dtos.UserDtos;
+using VeridianClimatePulse.Enums;
+using VeridianClimatePulse.IServices;
+using VeridianClimatePulse.Models;
 using System.Linq.Expressions;
 
-namespace HealthIntelligence.Services
+namespace VeridianClimatePulse.Services
 {
     public class UserService : IUserService
     {

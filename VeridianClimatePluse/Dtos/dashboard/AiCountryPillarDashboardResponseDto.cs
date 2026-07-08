@@ -1,4 +1,4 @@
-namespace HealthIntelligence.Dtos.dashboard
+namespace VeridianClimatePulse.Dtos.dashboard
 {
     public class AiCountryPillarDashboardResponseDto
     {

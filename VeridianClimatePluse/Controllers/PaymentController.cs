@@ -1,9 +1,9 @@
-using HealthIntelligence.Dtos.PaymentDto;
-using HealthIntelligence.IServices;
+using VeridianClimatePulse.Dtos.PaymentDto;
+using VeridianClimatePulse.IServices;
 using Microsoft.AspNetCore.Mvc;
 using Stripe;
 
-namespace HealthIntelligence.Controllers
+namespace VeridianClimatePulse.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]

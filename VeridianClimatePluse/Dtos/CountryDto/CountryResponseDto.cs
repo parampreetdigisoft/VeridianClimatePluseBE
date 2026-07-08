@@ -1,6 +1,6 @@
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Models;
 
-namespace HealthIntelligence.Dtos.CountryDto
+namespace VeridianClimatePulse.Dtos.CountryDto
 {
     public class CountryResponseDto : Country
     {

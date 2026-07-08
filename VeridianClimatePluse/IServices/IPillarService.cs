@@ -1,12 +1,12 @@
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Dtos.AssessmentDto;
-using HealthIntelligence.Dtos.CommonDto;
-using HealthIntelligence.Dtos.PillarDto;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Dtos.AssessmentDto;
+using VeridianClimatePulse.Dtos.CommonDto;
+using VeridianClimatePulse.Dtos.PillarDto;
+using VeridianClimatePulse.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace HealthIntelligence.IServices
+namespace VeridianClimatePulse.IServices
 {
     public interface IPillarService
     {

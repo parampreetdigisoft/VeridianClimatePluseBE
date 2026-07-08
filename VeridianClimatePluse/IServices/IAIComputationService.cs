@@ -1,11 +1,11 @@
 using AssessmentPlatform.Dtos.AiDto;
 using Microsoft.AspNetCore.Mvc;
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Dtos.AiDto;
-using HealthIntelligence.Dtos.CommonDto;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Dtos.AiDto;
+using VeridianClimatePulse.Dtos.CommonDto;
+using VeridianClimatePulse.Models;
 
-namespace HealthIntelligence.IServices
+namespace VeridianClimatePulse.IServices
 {
     public interface IAIComputationService
     {

@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Configuration;
-using HealthIntelligence.IServices;
+using VeridianClimatePulse.IServices;
 
-namespace HealthIntelligence.Backgroundjob
+namespace VeridianClimatePulse.Backgroundjob
 {
     /// <summary>
     /// Refreshes emerging trends in memory on a schedule. Failed refreshes keep serving the last good snapshot.

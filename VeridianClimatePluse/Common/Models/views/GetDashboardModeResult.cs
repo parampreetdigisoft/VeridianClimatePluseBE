@@ -1,4 +1,4 @@
-﻿namespace HealthIntelligence.Common.Models.views
+﻿namespace VeridianClimatePulse.Common.Models.views
 {
     public class GetDashboardModeResult
     {

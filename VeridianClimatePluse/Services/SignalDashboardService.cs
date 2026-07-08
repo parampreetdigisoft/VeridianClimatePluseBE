@@ -1,14 +1,14 @@
-using HealthIntelligence.Common.Implementation;
-using HealthIntelligence.Common.Interface;
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Common.Models.views;
-using HealthIntelligence.Data;
-using HealthIntelligence.Dtos.dashboard;
-using HealthIntelligence.IServices;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Common.Implementation;
+using VeridianClimatePulse.Common.Interface;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Common.Models.views;
+using VeridianClimatePulse.Data;
+using VeridianClimatePulse.Dtos.dashboard;
+using VeridianClimatePulse.IServices;
+using VeridianClimatePulse.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace HealthIntelligence.Services
+namespace VeridianClimatePulse.Services
 {
     public class SignalDashboardService : ISignalDashboardService
     {

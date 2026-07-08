@@ -1,4 +1,4 @@
-namespace HealthIntelligence.Dtos.kpiDto
+namespace VeridianClimatePulse.Dtos.kpiDto
 {
     public class CompareCountryResponseDto
     {

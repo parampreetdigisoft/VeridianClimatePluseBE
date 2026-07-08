@@ -1,7 +1,7 @@
-using HealthIntelligence.Enums;
+using VeridianClimatePulse.Enums;
 
 
-namespace HealthIntelligence.Models
+namespace VeridianClimatePulse.Models
 {
     public enum PaymentStatus:byte { Pending = 0, Succeeded = 1, Failed = 2 }
 

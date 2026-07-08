@@ -1,8 +1,8 @@
-using HealthIntelligence.Common.Models.views;
-using HealthIntelligence.Dtos.CountryDto;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Common.Models.views;
+using VeridianClimatePulse.Dtos.CountryDto;
+using VeridianClimatePulse.Models;
 
-namespace HealthIntelligence.Common.Interface
+namespace VeridianClimatePulse.Common.Interface
 {
     public interface ICommonService
     {

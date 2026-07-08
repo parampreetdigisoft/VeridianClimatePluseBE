@@ -1,5 +1,5 @@
-using HealthIntelligence.Common.Interface;
-using HealthIntelligence.Common.Models.settings;
+using VeridianClimatePulse.Common.Interface;
+using VeridianClimatePulse.Common.Models.settings;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -10,7 +10,7 @@ using Microsoft.Extensions.Options;
 using System.Net;
 using System.Net.Mail;
 
-namespace HealthIntelligence.Common.Implementation
+namespace VeridianClimatePulse.Common.Implementation
 {
     public class EmailService : IEmailService
     {

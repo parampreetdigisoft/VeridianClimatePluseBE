@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using HealthIntelligence.Dtos.UserDtos;
-using HealthIntelligence.IServices;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Dtos.UserDtos;
+using VeridianClimatePulse.IServices;
+using VeridianClimatePulse.Models;
 using System.Security.Claims;
 
-namespace HealthIntelligence.Controllers
+namespace VeridianClimatePulse.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]

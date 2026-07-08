@@ -1,6 +1,6 @@
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Models;
 
-namespace HealthIntelligence.Dtos.UserDtos
+namespace VeridianClimatePulse.Dtos.UserDtos
 {
     public class CountryUserSignUpDto
     {

@@ -1,17 +1,17 @@
-using HealthIntelligence.Common.Implementation;
-using HealthIntelligence.Common.Interface;
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Data;
-using HealthIntelligence.Dtos.chatDto;
-using HealthIntelligence.Dtos.CommonDto;
-using HealthIntelligence.Dtos.PublicDto;
-using HealthIntelligence.IServices;
+using VeridianClimatePulse.Common.Implementation;
+using VeridianClimatePulse.Common.Interface;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Data;
+using VeridianClimatePulse.Dtos.chatDto;
+using VeridianClimatePulse.Dtos.CommonDto;
+using VeridianClimatePulse.Dtos.PublicDto;
+using VeridianClimatePulse.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using System.Text.Json;
 
-namespace HealthIntelligence.Services
+namespace VeridianClimatePulse.Services
 {
     [AllowAnonymous]
     public class PublicService : IPublicService

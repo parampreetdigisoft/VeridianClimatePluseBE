@@ -1,6 +1,6 @@
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Models;
 
-namespace HealthIntelligence.Dtos.PaymentDto
+namespace VeridianClimatePulse.Dtos.PaymentDto
 {
     public class VerifySessionResponse
     {

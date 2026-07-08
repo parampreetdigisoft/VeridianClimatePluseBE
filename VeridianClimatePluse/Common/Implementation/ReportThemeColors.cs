@@ -1,6 +1,6 @@
 using SkiaSharp;
 
-namespace HealthIntelligence.Common.Implementation
+namespace VeridianClimatePulse.Common.Implementation
 {
     /// <summary>Brand palette aligned with the AHI web application CSS variables.</summary>
     internal static class ReportThemeColors

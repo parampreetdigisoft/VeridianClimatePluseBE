@@ -1,11 +1,11 @@
-using HealthIntelligence.Backgroundjob;
-using HealthIntelligence.Backgroundjob.logging;
-using HealthIntelligence.Common.Implementation;
-using HealthIntelligence.Common.Interface;
-using HealthIntelligence.IServices;
-using HealthIntelligence.Services;
+using VeridianClimatePulse.Backgroundjob;
+using VeridianClimatePulse.Backgroundjob.logging;
+using VeridianClimatePulse.Common.Implementation;
+using VeridianClimatePulse.Common.Interface;
+using VeridianClimatePulse.IServices;
+using VeridianClimatePulse.Services;
 
-namespace HealthIntelligence.Common.DI
+namespace VeridianClimatePulse.Common.DI
 {
     public static class ServiceRegistration
     {

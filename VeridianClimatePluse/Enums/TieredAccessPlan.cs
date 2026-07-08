@@ -1,4 +1,6 @@
-namespace HealthIntelligence.Enums
+using System.ComponentModel;
+
+namespace VeridianClimatePulse.Enums
 {
     public enum TieredAccessPlan : byte  // maps well to SQL tinyint
     {

@@ -1,18 +1,18 @@
-using HealthIntelligence.Backgroundjob;
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Data;
-using HealthIntelligence.Dtos.AssessmentDto;
-using HealthIntelligence.Dtos.CommonDto;
-using HealthIntelligence.Dtos.PillarDto;
-using HealthIntelligence.IServices;
-using HealthIntelligence.Models;
+using VeridianClimatePulse.Backgroundjob;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Data;
+using VeridianClimatePulse.Dtos.AssessmentDto;
+using VeridianClimatePulse.Dtos.CommonDto;
+using VeridianClimatePulse.Dtos.PillarDto;
+using VeridianClimatePulse.IServices;
+using VeridianClimatePulse.Models;
 using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 using QuestPDF.Fluent;
-using HealthIntelligence.Common.Interface;
+using VeridianClimatePulse.Common.Interface;
 
-namespace HealthIntelligence.Services
+namespace VeridianClimatePulse.Services
 {
     public class PillarService : IPillarService
     {

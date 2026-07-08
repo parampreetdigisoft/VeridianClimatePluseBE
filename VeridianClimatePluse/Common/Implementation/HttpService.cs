@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.Json;
 
-namespace HealthIntelligence.Common.Implementation
+namespace VeridianClimatePulse.Common.Implementation
 {
     public class HttpService
     {

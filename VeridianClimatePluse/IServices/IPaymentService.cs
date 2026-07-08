@@ -1,7 +1,7 @@
-using HealthIntelligence.Common.Models;
-using HealthIntelligence.Dtos.PaymentDto;
+using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Dtos.PaymentDto;
 
-namespace HealthIntelligence.IServices
+namespace VeridianClimatePulse.IServices
 {
     public interface IPaymentService
     {
