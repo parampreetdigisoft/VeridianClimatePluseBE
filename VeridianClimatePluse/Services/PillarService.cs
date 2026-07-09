@@ -442,7 +442,7 @@ namespace VeridianClimatePulse.Services
                                 if (aiAnswer !=null)
                                 {
                                     var option = q.QuestionOptions
-                                    .FirstOrDefault(o => o.ScoreValue == aiAnswer.Score);
+                                    .FirstOrDefault(o => o.ScoreValue == aiAnswer.Score.ToString());
 
                                     aiAnswer.OptionText = option?.OptionText ?? "";
                                     userAnswers[int.MaxValue] = aiAnswer;

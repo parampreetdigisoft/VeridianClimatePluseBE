@@ -12,7 +12,6 @@ using VeridianClimatePulse.Common.Interface;
 using VeridianClimatePulse.Enums;
 
 namespace VeridianClimatePulse.Services
-namespace HealthIntelligence.Services
 {
     public class QuestionService : IQuestionService
     {
@@ -49,17 +48,38 @@ namespace HealthIntelligence.Services
                     .Include(o => o.QuestionOptions)
                 where !q.IsDeleted
                    && (!request.PillarID.HasValue || q.PillarID == request.PillarID.Value)
-                select new GetQuestionResponse
+                select new
                 {
-                    QuestionID = q.QuestionID,
-                    QuestionText = q.QuestionText,
-                    PillarID = q.PillarID,
+                    q.QuestionID,
+                    q.QuestionText,
+                    q.PillarID,
+                    q.Weight,
                     PillarName = q.Pillar.PillarName,
-                    DisplayOrder = q.DisplayOrder,
+                    q.DisplayOrder,
                     QuestionOptions = q.QuestionOptions.ToList()
                 };
 
-                var response = await query.ApplyPaginationAsync(request);
+                // Get paginated data
+                var pagedData = await query.ApplyPaginationAsync(request);
+
+                // Map to response DTO and calculate WeightID from Weight
+                var response = new PaginationResponse<GetQuestionResponse>
+                {
+                    Data = pagedData.Data.Select(q => new GetQuestionResponse
+                    {
+                        QuestionID = q.QuestionID,
+                        QuestionText = q.QuestionText,
+                        PillarID = q.PillarID,
+                        Weight = q.Weight,
+                        WeightID = QuestionWeightTierExtensions.GetWeightIdFromWeight(q.Weight),
+                        PillarName = q.PillarName,
+                        DisplayOrder = q.DisplayOrder,
+                        QuestionOptions = q.QuestionOptions
+                    }).ToList(),
+                    TotalRecords = pagedData.TotalRecords,
+                    PageNumber = pagedData.PageNumber,
+                    PageSize = pagedData.PageSize
+                };
 
                 return response;
             }
@@ -145,6 +165,10 @@ namespace HealthIntelligence.Services
                 question.QuestionText = q.QuestionText;
                 question.PillarID = q.PillarID;
 
+                // Get Weight value 
+                var tier = (QuestionWeightTier)q.WeightID;
+                question.Weight = tier.GetWeight();
+
                 // Sync options (Add / Update / Delete)
                 var incomingOptions = q.QuestionOptions ?? new List<QuestionOption>();
 
@@ -158,7 +182,7 @@ namespace HealthIntelligence.Services
                         option = new QuestionOption
                         {
                             OptionText = o.OptionText,
-                            DisplayOrder = (o.ScoreValue ?? -1) + 1,
+                            DisplayOrder = GetDisplayOrder(o),
                             ScoreValue = o.ScoreValue,
                             Question = question
                         };
@@ -167,27 +191,9 @@ namespace HealthIntelligence.Services
                     else // update existing
                     {
                         option.OptionText = o.OptionText;
-                        option.DisplayOrder = (o.ScoreValue ?? -1) + 1;
+                        option.DisplayOrder = GetDisplayOrder(o);
                         option.ScoreValue = o.ScoreValue;
                     }
-                }
-                // Add default N/A and Unknown only for new question
-                if (question.QuestionID == 0)
-                {
-                    question.DisplayOrder = totalQuestions + 1;
-
-                    question.QuestionOptions.Add(new QuestionOption
-                    {
-                        DisplayOrder = 6,
-                        OptionText = "N/A",
-                        ScoreValue = null
-                    });
-                    question.QuestionOptions.Add(new QuestionOption
-                    {
-                        DisplayOrder = 7,
-                        OptionText = "Unknown",
-                        ScoreValue = null
-                    });
                 }
 
                 var optionIdsFromDto = incomingOptions.Select(x => x.OptionID).ToHashSet();
@@ -216,58 +222,83 @@ namespace HealthIntelligence.Services
                 return ResultResponseDto<string>.Failure(new string[] { "There is an error please try later" });
             }
         }
+
+        private int GetDisplayOrder(QuestionOption option)
+        {
+            // Handle special options by OptionText
+            if (option.ScoreValue == "N/A")
+                return (int)ScoreDisplayOrder.NA;
+
+            if (option.ScoreValue == "Indeterminate")
+                return (int)ScoreDisplayOrder.Indeterminate;
+
+            // Try to find the ScoreValue using enum extension method
+            if (!string.IsNullOrEmpty(option.ScoreValue))
+            {
+                var displayOrder = ScoreDisplayOrderExtensions.GetDisplayOrderByScore(option.ScoreValue);
+                if (displayOrder.HasValue)
+                    return displayOrder.Value;
+            }
+
+            // If not found, return max value + 1
+            return ScoreDisplayOrderExtensions.GetMaxDisplayOrder() + 1;
+        }
+
         public async Task<ResultResponseDto<string>> AddBulkQuestion(AddBulkQuestionsDto payload)
         {
             try
             {
                 var newQuestions = new List<Question>();
+                var pillarIds = payload.Questions.Select(x => x.PillarID).Distinct().ToList();
+                var pillarQuestions = await _context.Questions
+                    .Where(x => pillarIds.Contains(x.PillarID) && !x.IsDeleted)
+                    .ToListAsync();
+
+                // Create a dictionary to track the max display order per pillar
+                var pillarQuestionCounts = pillarQuestions
+                    .GroupBy(q => q.PillarID)
+                    .ToDictionary(g => g.Key, g => g.Count());
+
+                // Initialize counts for pillars that don't have questions yet
+                foreach (var pillarId in pillarIds)
+                {
+                    if (!pillarQuestionCounts.ContainsKey(pillarId))
+                    {
+                        pillarQuestionCounts[pillarId] = 0;
+                    }
+                }
 
                 foreach (var q in payload.Questions)
                 {
-                    var pillarQuestions = await _context.Questions
-                        .Where(x => x.PillarID == q.PillarID && !x.IsDeleted)
-                        .ToListAsync();
                     if (pillarQuestions.Any(x => x.QuestionText == q.QuestionText && x.PillarID == q.PillarID))
                     {
                         continue;
                     }
 
-                    var totalQuestions = pillarQuestions.Count;
+                    // Get current count for this pillar and increment
+                    pillarQuestionCounts[q.PillarID]++;
 
                     var question = new Question
                     {
                         IsDeleted = false,
                         QuestionText = q.QuestionText,
                         PillarID = q.PillarID,
-                        DisplayOrder = totalQuestions + 1,
+                        DisplayOrder = pillarQuestionCounts[q.PillarID],
                         QuestionOptions = new List<QuestionOption>()
                     };
-
+                    var tier = (QuestionWeightTier)q.WeightID;
+                    question.Weight = tier.GetWeight();
                     // Add provided options
                     foreach (var o in q.QuestionOptions)
                     {
                         var option = new QuestionOption
                         {
                             OptionText = o.OptionText,
-                            DisplayOrder = (o.ScoreValue ?? -1) + 1,
+                            DisplayOrder = GetDisplayOrder(o),
                             ScoreValue = o.ScoreValue
                         };
                         question.QuestionOptions.Add(option);
                     }
-
-                    // Add default options (N/A & Unknown)
-                    question.QuestionOptions.Add(new QuestionOption
-                    {
-                        DisplayOrder = 6,
-                        OptionText = "N/A",
-                        ScoreValue = null
-                    });
-                    question.QuestionOptions.Add(new QuestionOption
-                    {
-                        DisplayOrder = 7,
-                        OptionText = "Unknown",
-                        ScoreValue = null
-                    });
 
                     newQuestions.Add(question);
                 }
@@ -586,7 +617,7 @@ namespace HealthIntelligence.Services
 
                     var optionTexts = options.Select(opt =>
                     {
-                        string prefix = opt.ScoreValue.HasValue ? $"{opt.ScoreValue} - " : "";
+                        string prefix = !string.IsNullOrEmpty(opt.ScoreValue) ? $"{opt.ScoreValue} - " : "";
                         return (prefix + opt.OptionText.Trim()).Trim();
                     }).ToList();
 
@@ -614,7 +645,7 @@ namespace HealthIntelligence.Services
                         var sel = options.FirstOrDefault(x => x.OptionID == ans.QuestionOptionID);
                         if (sel != null)
                         {
-                            string prefix = sel.ScoreValue.HasValue ? $"{sel.ScoreValue} - " : "";
+                            string prefix = !string.IsNullOrEmpty(sel.ScoreValue) ? $"{sel.ScoreValue} - " : "";
                             currentAnswer = (prefix + sel.OptionText.Trim()).Trim();
                         }
                     }
@@ -987,7 +1018,7 @@ namespace HealthIntelligence.Services
                         // ? ADD AI RESULT ROW
                         if (aiDict.TryGetValue(q.QuestionID, out var ai))
                         {
-                            var option = q.QuestionOptions.FirstOrDefault(x => x.ScoreValue == ai.Score);
+                            var option = q.QuestionOptions.FirstOrDefault(x => x.ScoreValue == ai.Score.ToString());
 
 
                             userInfos.Insert(0, new QuestionsByUserInfo
@@ -1207,7 +1238,7 @@ namespace HealthIntelligence.Services
 
                     foreach (var entry in relatedEntries)
                     {
-                        var option = question.QuestionOptions.FirstOrDefault(x => x.OptionID == entry.OptionID || x.ScoreValue == entry.ScoreValue);
+                        var option = question.QuestionOptions.FirstOrDefault(x => x.OptionID == entry.OptionID || x.ScoreValue == entry.ScoreValue.ToString());
                         question.History.Add(new HistoryQuestionAnswerRawDto
                         {
                             UserID = entry.UserID,

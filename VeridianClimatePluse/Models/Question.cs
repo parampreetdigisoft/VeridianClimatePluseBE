@@ -3,6 +3,7 @@ namespace VeridianClimatePulse.Models
     public class Question
     {
         public int QuestionID { get; set; }
+        public double Weight { get; set; } = 1.0;
         public int PillarID { get; set; }
         public string QuestionText { get; set; }
         public int DisplayOrder { get; set; }

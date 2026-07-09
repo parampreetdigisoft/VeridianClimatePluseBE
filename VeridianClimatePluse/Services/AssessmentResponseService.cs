@@ -534,14 +534,14 @@ namespace VeridianClimatePulse.Services
                             // 1. Exact full-text match against "N - Option text" or plain option text
                             foreach (var opt in qOptions)
                             {
-                                string prefix = opt.ScoreValue.HasValue ? $"{opt.ScoreValue} - " : "";
+                                string prefix = !string.IsNullOrEmpty(opt.ScoreValue) ? $"{opt.ScoreValue} - " : "";
                                 string fullText = (prefix + opt.OptionText.Trim()).Trim();
 
                                 if (fullText.Equals(answerText, StringComparison.OrdinalIgnoreCase) ||
                                     opt.OptionText.Trim().Equals(answerText, StringComparison.OrdinalIgnoreCase))
                                 {
                                     matchedOptionID = opt.OptionID;
-                                    score = opt.ScoreValue.HasValue ? (int?)opt.ScoreValue.Value : null;
+                                    score = !string.IsNullOrEmpty(opt.ScoreValue) ? (int?)int.Parse(opt.ScoreValue) : null;
                                     break;
                                 }
                             } 

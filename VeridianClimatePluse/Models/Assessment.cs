@@ -3,25 +3,14 @@ namespace VeridianClimatePulse.Models
     public class Assessment
     {
         public int AssessmentID { get; set; }
-
-        /// <summary>
-        /// Legacy: For backward compatibility with country-based assessments
-        /// </summary>
-        public int? UserCountryMappingID { get; set; }
-
-        /// <summary>
-        /// New: For climate program-based assessments
-        /// </summary>
-        public int? UserClimateProgramMappingID { get; set; }
-
+        public int UserCountryMappingID { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
         public bool IsActive { get; set; } = true;
         public AssessmentPhase? AssessmentPhase { get; set; } = Models.AssessmentPhase.InProgress;
 
         // Navigation properties
-        public UserCountryMapping? UserCountryMapping { get; set; }
-        public UserClimateProgramMapping? UserClimateProgramMapping { get; set; }
+        public UserCountryMapping UserCountryMapping { get; set; }
         public ICollection<PillarAssessment> PillarAssessments { get; set; } = new List<PillarAssessment>();
     }
 
