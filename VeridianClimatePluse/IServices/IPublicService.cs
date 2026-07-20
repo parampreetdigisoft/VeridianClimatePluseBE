@@ -7,18 +7,18 @@ namespace VeridianClimatePulse.IServices
 {
     public interface IPublicService
     {
-        Task<ResultResponseDto<List<PartnerCountryResponseDto>>> getAllCountries();
-        Task<ResultResponseDto<PartnerCountryFilterResponse>> GetPartnerCountriesFilterRecord();
+        Task<ResultResponseDto<List<PartnerProgramResponseDto>>> GetAllPrograms();
+        Task<ResultResponseDto<PartnerProgramFilterResponse>> GetPartnerProgramsFilterRecord();
         Task<ResultResponseDto<List<PillarResponseDto>>> GetAllPillarAsync();
-        Task<PaginationResponse<PartnerCountryResponseDto>> GetPartnerCountries(PartnerCountryRequestDto r);
-        Task<CountryCityResponse> GetCountriesAndCountries_WithStaleSupport();
-        Task<ResultResponseDto<List<PromotedPillarsResponseDto>>> GetPromotedCountries();
+        Task<PaginationResponse<PartnerProgramResponseDto>> GetPartnerPrograms(PartnerProgramRequestDto r);
+        Task<ProgramResponse> GetProgramsAndPrograms_WithStaleSupport();
+        Task<ResultResponseDto<List<PromotedPillarsResponseDto>>> GetPromotedPrograms();
         Task<ResultResponseDto<List<PillarDmiResultDto>>> GetPillarsDmi();
         Task<ResultResponseDto<EmergingTrendsResult>> GetEmergingTrendsAndIssues();
         /// <summary>
-        /// Fetches emerging trends from AI, enriches countries, and caches on success only.
+        /// Fetches emerging trends from AI, enriches programs, and caches on success only.
         /// </summary>
-        Task<bool> RefreshEmergingTrendsCacheAsync(int countryCount, CancellationToken cancellationToken = default);
+        Task<bool> RefreshEmergingTrendsCacheAsync(int programCount, CancellationToken cancellationToken = default);
         Task<ResultResponseDto<PillarLiveSignalsResult>> GetPillarLiveSignals();
         Task<ResultResponseDto<ROSEWPublicDashboardDto>> GetResilienceScorecard();
 

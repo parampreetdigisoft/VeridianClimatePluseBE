@@ -23,7 +23,7 @@ namespace VeridianClimatePulse.Services
             _context = context;
             _appLogger = appLogger;
             _stripeSetting = stripeSetting.Value;
-             StripeConfiguration.ApiKey = stripeSetting.Value.SecretKey;
+            StripeConfiguration.ApiKey = stripeSetting.Value.SecretKey;
             _appSettings = appSettings.Value;
             _httpContextAccessor = httpContextAccessor;
         }
@@ -32,7 +32,7 @@ namespace VeridianClimatePulse.Services
             try
             {
                 var user = await _context.Users.FindAsync(request.UserID);
-                if (user == null || user?.Role != UserRole.CountryUser) return ResultResponseDto<CheckoutSessionResponse>.Failure(new string[] { "Invalid user" });
+                if (user == null || user?.Role != UserRole.ProgramUser) return ResultResponseDto<CheckoutSessionResponse>.Failure(new string[] { "Invalid user" });
 
                 await CancelSessionIfPaymentNotCompelete(request);
                 var payment = new PaymentRecord
@@ -62,7 +62,7 @@ namespace VeridianClimatePulse.Services
                                 UnitAmount = request.Amount * 100,
                                 ProductData = new SessionLineItemPriceDataProductDataOptions
                                 {
-                                    Name = "Africa Health Intelligence Payment Please don't close the window after clicking on pay button",
+                                    Name = "Veridian Climate Pulse Payment Please don't close the window after clicking on pay button",
                                     Metadata = new Dictionary<string, string>
                                     {
                                         {request.Tier.ToString(), $"Provide {request.Tier.ToString()} Paid subsciption" }
@@ -132,7 +132,7 @@ namespace VeridianClimatePulse.Services
                 // idempotent update: only change if pending
                 payment.PaymentStatus = PaymentStatus.Succeeded;
                 var user = await _context.Users.FindAsync(request.UserID);
-                if (user != null && user.Role == UserRole.CountryUser)
+                if (user != null && user.Role == UserRole.ProgramUser)
                 {
                     user.Tier = payment.Tier;
                     _context.Users.Update(user);
@@ -218,32 +218,32 @@ namespace VeridianClimatePulse.Services
                 {
                     case EventTypes.CheckoutSessionCompleted: // "checkout.session.completed"
                     case EventTypes.CheckoutSessionAsyncPaymentSucceeded: // "checkout.session.async_payment_succeeded"
-                    {
-                        var session = stripeEvent.Data.Object as Session;
-                        if (session != null &&
-                            session.Metadata != null &&
-                            session.Metadata.TryGetValue("PaymentRecordId", out var paymentRecordIdStr) &&
-                            Guid.TryParse(paymentRecordIdStr, out var paymentId))
                         {
-                            var payment = await _context.PaymentRecords
-                                .FirstOrDefaultAsync(p => p.PaymentRecordID == paymentId);
-
-                            if (payment != null && payment.PaymentStatus != PaymentStatus.Succeeded)
+                            var session = stripeEvent.Data.Object as Session;
+                            if (session != null &&
+                                session.Metadata != null &&
+                                session.Metadata.TryGetValue("PaymentRecordId", out var paymentRecordIdStr) &&
+                                Guid.TryParse(paymentRecordIdStr, out var paymentId))
                             {
-                                payment.PaymentStatus = PaymentStatus.Succeeded;
+                                var payment = await _context.PaymentRecords
+                                    .FirstOrDefaultAsync(p => p.PaymentRecordID == paymentId);
 
-                                var user = await _context.Users.FindAsync(payment.UserID);
-                                if (user != null)
+                                if (payment != null && payment.PaymentStatus != PaymentStatus.Succeeded)
                                 {
-                                    user.Tier = payment.Tier;
-                                }
-                                await _context.SaveChangesAsync();
+                                    payment.PaymentStatus = PaymentStatus.Succeeded;
 
-                                // TODO: Send confirmation email or perform async background task
+                                    var user = await _context.Users.FindAsync(payment.UserID);
+                                    if (user != null)
+                                    {
+                                        user.Tier = payment.Tier;
+                                    }
+                                    await _context.SaveChangesAsync();
+
+                                    // TODO: Send confirmation email or perform async background task
+                                }
                             }
+                            break;
                         }
-                        break;
-                    }
                 }
             }
             catch (StripeException ex)

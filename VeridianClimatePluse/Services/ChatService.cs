@@ -51,40 +51,40 @@ namespace VeridianClimatePulse.Services
             }
         }
 
-        public async Task<ResultResponseDto<ChatResponseDto>> AskAboutCountry(CountryChatRequestDto request, int userId, UserRole userRole)
+        public async Task<ResultResponseDto<ChatResponseDto>> AskAboutProgram(ProgramChatRequestDto request, int userId, UserRole userRole)
         {
             try
             {
-                if(userRole == UserRole.CountryUser)
+                if(userRole == UserRole.ProgramUser)
                 {
-                    var isValidCountry = _context.PublicUserCountryMappings.Where(x => x.UserID == userId).Any(c => c.CountryID == request.CountryID);
-                    if (!isValidCountry)
+                    var isValidProgram = _context.ClientProgramMappings.Where(x => x.UserID == userId).Any(c => c.ClimateProgramID == request.ClimateProgramID);
+                    if (!isValidProgram)
                     {
-                        return ResultResponseDto<ChatResponseDto>.Failure(new[] { "You don't have access to this country data." });
+                        return ResultResponseDto<ChatResponseDto>.Failure(new[] { "You don't have access to this program data." });
                     }
                 }
 
-                var r = new ChatCountryAskQuestionRequest
+                var r = new ChatProgramAskQuestionRequest
                 {
-                    CountryID = request.CountryID,
+                    ClimateProgramID = request.ClimateProgramID,
                     PillarID = request.PillarID,
                     QuestionText = request.QuestionText,
                     FAQID = request.FAQID,
                     HistoryText = request.HistoryText
                 };
 
-                var resutl = await _aIAnalyzeService.ChatCountryAsk(r);
+                var resutl = await _aIAnalyzeService.ChatProgramAsk(r);
           
                 if (resutl == null || resutl.Success != true)
                 {
                     return ResultResponseDto<ChatResponseDto>.Failure(
-                        new[] { resutl?.Message ?? "Failed to query request from AHI Aevum." }
+                        new[] { resutl?.Message ?? "Failed to query request from VCP Aevum." }
                     );
                 }
 
                 return ResultResponseDto<ChatResponseDto>.Success(new ChatResponseDto
                 {
-                    CountryID = request.CountryID,
+                    ClimateProgramID = request.ClimateProgramID,
                     PillarID = request.PillarID,
                     QuestionText = request.QuestionText,
                     FAQID = request.FAQID,
@@ -93,7 +93,7 @@ namespace VeridianClimatePulse.Services
             }
             catch (Exception ex)
             {
-                await _appLogger.LogAsync("An error occurred while processing the AskAboutCountry request.", ex);
+                await _appLogger.LogAsync("An error occurred while processing the AskAboutProgram request.", ex);
                 return ResultResponseDto<ChatResponseDto>.Failure(new[] { "An error occurred while processing your request. Please try again later." });
             }
         }
@@ -114,7 +114,7 @@ namespace VeridianClimatePulse.Services
                 if (resutl == null || resutl.Success != true)
                 {
                     return ResultResponseDto<ChatResponseDto>.Failure(
-                        new[] { resutl?.Message ?? "Failed to query request from AHI Aevum." }
+                        new[] { resutl?.Message ?? "Failed to query request from VCP Aevum." }
                     );
                 }
 
@@ -136,25 +136,25 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                if (userRole == UserRole.CountryUser)
+                if (userRole == UserRole.ProgramUser)
                 {
-                    var userCountryIds = _context.PublicUserCountryMappings
+                    var userClimateProgramIDs = _context.ClientProgramMappings
                         .Where(x=>x.UserID == userId)
-                        .Select(x => x.CountryID)
+                        .Select(x => x.ClimateProgramID)
                         .ToList();
 
-                    var isValidCountry = request.CountryIDs
-                        .All(id => userCountryIds.Contains(id));
+                    var isValidProgram = request.ClimateProgramIDs
+                        .All(id => userClimateProgramIDs.Contains(id));
 
-                    if (!isValidCountry)
+                    if (!isValidProgram)
                     {
                         return ResultResponseDto<ChatResponseDto>
-                            .Failure(new[] { "You don't have access to this country data." });
+                            .Failure(new[] { "You don't have access to this program data." });
                     }
                 }
                 var r = new CrossComparisionRequest
                 {  
-                    CountryIDs = request.CountryIDs,
+                    ClimateProgramIDs = request.ClimateProgramIDs,
                     QuestionText = request.QuestionText,
                     HistoryText = request.HistoryText
                 };
@@ -164,7 +164,7 @@ namespace VeridianClimatePulse.Services
                 if (resutl == null || resutl.Success != true)
                 {
                     return ResultResponseDto<ChatResponseDto>.Failure(
-                        new[] { resutl?.Message ?? "Failed to query request from AHI Aevum." }
+                        new[] { resutl?.Message ?? "Failed to query request from VCP Aevum." }
                     );
                 }
 
@@ -181,38 +181,38 @@ namespace VeridianClimatePulse.Services
                 return ResultResponseDto<ChatResponseDto>.Failure(new[] { "An error occurred while processing your request. Please try again later." });
             }
         }
-        public async Task<ResultResponseDto<ChatCountryExecutiveSlidesResponse>> GetCountrySlides(int CountryId, int userId, UserRole userRole)
+        public async Task<ResultResponseDto<ChatProgramExecutiveSlidesResponse>> GetProgramSlides(int climateProgramID, int userId, UserRole userRole)
         {
-            string cacheKey = $"CountrySlides_{CountryId}";
+            string cacheKey = $"ProgramSlides_{climateProgramID}";
 
             try
             {
-                if (userRole == UserRole.CountryUser)
+                if (userRole == UserRole.ProgramUser)
                 {
-                    var isValidCountry = _context.PublicUserCountryMappings.Where(x => x.UserID == userId).Any(c => c.CountryID == CountryId);
-                    if (!isValidCountry)
+                    var isValidProgram = _context.ClientProgramMappings.Where(x => x.UserID == userId).Any(c => c.ClimateProgramID == climateProgramID);
+                    if (!isValidProgram)
                     {
-                        return ResultResponseDto<ChatCountryExecutiveSlidesResponse>.Failure(new[] { "You don't have access to this country data." });
+                        return ResultResponseDto<ChatProgramExecutiveSlidesResponse>.Failure(new[] { "You don't have access to this program data." });
                     }
                 }
 
                 var year = DateTime.UtcNow.Year;
 
-                var countryExists = await _commonService.GetCountriesRankings(CountryId, year);
+                var programExists = await _commonService.GetProgramRankings(climateProgramID, year);
 
-                var country = countryExists.FirstOrDefault(x=>x.CountryID == CountryId);
+                var program = programExists.FirstOrDefault(x=>x.ClimateProgramID == climateProgramID);
 
-                if (country == null)
+                if (program == null)
                 {
-                   return ResultResponseDto<ChatCountryExecutiveSlidesResponse>.Failure(new[] { "Country not found." });
+                   return ResultResponseDto<ChatProgramExecutiveSlidesResponse>.Failure(new[] { "Program not found." });
                 }                
 
                 var pillars = (
                     from p in _context.Pillars.Where(x => x.IsActive && !x.IsDeleted)
 
                     join x in _context.AIPillarScores
-                        .Where(a => a.CountryID == country.CountryID
-                                 && a.Year == country.DataYear)
+                        .Where(a => a.ClimateProgramID == program.ClimateProgramID
+                                 && a.Year == program.DataYear)
                     on p.PillarID equals x.PillarID into pillarScores
 
                     from score in pillarScores.DefaultIfEmpty()
@@ -227,52 +227,48 @@ namespace VeridianClimatePulse.Services
                     }
                 ).ToList();
 
-                if (userRole == UserRole.CountryUser)
+                if (userRole == UserRole.ProgramUser)
                 {
-                    var validPillars = _context.CountryUserPillarMappings.Where(x => x.UserID == userId).Select(x => x.PillarID);
+                    var validPillars = _context.ClientPillarMappings.Where(x => x.UserID == userId).Select(x => x.PillarID);
                     pillars = pillars.Where(x => validPillars.Contains(x.PillarID)).ToList();
                 }
-                
-
-
-                var countryResult = new CountryRankingResponseDto
+               
+                var programResult = new ProgramRankingResponseDto
                 {
-                    Continent = country.Continent,
-                    CountryID = country.CountryID,
-                    CountryName = country.CountryName,
-                    CountryRank = country.CountryRank,
-                    CountryAIScore = country.CountryAIScore,
-                    DataYear = country.DataYear,
-                    Region = country.Region,
-                    RegionRank= country.RegionRank,
-                    TotalCountry = country.TotalCountry,
-                    TotalCountryInRegion = country.TotalCountryInRegion,
+                    ClimateProgramID = program.ClimateProgramID,
+                    ProgramName = program.ProgramName,
+                    ProgramAIScore = program.ProgramAIScore,
+                    DataYear = program.DataYear,
+                    Location = program.Location,
+                    RegionRank= program.RegionRank,
+                    TotalProgram = program.TotalProgram,
+                    TotalProgramInRegion = program.TotalProgramInRegion,
                     Pillars = pillars.OrderBy(p => p.DisplayOrder).ToList()
                 };
 
-                if (_cache.TryGetValue(cacheKey, out ChatCountryExecutiveSlidesResponse cachedResult))
+                if (_cache.TryGetValue(cacheKey, out ChatProgramExecutiveSlidesResponse cachedResult))
                 {
-                    cachedResult.Result.Country = countryResult;
+                    cachedResult.Result.Program = programResult;
 
-                    return ResultResponseDto<ChatCountryExecutiveSlidesResponse>.Success(
+                    return ResultResponseDto<ChatProgramExecutiveSlidesResponse>.Success(
                         cachedResult,
                         new List<string>
                         {
-                            "Country executive slides fetched successfully from cache."
+                            "Program executive slides fetched successfully from cache."
                         }
                     );
                 }
 
                 // ? Fetch from AI service
-                var result = await _aIAnalyzeService.GetCountrySlides(CountryId);
+                var result = await _aIAnalyzeService.GetProgramSlides(climateProgramID);
 
                 if (result == null || result.Success != true)
                 {
-                    return ResultResponseDto<ChatCountryExecutiveSlidesResponse>.Failure(
+                    return ResultResponseDto<ChatProgramExecutiveSlidesResponse>.Failure(
                         new[]
                         {
                             result?.Message ??
-                            "Failed to fetch Country executive slides from AHI Aevum."
+                            "Failed to fetch Program executive slides from VCP Aevum."
                         }
                     );
                 }
@@ -286,23 +282,23 @@ namespace VeridianClimatePulse.Services
                         Priority = CacheItemPriority.High
                     });
 
-                result.Result.Country = countryResult;
-                return ResultResponseDto<ChatCountryExecutiveSlidesResponse>.Success(
+                result.Result.Program = programResult;
+                return ResultResponseDto<ChatProgramExecutiveSlidesResponse>.Success(
                     result,
                     new List<string>
                     {
-                         "Country executive slides fetched successfully."
+                         "Program executive slides fetched successfully."
                     }
                 );
             }
             catch (Exception ex)
             {
                 await _appLogger.LogAsync(
-                    "An error occurred while processing the GetCountrySlides request.",
+                    "An error occurred while processing the GetProgramSlides request.",
                     ex
                 );
 
-                return ResultResponseDto<ChatCountryExecutiveSlidesResponse>.Failure(
+                return ResultResponseDto<ChatProgramExecutiveSlidesResponse>.Failure(
                     new[]
                     {
                         "An error occurred while processing your request. Please try again later."

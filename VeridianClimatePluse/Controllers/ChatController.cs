@@ -1,11 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using VeridianClimatePulse.Dtos.AiDto;
 using VeridianClimatePulse.Dtos.chatDto;
 using VeridianClimatePulse.IServices;
 using VeridianClimatePulse.Models;
-using VeridianClimatePulse.Services;
 using System.Security.Claims;
 
 namespace VeridianClimatePulse.Controllers
@@ -59,8 +56,8 @@ namespace VeridianClimatePulse.Controllers
             return Ok(resp);
         }
 
-        [HttpPost("askAboutCountry")]
-        public async Task<IActionResult> AskAboutCountry([FromBody] CountryChatRequestDto request)
+        [HttpPost("askAboutProgram")]
+        public async Task<IActionResult> AskAboutProgram([FromBody] ProgramChatRequestDto request)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
@@ -75,7 +72,7 @@ namespace VeridianClimatePulse.Controllers
                 return Unauthorized("You Don't have access.");
             }
 
-            return Ok(await _chatService.AskAboutCountry(request, userId.GetValueOrDefault(), userRole));
+            return Ok(await _chatService.AskAboutProgram(request, userId.GetValueOrDefault(), userRole));
         }
 
         [HttpPost("askGlobalQuestion")]
@@ -118,8 +115,8 @@ namespace VeridianClimatePulse.Controllers
             return Ok(await _chatService.CrossComparision(request, userId.GetValueOrDefault(), userRole));
         }
 
-        [HttpPost("countrySlides")]
-        public async Task<IActionResult> GetCountrySlides([FromBody] int countryId)
+        [HttpPost("programSlides")]
+        public async Task<IActionResult> GetProgramSlides([FromBody] int ClimateProgramID)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
@@ -134,7 +131,7 @@ namespace VeridianClimatePulse.Controllers
                 return Unauthorized("You Don't have access.");
             }
 
-            return Ok(await _chatService.GetCountrySlides(countryId, userId.GetValueOrDefault(), userRole));
+            return Ok(await _chatService.GetProgramSlides(ClimateProgramID, userId.GetValueOrDefault(), userRole));
         }
     }
 }

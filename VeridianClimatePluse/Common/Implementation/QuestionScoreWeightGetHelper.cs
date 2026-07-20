@@ -4,21 +4,21 @@ using VeridianClimatePulse.Enums;
 namespace VeridianClimatePulse.Common.Implementation
 {
     // Extension methods for the enum
-    public static class ScoreDisplayOrderExtensions
+    public static class ScoreValueExtensions
     {
         private static readonly Dictionary<string, int> ScoreToDisplayOrderMap = new()
         {
-            { "4", (int)ScoreDisplayOrder.Score4 },
-            { "3", (int)ScoreDisplayOrder.Score3 },
-            { "2", (int)ScoreDisplayOrder.Score2 },
-            { "1", (int)ScoreDisplayOrder.Score1 },
-            { "0", (int)ScoreDisplayOrder.Score0 },
-            { "-1", (int)ScoreDisplayOrder.ScoreMinus1 },
-            { "-2", (int)ScoreDisplayOrder.ScoreMinus2 },
-            { "-3", (int)ScoreDisplayOrder.ScoreMinus3 },
-            { "-4", (int)ScoreDisplayOrder.ScoreMinus4 },
-            { "N/A", (int)ScoreDisplayOrder.NA },
-            { "Indeterminate", (int)ScoreDisplayOrder.Indeterminate }
+            { "4", (int)ScoreValue.Score4 },
+            { "3", (int)ScoreValue.Score3 },
+            { "2", (int)ScoreValue.Score2 },
+            { "1", (int)ScoreValue.Score1 },
+            { "0", (int)ScoreValue.Score0 },
+            { "-1", (int)ScoreValue.ScoreMinus1 },
+            { "-2", (int)ScoreValue.ScoreMinus2 },
+            { "-3", (int)ScoreValue.ScoreMinus3 },
+            { "-4", (int)ScoreValue.ScoreMinus4 },
+            { "N/A", (int)ScoreValue.NA },
+            { "Indeterminate", (int)ScoreValue.Indeterminate }
         };
 
         /// <summary>
@@ -31,7 +31,7 @@ namespace VeridianClimatePulse.Common.Implementation
 
         public static int GetMaxDisplayOrder()
         {
-            return Enum.GetValues(typeof(ScoreDisplayOrder)).Cast<ScoreDisplayOrder>().Max(x => (int)x);
+            return Enum.GetValues(typeof(ScoreValue)).Cast<ScoreValue>().Max(x => (int)x);
         }
     }
 

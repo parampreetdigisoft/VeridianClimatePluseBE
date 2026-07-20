@@ -28,10 +28,10 @@ namespace VeridianClimatePulse.Common.DI
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IPillarService, PillarService>();
             services.AddScoped<IAssessmentResponseService, AssessmentResponseService>();
-            services.AddScoped<ICountryService, CountryService>();
+            services.AddScoped<IProgramService, ProgramService>();
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<IAuthService, AuthService>();
-            services.AddScoped<ICountryUserService, CountryUserService>();
+            services.AddScoped<IClientService, ClientService>();
             services.AddScoped<ISignalDashboardService, SignalDashboardService>();
             services.AddScoped<IPaymentService, PaymentService>();
             services.AddScoped<IPublicService, PublicService>();

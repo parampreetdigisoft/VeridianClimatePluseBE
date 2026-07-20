@@ -81,25 +81,40 @@ namespace VeridianClimatePulse.Controllers
             return Ok();
         }
 
-        [HttpGet("getQuestionsByCountryMappingId")]
+        [HttpGet("getQuestionsByProgramMappingId")]
         [Authorize]
-        public async Task<IActionResult> GetQuestionsByCountryIdAsync([FromQuery] CountryPillerRequestDto requestDto)
+        public async Task<IActionResult> GetQuestionsByProgramIDAsync([FromQuery] StaffProgramPillerRequestDto requestDto)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
                 return Unauthorized("User ID not found in token.");
 
-            var result = await _questionService.GetQuestionsByCountryIdAsync(requestDto, userId.GetValueOrDefault());
+            var result = await _questionService.GetQuestionsByProgramIDAsync(requestDto, userId.GetValueOrDefault());
             if (result == null) return NotFound();
 
             return Ok(result);
         }
         
-        [HttpGet("ExportAssessment/{userCountryMappingID}")]
+        [HttpGet("ExportAssessment/{StaffProgramMappingID}")]
         [Authorize]
-        public async Task<IActionResult> ExportAssessment(int userCountryMappingID)
+        public async Task<IActionResult> ExportAssessment(int staffProgramMappingID)
         {
-            var content = await _questionService.ExportAssessment(userCountryMappingID);
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+                return Unauthorized("User ID not found in token.");
+
+
+            var role = GetRoleFromClaims();
+            if (role == null)
+                return Unauthorized("You Don't have access.");
+
+            if (!Enum.TryParse<UserRole>(role, true, out var userRole))
+            {
+                return Unauthorized("You Don't have access.");
+            }
+
+            var content = await _questionService.ExportAssessment(staffProgramMappingID, userId.GetValueOrDefault(), userRole);
+
 
             return File(content.Item2 ?? new byte[1],
                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -108,21 +123,38 @@ namespace VeridianClimatePulse.Controllers
 
         [HttpGet("getQuestionsHistoryByPillar")]
         [Authorize]
-        public async Task<IActionResult> GetQuestionsHistoryByPillar([FromQuery] GetCountryPillarHistoryRequestDto requestDto)
-        {
-            var content = await _questionService.GetQuestionsHistoryByPillar(requestDto);
-
-            return Ok(content);
-        }
-        [HttpGet("getQuestionsByCountryMappingIdForAnalyst")]
-        [Authorize]
-        public async Task<IActionResult> GetQuestionsByCountryMappingIdForAnalyst([FromQuery] CountryPillerRequestDto requestDto)
+        public async Task<IActionResult> GetQuestionsHistoryByPillar([FromQuery] GetProgramPillarHistoryRequestDto requestDto)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
                 return Unauthorized("User ID not found in token.");
 
-            var result = await _questionService.GetQuestionsByCountryMappingIdForAnalyst(requestDto, userId.GetValueOrDefault());
+            requestDto.UserID = userId.GetValueOrDefault();
+
+
+            var role = GetRoleFromClaims();
+            if (role == null)
+                return Unauthorized("You Don't have access.");
+
+            if (!Enum.TryParse<UserRole>(role, true, out var userRole))
+            {
+                return Unauthorized("You Don't have access.");
+            }
+
+            var content = await _questionService.GetQuestionsHistoryByPillar(requestDto, userRole);
+
+
+            return Ok(content);
+        }
+        [HttpGet("getQuestionsByProgramMappingIdForAnalyst")]
+        [Authorize]
+        public async Task<IActionResult> GetQuestionsByProgramMappingIdForAnalyst([FromQuery] StaffProgramPillerRequestDto requestDto)
+        {
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+                return Unauthorized("User ID not found in token.");
+
+            var result = await _questionService.GetQuestionsByProgramMappingIdForAnalyst(requestDto, userId.GetValueOrDefault());
             if (result == null) return NotFound();
 
             return Ok(result);

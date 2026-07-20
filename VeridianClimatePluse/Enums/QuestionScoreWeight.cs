@@ -2,7 +2,7 @@ using System.ComponentModel;
 
 namespace VeridianClimatePulse.Enums
 {
-    public enum ScoreDisplayOrder
+    public enum ScoreValue
     {
         [Description("4")]
         Score4 = 1,

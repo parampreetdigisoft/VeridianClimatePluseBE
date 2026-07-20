@@ -2,7 +2,7 @@
 using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using VeridianClimatePulse.Dtos.CountryUserDto;
+using VeridianClimatePulse.Dtos.ClientDto;
 using VeridianClimatePulse.Dtos.kpiDto;
 using VeridianClimatePulse.Enums;
 using VeridianClimatePulse.IServices;
@@ -59,10 +59,10 @@ namespace VeridianClimatePulse.Controllers
             }
 
             var tierName = GetTierFromClaims();
-            if (tierName == null && userRole == UserRole.CountryUser)
+            if (tierName == null && userRole == UserRole.ProgramUser)
                 return Unauthorized("You Don't have access.");
 
-            if (!Enum.TryParse<TieredAccessPlan>(tierName, true, out var userPlan) && userRole == UserRole.CountryUser)
+            if (!Enum.TryParse<TieredAccessPlan>(tierName, true, out var userPlan) && userRole == UserRole.ProgramUser)
             {
                 return Unauthorized("You Don't have access.");
             }
@@ -97,9 +97,9 @@ namespace VeridianClimatePulse.Controllers
         }
 
         [HttpPost]
-        [Route("CompareCountries")]
+        [Route("ComparePrograms")]
         [Authorize(Policy = "StaffOnly")]
-        public async Task<IActionResult> CompareCountries([FromBody] CompareCountryRequestDto r)
+        public async Task<IActionResult> ComparePrograms([FromBody] CompareProgramsRequestDto r)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
@@ -113,12 +113,12 @@ namespace VeridianClimatePulse.Controllers
             {
                 return Unauthorized("You Don't have access.");
             }
-           var result = await _kpiService.CompareCountries(r, userId.GetValueOrDefault(), userRole, true);
+           var result = await _kpiService.ComparePrograms(r, userId.GetValueOrDefault(), userRole, true);
             return Ok(result);
         }
 
-        [HttpGet("ExportCompareCountries")]
-        public async Task<IActionResult> ExportCompareCountries( string countries, string? kpis, DateTime updatedAt)
+        [HttpGet("ExportComparePrograms")]
+        public async Task<IActionResult> ExportComparePrograms( string programs, string? kpis, DateTime updatedAt)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
@@ -131,7 +131,7 @@ namespace VeridianClimatePulse.Controllers
             if (!Enum.TryParse<UserRole>(role, true, out var userRole))
                 return Unauthorized("You Don't have access.");
 
-            var countryIds = countries.Split(',')
+            var climateProgramIDs = programs.Split(',')
                 .Where(x => !string.IsNullOrWhiteSpace(x))
                 .Select(int.Parse)
                 .ToList();
@@ -146,14 +146,14 @@ namespace VeridianClimatePulse.Controllers
                     .ToList();
             }
 
-            var request = new CompareCountryRequestDto
+            var request = new CompareProgramsRequestDto
             {
-                Countries = countryIds,
+                Programs = climateProgramIDs,
                 Kpis = kpiIds,
                 UpdatedAt = updatedAt
             };
 
-            var content = await _kpiService.ExportCompareCountries(request, userId.Value, userRole);
+            var content = await _kpiService.ExportComparePrograms(request, userId.Value, userRole);
 
             return File(content.Item2,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -179,10 +179,10 @@ namespace VeridianClimatePulse.Controllers
             }
 
             var tierName = GetTierFromClaims();
-            if (tierName == null && userRole == UserRole.CountryUser)
+            if (tierName == null && userRole == UserRole.ProgramUser)
                 return Unauthorized("You Don't have access.");
 
-            if (!Enum.TryParse<TieredAccessPlan>(tierName, true, out var userPlan) && userRole == UserRole.CountryUser)
+            if (!Enum.TryParse<TieredAccessPlan>(tierName, true, out var userPlan) && userRole == UserRole.ProgramUser)
             {
                 return Unauthorized("You Don't have access.");
             }

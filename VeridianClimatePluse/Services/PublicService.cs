@@ -40,68 +40,66 @@ namespace VeridianClimatePulse.Services
             _aIAnalyzeService = aIAnalyzeService;
             _configuration = configuration;
         }
-        public async Task<ResultResponseDto<List<PartnerCountryResponseDto>>> getAllCountries()
+        public async Task<ResultResponseDto<List<PartnerProgramResponseDto>>> GetAllPrograms()
         {
             try
             {
-                var result = await _context.Countries.Where(c => c.IsActive && !c.IsDeleted).
-                 Select(c => new PartnerCountryResponseDto
+                var result = await _context.ClimatePrograms.Where(c => c.IsActive && !c.IsDeleted).
+                 Select(c => new PartnerProgramResponseDto
                  {
-                     CountryID = c.CountryID,                     
-                     CountryName = c.CountryName,
-                     CountryCode = c.CountryCode,
-                     Continent = c.Continent,
-                     
-                 }).OrderBy(x => x.CountryName).ToListAsync();
+                     ClimateProgramID = c.ClimateProgramID,                     
+                     ProgramName = c.ProgramName,
+                     Location = c.Location
+                 }).OrderBy(x => x.ProgramName).ToListAsync();
 
-                return ResultResponseDto<List<PartnerCountryResponseDto>>.Success(result, new string[] { "get All Countries successfully" });
+                return ResultResponseDto<List<PartnerProgramResponseDto>>.Success(result, new string[] { "Get All Programs successfully" });
             }
             catch (Exception ex)
             {
-                await _appLogger.LogAsync("Error Occure in getAllCountries", ex);
-                return ResultResponseDto<List<PartnerCountryResponseDto>>.Failure(new string[] { "There is an error please try later" });
+                await _appLogger.LogAsync("Error Occured in GetAllPrograms", ex);
+                return ResultResponseDto<List<PartnerProgramResponseDto>>.Failure(new string[] { "There is an error please try later" });
             }
         }
-        public async Task<ResultResponseDto<PartnerCountryFilterResponse>> GetPartnerCountriesFilterRecord()
+        public async Task<ResultResponseDto<PartnerProgramFilterResponse>> GetPartnerProgramsFilterRecord()
         {
             try
             {
-                // Fetch all active Countries once
-                var activeCountries = await _context.Countries
+                // Fetch all active Climate Programs once
+                var activePrograms = await _context.ClimatePrograms
                     .Where(x => !x.IsDeleted)
                     .ToListAsync();
 
-                var res = new PartnerCountryFilterResponse
+                var res = new PartnerProgramFilterResponse
                 {
-                    Countries = activeCountries.Select(x=>x.CountryName)
+                    Programs = activePrograms.Select(x=>x.ProgramName)
                         .Distinct()
                         .ToList(),
 
-                    //Countries = activeCountries
-                    //    .Select(x => new PartnerCountryDto
+                    //Countries = activePrograms
+                    //    .Select(x => new PartnerProgramDto
                     //    {
-                    //        CountryID = x.CountryID,
+                    //        ClimateProgramID = x.ClimateProgramID,
                     //        CountryName = x.CountryName
                     //    })
                     //    .ToList(),
 
-                    Regions = activeCountries
-                        .Select(x => x.Region)
-                        .Where(r => !string.IsNullOrEmpty(r))
-                        .Distinct()
-                        .ToList()
+                    //Regions = activePrograms        
+                    //    .Select(x => x.Region)
+                    //    .Where(r => !string.IsNullOrEmpty(r))
+                    //    .Distinct()
+                    //    .ToList()
                 };
 
-                return ResultResponseDto<PartnerCountryFilterResponse>.Success(
+                return ResultResponseDto<PartnerProgramFilterResponse>.Success(
                     res,
-                    new List<string> { "Get Countries history successfully" }
+                    new List<string> { "Get program filter data successfully" }
                 );
             }
             catch (Exception ex)
             {
-                await _appLogger.LogAsync("Error Occured in GetPartnerCountriesFilterRecord", ex);
-                return ResultResponseDto<PartnerCountryFilterResponse>.Failure(
-                    new string[] { "Failed to get Partner country filter data" }
+                await _appLogger.LogAsync("Error Occured in GetPartnerProgramsFilterRecord", ex);
+                return ResultResponseDto<PartnerProgramFilterResponse>.Failure(
+                    new string[] { "Failed to get Partner program filter data" }
                 );
             }
         }
@@ -119,27 +117,27 @@ namespace VeridianClimatePulse.Services
                     PillarName = x.PillarName,
                     ImagePath = x.ImagePath
                 }).ToList();
-                return ResultResponseDto<List<PillarResponseDto>>.Success(res, new List<string> { "Get Countries history successfully" });
+                return ResultResponseDto<List<PillarResponseDto>>.Success(res, new List<string> { "Get Pillars history successfully" });
 
             }
             catch (Exception ex)
             {
                 await _appLogger.LogAsync("Error Occure in GetAllPillarAsync", ex);
-                return ResultResponseDto<List<PillarResponseDto>>.Failure(new string[] { "Failed to get Piilar detail" });
+                return ResultResponseDto<List<PillarResponseDto>>.Failure(new string[] { "Failed to get Pillar detail" });
             }
         }
-        public async Task<PaginationResponse<PartnerCountryResponseDto>> GetPartnerCountries(PartnerCountryRequestDto request)
+        public async Task<PaginationResponse<PartnerProgramResponseDto>> GetPartnerPrograms(PartnerProgramRequestDto request)
         {
             try
             {
                 var year = DateTime.Now.Year;
 
 
-                var cityQuery =
-                   from c in _context.Countries.Where(x => !request.CountryID.HasValue || x.CountryID == request.CountryID)
-                   join uc in _context.UserCountryMappings on c.CountryID equals uc.CountryID into ucg
+                var programQuery =
+                   from c in _context.ClimatePrograms.Where(x => !request.ClimateProgramID.HasValue || x.ClimateProgramID == request.ClimateProgramID)
+                   join uc in _context.StaffProgramMappings on c.ClimateProgramID equals uc.ClimateProgramID into ucg
                    from uc in ucg.DefaultIfEmpty()
-                   join a in _context.Assessments on uc.UserCountryMappingID equals a.UserCountryMappingID into ag
+                   join a in _context.Assessments on uc.StaffProgramMappingID equals a.StaffProgramMappingID into ag
                    from a in ag.DefaultIfEmpty()
                    join pa in _context.PillarAssessments.Where(x=> !request.PillarID.HasValue || x.PillarID == request.PillarID) 
                    on a.AssessmentID equals pa.AssessmentID into pag
@@ -151,79 +149,69 @@ namespace VeridianClimatePulse.Services
                     (a == null || a.UpdatedAt.Year == year) 
                    group r by new
                    {
-                       c.CountryID,                       
-                       c.CountryCode,
+                       c.ClimateProgramID,                       
+                       c.ProgramName,
                        c.Image,
-                       c.Continent,
-                       c.CountryName,
-                       c.Region,
-                       EvaluatorCount = _context.UserCountryMappings
-                                           .Count(x => x.CountryID == c.CountryID && !x.IsDeleted)
+                       c.Location,
+                       EvaluatorCount = _context.StaffProgramMappings
+                                           .Count(x => x.ClimateProgramID == c.ClimateProgramID && !x.IsDeleted)
                    }
                    into g
-                   select new PartnerCountryResponseDto
+                   select new PartnerProgramResponseDto
                    {
-                       CountryID = g.Key.CountryID,
-                       Continent = g.Key.Continent,
-                       CountryName = g.Key.CountryName,
-                       CountryCode = g.Key.CountryCode,
-                       Region = g.Key.Region,                       
+                       ClimateProgramID = g.Key.ClimateProgramID,
+                       ProgramName = g.Key.ProgramName,
                        Image = g.Key.Image,
+                       Location = g.Key.Location,
                        Score = (decimal)g.Sum(x => (int?)x.Score ?? 0) / (g.Key.EvaluatorCount == 0 ? 1 : g.Key.EvaluatorCount),
                        HighScore = g.Max(x=>(int?)x.Score ?? 0),
                        LowerScore = g.Min(x => (int?)x.Score ?? 0),
                        Progress = ((decimal)g.Sum(x => (int?)x.Score ?? 0)) / ((g.Key.EvaluatorCount == 0 ? 1 : g.Key.EvaluatorCount) * g.Count()),
                    };
 
-                if (!string.IsNullOrWhiteSpace(request.Country))
+                if (!string.IsNullOrWhiteSpace(request.Program))
                 {
-                    cityQuery = cityQuery.Where(c => c.CountryName.Contains(request.Country));
+                    programQuery = programQuery.Where(c => c.ProgramName.Contains(request.Program));
                 }
 
-                // Only filter by Region if a value is provided
-                if (!string.IsNullOrWhiteSpace(request.Region))
-                {
-                    cityQuery = cityQuery.Where(c => c.Region != null && c.Region.Contains(request.Region));
-                }
-
-                var response = await cityQuery.ApplyPaginationAsync(request);
+                var response = await programQuery.ApplyPaginationAsync(request);
 
                 return response;
 
             }
             catch (Exception ex)
             {
-                await _appLogger.LogAsync("Error Occure in GetCountriesProgressByUserId", ex);
+                await _appLogger.LogAsync("Error Occure in GetPartnerPrograms", ex);
                 return new();
             }
         }
 
-        public async Task<CountryCityResponse> GetCountriesAndCountries_WithStaleSupport()
+        public async Task<ProgramResponse> GetProgramsAndPrograms_WithStaleSupport()
         {
             try
             {
-                string jsonFilePath = Path.Combine(_env.WebRootPath, "data\\countries_cache.json");
+                string jsonFilePath = Path.Combine(_env.WebRootPath, "data\\programs_cache.json");
                 if (!File.Exists(jsonFilePath))
-                    return new CountryCityResponse(); // ? NEVER return null
+                    return new ProgramResponse(); // ? NEVER return null
 
                 var json = await File.ReadAllTextAsync(jsonFilePath);
 
-                var data = JsonSerializer.Deserialize<CountryCityResponse>(json);
+                var data = JsonSerializer.Deserialize<ProgramResponse>(json);
 
-                return data ?? new CountryCityResponse();
+                return data ?? new ProgramResponse();
             }
             catch (Exception ex)
             {
                 // ? Optional: log error
-                // _logger.LogError(ex, "Failed to load country-city file");
+                // _logger.LogError(ex, "Failed to load programs file");
 
-                return new CountryCityResponse(); // ? Safe fallback
+                return new ProgramResponse(); // ? Safe fallback
             }
         }
 
-        public async Task<ResultResponseDto<List<PromotedPillarsResponseDto>>> GetPromotedCountries()
+        public async Task<ResultResponseDto<List<PromotedPillarsResponseDto>>> GetPromotedPrograms()
         {
-            const string cacheKey = "GetPromotedCountries";
+            const string cacheKey = "GetPromotedPrograms";
 
             try
             {
@@ -231,7 +219,7 @@ namespace VeridianClimatePulse.Services
                 {
                     return ResultResponseDto<List<PromotedPillarsResponseDto>>.Success(
                         cachedData,
-                        new List<string> { "Promoted Countries fetched successfully" });
+                        new List<string> { "Promoted Programs fetched successfully" });
                 }
 
                 int currentYear = DateTime.UtcNow.Year;
@@ -249,12 +237,12 @@ namespace VeridianClimatePulse.Services
                 int userId = admin?.UserID ?? 0;
                 int role = (int)(admin?.Role ?? Models.UserRole.Admin);
 
-                var pillarScores = await _commonService.GetCountriesProgressAsync(userId, role, currentYear);
+                var pillarScores = await _commonService.GetProgramProgressAsync(userId, role, currentYear);
 
                 int[] selectedPillars = { 1, 4, 7, 15, 22 };
                 pillarScores = pillarScores.Where(x => selectedPillars.Contains(x.PillarID)).ToList();
 
-                var topCountriesByPillar = pillarScores
+                var topProgramsByPillar = pillarScores
                     .GroupBy(x => x.PillarID)
                     .ToDictionary(
                         g => g.Key,
@@ -263,16 +251,16 @@ namespace VeridianClimatePulse.Services
                               .ToList()
                     );
 
-                var countryIds = topCountriesByPillar
+                var climateProgramIDs = topProgramsByPillar
                     .SelectMany(x => x.Value)
-                    .Select(x => x.CountryID)
+                    .Select(x => x.ClimateProgramID)
                     .Distinct()
                     .ToList();
 
                 var scoreLookup = pillarScores
-                    .GroupBy(x => new { x.CountryID, x.PillarID })
+                    .GroupBy(x => new { x.ClimateProgramID, x.PillarID })
                     .ToDictionary(
-                        g => (g.Key.CountryID, g.Key.PillarID),
+                        g => (g.Key.ClimateProgramID, g.Key.PillarID),
                         g => g.First().ScoreProgress
                     );
 
@@ -280,10 +268,10 @@ namespace VeridianClimatePulse.Services
                     .AsNoTracking()
                     .Where(x =>
                         x.Year == currentYear &&
-                        countryIds.Contains(x.CountryID) &&
+                        climateProgramIDs.Contains(x.ClimateProgramID) &&
                         selectedPillars.Contains(x.PillarID) &&
-                        x.Country.IsActive &&
-                        !x.Country.IsDeleted)
+                        x.Program.IsActive &&
+                        !x.Program.IsDeleted)
                     .GroupBy(x => new
                     {
                         x.PillarID,
@@ -298,16 +286,14 @@ namespace VeridianClimatePulse.Services
                         DisplayOrder = g.Key.DisplayOrder,
                         ImagePath = g.Key.ImagePath,
 
-                        Countries = g
+                        Programs = g
                             .OrderByDescending(x => x.AIProgress)
-                            .Select(c => new PromotedCountryResponseDto
+                            .Select(c => new PromotedProgramResponseDto
                             {
-                                CountryID = c.CountryID,
-                                CountryName = c.Country.CountryName,
-                                CountryCode = c.Country.CountryCode,
-                                Continent = c.Country.Continent,
-                                Region = c.Country.Region,
-                                Image = c.Country.Image,
+                                ClimateProgramID = c.ClimateProgramID,
+                                ProgramName = c.Program.ProgramName,
+                                Location = c.Program.Location,
+                                Image = c.Program.Image,
                                 Description = c.EvidenceSummary,
                                 ScoreProgress = 0 
                             })
@@ -318,17 +304,17 @@ namespace VeridianClimatePulse.Services
 
                 foreach (var pillar in result)
                 {
-                    foreach (var country in pillar.Countries)
+                    foreach (var program in pillar.Programs)
                     {
                         if (scoreLookup.TryGetValue(
-                            (country.CountryID, pillar.PillarID),
+                            (program.ClimateProgramID, pillar.PillarID),
                             out var score))
                         {
-                            country.ScoreProgress = score;
+                            program.ScoreProgress = Math.Round(score, 2);
                         }
                     }
 
-                    pillar.Countries = pillar.Countries
+                    pillar.Programs = pillar.Programs
                         .OrderByDescending(x => x.ScoreProgress)
                         .Take(3)
                         .ToList();
@@ -343,14 +329,14 @@ namespace VeridianClimatePulse.Services
 
                 return ResultResponseDto<List<PromotedPillarsResponseDto>>.Success(
                     result,
-                    new List<string> { "Promoted Countries fetched successfully" });
+                    new List<string> { "Promoted Programs fetched successfully" });
             }
             catch (Exception ex)
             {
-                await _appLogger.LogAsync("Error Occurred in GetPromotedCountries", ex);
+                await _appLogger.LogAsync("Error Occurred in GetPromotedPrograms", ex);
 
                 return ResultResponseDto<List<PromotedPillarsResponseDto>>.Failure(
-                    new[] { "Failed to get promoted Countries" });
+                    new[] { "Failed to get promoted Programs" });
             }
         }
 
@@ -442,11 +428,11 @@ namespace VeridianClimatePulse.Services
             PropertyNameCaseInsensitive = true
         };
 
-        private static string EmergingTrendsCacheKey(int countryCount) =>
-            $"EmergingTrendsAndIssues_{countryCount}";
+        private static string EmergingTrendsCacheKey(int programCount) =>
+            $"EmergingTrendsAndIssues_{programCount}";
 
-        private static string EmergingTrendsStaleCacheKey(int countryCount) =>
-            $"EmergingTrendsAndIssues_Stale_{countryCount}";
+        private static string EmergingTrendsStaleCacheKey(int programCount) =>
+            $"EmergingTrendsAndIssues_Stale_{programCount}";
 
         private TimeSpan EmergingTrendsCacheDuration =>
             TimeSpan.FromHours(_configuration.GetValue("EmergingTrendsCache:CacheExpirationHours", 12));
@@ -455,8 +441,8 @@ namespace VeridianClimatePulse.Services
             TimeSpan.FromHours(_configuration.GetValue("EmergingTrendsCache:StaleCacheExpirationHours", 168));
 
         private static bool IsEmergingTrendsCacheValid(EmergingTrendsResult? data) =>
-            data?.Countries?.Any(c =>
-                !string.IsNullOrWhiteSpace(c.Country) &&
+            data?.Programs?.Any(c =>
+                !string.IsNullOrWhiteSpace(c.ProgramName) &&
                 !string.IsNullOrWhiteSpace(c.SourceUrl)) == true;
 
         private static EmergingTrendsResult CloneEmergingTrendsResult(EmergingTrendsResult data) =>
@@ -466,13 +452,13 @@ namespace VeridianClimatePulse.Services
             ) ?? new EmergingTrendsResult();
 
         private bool TryGetEmergingTrendsFromCache(
-            int countryCount,
+            int programCount,
             out EmergingTrendsResult? result,
             bool allowStale = false)
         {
             result = null;
 
-            if (_cache.TryGetValue(EmergingTrendsCacheKey(countryCount), out EmergingTrendsResult? cached))
+            if (_cache.TryGetValue(EmergingTrendsCacheKey(programCount), out EmergingTrendsResult? cached))
             {
                 if (IsEmergingTrendsCacheValid(cached))
                 {
@@ -480,11 +466,11 @@ namespace VeridianClimatePulse.Services
                     return true;
                 }
 
-                _cache.Remove(EmergingTrendsCacheKey(countryCount));
+                _cache.Remove(EmergingTrendsCacheKey(programCount));
             }
 
             if (allowStale
-                && _cache.TryGetValue(EmergingTrendsStaleCacheKey(countryCount), out EmergingTrendsResult? stale)
+                && _cache.TryGetValue(EmergingTrendsStaleCacheKey(programCount), out EmergingTrendsResult? stale)
                 && IsEmergingTrendsCacheValid(stale))
             {
                 result = CloneEmergingTrendsResult(stale!);
@@ -495,7 +481,7 @@ namespace VeridianClimatePulse.Services
         }
 
         private void SetEmergingTrendsCache(
-            int countryCount,
+            int programCount,
             EmergingTrendsResult data,
             bool updateStale = true)
         {
@@ -505,12 +491,12 @@ namespace VeridianClimatePulse.Services
                 AbsoluteExpirationRelativeToNow = EmergingTrendsCacheDuration,
                 Priority = CacheItemPriority.NeverRemove
             };
-            _cache.Set(EmergingTrendsCacheKey(countryCount), primarySnapshot, cacheOptions);
+            _cache.Set(EmergingTrendsCacheKey(programCount), primarySnapshot, cacheOptions);
 
             if (updateStale)
             {
                 _cache.Set(
-                    EmergingTrendsStaleCacheKey(countryCount),
+                    EmergingTrendsStaleCacheKey(programCount),
                     CloneEmergingTrendsResult(primarySnapshot),
                     new MemoryCacheEntryOptions
                     {
@@ -521,16 +507,16 @@ namespace VeridianClimatePulse.Services
             }
         }
 
-        private bool PreserveEmergingTrendsCacheOnRefreshFailure(int countryCount)
+        private bool PreserveEmergingTrendsCacheOnRefreshFailure(int programCount)
         {
-            if (!TryGetEmergingTrendsFromCache(countryCount, out var lastGood, allowStale: true)
+            if (!TryGetEmergingTrendsFromCache(programCount, out var lastGood, allowStale: true)
                 || lastGood == null)
             {
                 return false;
             }
 
             // Re-write both cache entries so TTLs are extended and snapshots stay isolated.
-            SetEmergingTrendsCache(countryCount, lastGood, updateStale: true);
+            SetEmergingTrendsCache(programCount, lastGood, updateStale: true);
             return true;
         }
 
@@ -538,13 +524,13 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                var countryCount = _configuration.GetValue("EmergingTrendsCache:CountryCount", 8);
+                var programCount = _configuration.GetValue("EmergingTrendsCache:ProgramCount", 8);
 
-                if (TryGetEmergingTrendsFromCache(countryCount, out var cachedResult, allowStale: true)
+                if (TryGetEmergingTrendsFromCache(programCount, out var cachedResult, allowStale: true)
                     && cachedResult != null)
                 {
                     var fromPrimary = _cache.TryGetValue(
-                        EmergingTrendsCacheKey(countryCount),
+                        EmergingTrendsCacheKey(programCount),
                         out EmergingTrendsResult _);
 
                     return ResultResponseDto<EmergingTrendsResult>.Success(
@@ -582,22 +568,22 @@ namespace VeridianClimatePulse.Services
         }
 
         public async Task<bool> RefreshEmergingTrendsCacheAsync(
-            int countryCount,
+            int programCount,
             CancellationToken cancellationToken = default)
         {
             try
             {
-                countryCount = _configuration.GetValue("EmergingTrendsCache:CountryCount", countryCount);
+                programCount = _configuration.GetValue("EmergingTrendsCache:programCount", programCount);
 
-                var enriched = await FetchAndEnrichEmergingTrendsAsync(countryCount, cancellationToken);
+                var enriched = await FetchAndEnrichEmergingTrendsAsync(programCount, cancellationToken);
 
                 if (IsEmergingTrendsCacheValid(enriched))
                 {
-                    SetEmergingTrendsCache(countryCount, enriched!);
+                    SetEmergingTrendsCache(programCount, enriched!);
                     return true;
                 }
 
-                return PreserveEmergingTrendsCacheOnRefreshFailure(countryCount);
+                return PreserveEmergingTrendsCacheOnRefreshFailure(programCount);
             }
             catch (Exception ex)
             {
@@ -606,15 +592,15 @@ namespace VeridianClimatePulse.Services
                     ex
                 );
 
-                return PreserveEmergingTrendsCacheOnRefreshFailure(countryCount);
+                return PreserveEmergingTrendsCacheOnRefreshFailure(programCount);
             }
         }
 
         private async Task<EmergingTrendsResult?> FetchAndEnrichEmergingTrendsAsync(
-            int countryCount,
+            int programCount,
             CancellationToken cancellationToken = default)
         {
-            var result = await _aIAnalyzeService.GetEmergingTrendsAndIssues(countryCount);
+            var result = await _aIAnalyzeService.GetEmergingTrendsAndIssues(programCount);
 
             if (result == null || result.Success != true || result.Result == null)
             {
@@ -626,46 +612,44 @@ namespace VeridianClimatePulse.Services
                 return null;
             }
 
-            var countryCodes = result.Result.Countries
-                .Select(c => c.CountryCode?.Trim().ToLower())
+            var programNames = result.Result.Programs
+                .Select(c => c.ProgramName?.Trim().ToLower())
                 .Where(x => !string.IsNullOrWhiteSpace(x))
                 .ToList();
 
-            var countries = result.Result.Countries
-                .Select(c => c.Country?.Trim().ToLower())
+            var locations = result.Result.Programs
+                .Select(c => c.Location?.Trim().ToLower())
                 .Where(x => !string.IsNullOrWhiteSpace(x))
                 .ToList();
 
-            var countryLookup = await _context.Countries
+            var programLookup = await _context.ClimatePrograms
                 .AsNoTracking()
                 .Where(c =>
                     c.IsActive &&
                     !c.IsDeleted &&
                     (
-                        countryCodes.Contains(c.CountryCode.ToLower()) ||
-                        countries.Contains(c.CountryName.ToLower())
+                        programNames.Contains(c.ProgramName.ToLower()) ||
+                        locations.Contains(c.Location.ToLower())
                     ))
                 .Select(c => new
                 {
-                    CountryCode = c.CountryCode.ToLower(),
-                    CountryName = c.CountryName.ToLower(),
+                    ProgramName = c.ProgramName.ToLower(),
+                    Location = c.Location.ToLower(),
                     c.Image,
-                    c.Region,
-                    c.Continent,
-                    c.CountryID
+                    c.ClimateProgramID
                 })
                 .ToListAsync(cancellationToken);
 
-            foreach (var trendCountry in result.Result.Countries)
+            foreach (var trendProgram in result.Result.Programs)
             {
-                var countryCode = trendCountry.CountryCode?.Trim().ToLower();
-                var countryName = trendCountry.Country?.Trim().ToLower();
+                var programName = trendProgram.ProgramName?.Trim().ToLower();
+                var location = trendProgram.Location?.Trim().ToLower();
 
-                var matchedCountry = countryLookup.FirstOrDefault(x =>
-                    x.CountryCode == countryCode ||
-                    x.CountryName == countryName);
+                var matchedProgram = programLookup.FirstOrDefault(x =>
+                    x.ProgramName == programName ||
+                    x.Location == location);
 
-                trendCountry.ImagePath = matchedCountry?.Image ?? "";
+                trendProgram.ImagePath = matchedProgram?.Image ?? "";
             }
 
             return result.Result;
@@ -805,25 +789,26 @@ namespace VeridianClimatePulse.Services
                     questions.Add(questionScore);
                 }
 
-                var spResultsByCountry = spResults
-                    .Where(x => x.CountryID.HasValue)
-                    .GroupBy(x => x.CountryID!.Value)
+                var spResultsByProgram = spResults
+                    .Where(x => x.ClimateProgramID.HasValue)
+                    .GroupBy(x => x.ClimateProgramID!.Value)
                         .ToDictionary(g => g.Key, g => g.Average(x => x.AiQuestionScore)).OrderByDescending(x=>x.Value).Take(3);
 
 
-                var dbCountries = _context.Countries.Where(x=> spResultsByCountry.Select(k=>k.Key).Contains(x.CountryID)).ToList();
-                var countries = new List<ROSEWPublicCountryDto>();
+                var dbPrograms = _context.ClimatePrograms.Where(x=> spResultsByProgram.Select(k=>k.Key).Contains(x.ClimateProgramID)).ToList();
+                var programs = new List<ROSEWPublicProgramDto>();
 
-                foreach (var country in spResultsByCountry)
+                foreach (var program in spResultsByProgram)
                 {
-                    var Score = (decimal)country.Value.GetValueOrDefault();
-                    var countryScore = new ROSEWPublicCountryDto
+                    var Score = (decimal)program    .Value.GetValueOrDefault();
+                    var programScore = new ROSEWPublicProgramDto
                     {
-                        Country = dbCountries.FirstOrDefault(x=>x.CountryID == country.Key)?.CountryName ?? "",
+                        ProgramName = dbPrograms.FirstOrDefault(x=>x.ClimateProgramID == program.Key)?.ProgramName ?? "",
+                        Location = dbPrograms.FirstOrDefault(x=>x.ClimateProgramID == program.Key)?.Location ?? "",
                         UpdatedAt = DateTime.UtcNow,
                         Condition = interpretations.FirstOrDefault(i => i.MaxRange >= Score && i.MinRange <= Score)?.Condition ?? "Moderate Stress (Watch)"
                     };
-                    countries.Add(countryScore);
+                    programs.Add(programScore);
                 }
 
 
@@ -831,10 +816,10 @@ namespace VeridianClimatePulse.Services
 
                 var response = new ROSEWPublicDashboardDto
                 {
-                    Score = overAllScore ?? 0m,
+                    Score = Math.Round(overAllScore ?? 0m, 2),
                     UpdatedAt = spResults.Max(x => x.AiUpdatedAt),
                     OverallCondition = interpretations.FirstOrDefault(i => i.MaxRange >= (overAllScore ?? 0m) && i.MinRange <= (overAllScore ?? 0m))?.Condition ?? "Moderate Stress (Watch)",
-                    Countries = countries,
+                    Programs = programs,
                     Questions = questions
 
                 };
@@ -846,20 +831,20 @@ namespace VeridianClimatePulse.Services
                 await _appLogger.LogAsync($"Error in GetDashboardMode for mode {dashboardModeId}", ex);
                 return ResultResponseDto<ROSEWPublicDashboardDto>.Failure(new[] { "There is an error, please try later" });
             }
-        }       
+        }
     }
 }
 
-public class CountryCityResponse
+public class ProgramResponse
 {
     public bool error { get; set; }
     public string msg { get; set; }
-    public List<CountryData> data { get; set; }
+    public List<ProgramData> data { get; set; }
 }
 
-public class CountryData
+public class ProgramData
 {
-    public string Country { get; set; }
-    public List<string> Countries { get; set; }
+    public string Program { get; set; }
+    public List<string> Programs { get; set; }
 }
 

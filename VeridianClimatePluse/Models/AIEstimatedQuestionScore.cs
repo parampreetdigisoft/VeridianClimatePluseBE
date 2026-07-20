@@ -3,7 +3,7 @@ namespace VeridianClimatePulse.Models
     public class AIEstimatedQuestionScore
     {
         public int QuestionScoreID { get; set; }
-        public int CountryID { get; set; }
+        public int ClimateProgramID { get; set; }
         public int PillarID { get; set; }
         public int QuestionID { get; set; }
         public int Year { get; set; }
@@ -49,7 +49,7 @@ namespace VeridianClimatePulse.Models
         public DateTime UpdatedAt { get; set; }
 
         // Navigation Properties
-        public Country? Country { get; set; }
+        public ClimateProgram? Program { get; set; }
         public Pillar? Pillar { get; set; }
         public Question? Question { get; set; }
     }

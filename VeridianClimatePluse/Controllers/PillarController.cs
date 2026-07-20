@@ -119,7 +119,7 @@ namespace VeridianClimatePulse.Controllers
 
         [HttpGet("ExportPillarsHistoryByUserId")]
         [Authorize]
-        public async Task<IActionResult> ExportPillarsHistoryByUserId([FromQuery] GetCountryPillarHistoryRequestDto requestDto)
+        public async Task<IActionResult> ExportPillarsHistoryByUserId([FromQuery] GetProgramPillarHistoryRequestDto requestDto)
         {
             var claimUserId = GetUserIdFromClaims();
             if (claimUserId == null || claimUserId != requestDto.UserID)
@@ -144,6 +144,7 @@ namespace VeridianClimatePulse.Controllers
 
             return File(fileBytes, contentType, fileName);
         }
+
         [HttpPost("GetResponsesByUserId")]
         public async Task<IActionResult> GetResponsesByUserId([FromBody] GetPillarResponseHistoryRequestNewDto requestDto)
         {

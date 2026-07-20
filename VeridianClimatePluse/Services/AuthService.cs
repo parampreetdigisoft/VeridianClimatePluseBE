@@ -1,28 +1,22 @@
-using DocumentFormat.OpenXml.InkML;
-using DocumentFormat.OpenXml.Spreadsheet;
-
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-
-using VeridianClimatePulse.Common.Implementation;
+using System.Data;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using VeridianClimatePulse.Common.Interface;
 using VeridianClimatePulse.Common.Models;
 using VeridianClimatePulse.Common.Models.settings;
 using VeridianClimatePulse.Data;
-using VeridianClimatePulse.Dtos.CountryDto;
-using VeridianClimatePulse.Dtos.CountryUserDto;
+using VeridianClimatePulse.Dtos.ProgramDto;
+using VeridianClimatePulse.Dtos.ClientDto;
 using VeridianClimatePulse.Dtos.EmailExistDto;
 using VeridianClimatePulse.Dtos.UserDtos;
 using VeridianClimatePulse.Enums;
 using VeridianClimatePulse.IServices;
 using VeridianClimatePulse.Models;
 using VeridianClimatePulse.Views.EmailModels;
-
-using System.Data;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace VeridianClimatePulse.Services
 {
@@ -70,6 +64,7 @@ namespace VeridianClimatePulse.Services
         {
             return _context.Users.FirstOrDefault(u => u.Email == email && !u.IsDeleted);
         }
+
         public async Task<User?> GetByEmailAsync(string email)
         {
             try
@@ -82,10 +77,12 @@ namespace VeridianClimatePulse.Services
             }
             return null;
         }
+
         public bool VerifyPassword(string password, string hash)
         {
             return BCrypt.Net.BCrypt.Verify(password, hash);
         }
+
         public async Task<ResultResponseDto<object>> ForgotPassword(string email)
         {
             try
@@ -101,17 +98,17 @@ namespace VeridianClimatePulse.Services
                     var passwordToken = hash;
                     var token = passwordToken.Replace("+", " ");
 
-                    var url = user.Role != UserRole.CountryUser ? _appSettings.ApplicationUrl : _appSettings.PublicApplicationUrl;
+                    var url = user.Role != UserRole.ProgramUser ? _appSettings.ApplicationUrl : _appSettings.PublicApplicationUrl;
                     string passwordResetLink = url + "/auth/reset-password?PasswordToken=" + token;
 
-                    var sub = "Password Update Link – Africa Health Intelligence Platform";
+                    var sub = "Password Update Link – Veridian Climate Pulse Platform";
                     var model = new EmailInvitationSendRequestDto
                     {
                         ResetPasswordUrl = passwordResetLink,
                         Title = sub,
                         ApiUrl = _appSettings.ApiUrl,
                         ApplicationUrl = url,
-                        MsgText= "A request was made to update the password for your Africa Health Intelligence (AHI) account. To proceed, please use the secure link below:",
+                        MsgText= "A request was made to update the password for your Veridian Climate Pulse (VCP) account. To proceed, please use the secure link below:",
                         IsShowBtnText=true,
                         IsLoginBtn=false,
                         BtnText= "Update Password",
@@ -137,6 +134,7 @@ namespace VeridianClimatePulse.Services
 
             }
         }
+
         public async Task<ResultResponseDto<object>> ChangePassword(string passwordToken, string password)
         {
             try
@@ -168,6 +166,7 @@ namespace VeridianClimatePulse.Services
                 return ResultResponseDto<object>.Failure(new string[] { "There is an error please try later" });
             }
         }
+
         public async Task<ResultResponseDto<UserResponseDto>> Login(string email, string password)
         {
             try
@@ -180,9 +179,9 @@ namespace VeridianClimatePulse.Services
                 if (user.IsEmailConfirmed && !user.IsDeleted && user.Is2FAEnabled)
                 {
                     var r = await SendTwoFactorOTPAsync(user);
-                    if (r.Succeeded) 
+                    if (r.Succeeded)
                     {
-                        var sendOpt = new UserResponseDto {};                        
+                        var sendOpt = new UserResponseDto {};
                         return ResultResponseDto<UserResponseDto>.Success(sendOpt,
                           new string[] { "We've sent a one-time verification code (OTP) to your registered email address. Please check your inbox and enter the OTP to continue." });
                     }
@@ -210,7 +209,7 @@ namespace VeridianClimatePulse.Services
             {
                 string message = string.Empty;
 
-                if (user.Role != UserRole.CountryUser)
+                if (user.Role != UserRole.ProgramUser)
                 {
                     message = $"Your mail is not confirmed or de-activated by super {(user.Role == UserRole.Analyst ? "Admin" : "Analyst")}";
                 }
@@ -225,8 +224,8 @@ namespace VeridianClimatePulse.Services
             {
                 new Claim(ClaimTypes.Name, user.Email),
                 new Claim(ClaimTypes.Role, user.Role.ToString()),
-                new Claim("Tier", user.Tier?.ToString() ?? ""),         
-                new Claim("UserId", user!.UserID.ToString())       
+                new Claim("Tier", user.Tier?.ToString() ?? ""),
+                new Claim("UserId", user!.UserID.ToString())
             };
             var tokenExpired = DateTime.UtcNow.AddHours(1);
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSetting.Key));
@@ -290,19 +289,19 @@ namespace VeridianClimatePulse.Services
                 var token = passwordToken.Replace("+", " ");
                 string roleName = inviteUser.Role.ToString();
 
-                if (inviteUser.Role == UserRole.CountryUser)
+                if (inviteUser.Role == UserRole.ProgramUser)
                 {
-                    roleName = "Country User";
+                    roleName = "Program User";
                 }
 
-                string sub = $"{roleName} Access Granted – Africa Health Intelligence Platform";
-                var url = _appSettings.ApplicationUrl; 
+                string sub = $"{roleName} Access Granted – Veridian Climate Pulse Platform";
+                var url = _appSettings.ApplicationUrl;
                 string passwordResetLink = url + "/auth/reset-password?PasswordToken=" + token;
 
-                var countryName = string.Join(", ",
-                                         _context.Countries
-                                         .Where(c => inviteUser.CountryID.Contains(c.CountryID))
-                                         .Select(c => c.CountryName));
+                var programName = string.Join(", ",
+                                         _context.ClimatePrograms
+                                         .Where(c => inviteUser.ClimateProgramID.Contains(c.ClimateProgramID))
+                                         .Select(c => c.ProgramName));
                 var invitedUser = _context.Users.FirstOrDefault(x => x.UserID == inviteUser.InvitedUserID);
 
                 var model = new EmailInvitationSendRequestDto
@@ -318,43 +317,47 @@ namespace VeridianClimatePulse.Services
                 {
                     UserRole.Analyst => "~/Views/EmailTemplates/AnalystSendInvitation.cshtml",
                     UserRole.Evaluator => "~/Views/EmailTemplates/EvaluatorSendInvitation.cshtml",
-                    UserRole.CountryUser => "~/Views/EmailTemplates/CountryUserSendInvitation.cshtml",
+                    UserRole.ProgramUser => "~/Views/EmailTemplates/ProgramUserSendInvitation.cshtml",
                     _ => ""
                 };
 
                 var isMailSent = await _emailService.SendEmailAsync(inviteUser.Email, sub, viewNamePath, model);
                 user.ResetToken = token;
                 user.ResetTokenDate = DateTime.Now;
-                user.IsDeleted = false;                
+                user.IsDeleted = false;
                 _context.Users.Update(user);
-                if (inviteUser.Role != UserRole.CountryUser)
+                if (inviteUser.Role != UserRole.ProgramUser)
                 {
-                    foreach (var id in inviteUser.CountryID)
+                    foreach (var id in inviteUser.ClimateProgramID)
                     {
-                        var mapping = new UserCountryMapping
+                        var mapping = new StaffProgramMapping
                         {
                             UserID = user.UserID,
-                            CountryID = id,
+                            ClimateProgramID = id,
                             AssignedByUserId = inviteUser.InvitedUserID,
                             Role = user.Role
                         };
-                        _context.UserCountryMappings.Add(mapping);
+                        _context.StaffProgramMappings.Add(mapping);
                     }
                 }
-                
+
                 await _context.SaveChangesAsync();
-                if (inviteUser.Role == UserRole.CountryUser)
+                if (inviteUser.Role == UserRole.ProgramUser)
                 {
                     string tierName = inviteUser.Tier?.ToString();
-                    var kpiPayload = new AddCountryUserKpisCountryAndPillar
+                    var kpiPayload = new AddClientKpisProgramAndPillar
                     {
-                        Countries = inviteUser.CountryID,
-                        Pillars = inviteUser.Pillars
+                        Programs = inviteUser.IsAllPrograms ? new List<int>() : (inviteUser.ClimateProgramID ?? new List<int>()),
+                        Pillars = inviteUser.Pillars,
+                        IsAllPrograms = inviteUser.IsAllPrograms
                     };
-                   var response =  await AddCountryUserKpisCountryAndPillar(kpiPayload, user.UserID, tierName);
+                    var response = await AddProgramUserKpisProgramAndPillar(kpiPayload, user.UserID, tierName);
                     if (!response.Succeeded)
                     {
-                        return ResultResponseDto<object>.Failure(new string[] { "There is an error please try later" });
+                        return ResultResponseDto<object>.Failure(
+                            response.Messages?.Length > 0
+                                ? response.Messages
+                                : new string[] { "There is an error please try later" });
                     }
                 }
                 if (isMailSent)
@@ -363,11 +366,11 @@ namespace VeridianClimatePulse.Services
 
                     if (isExistingUser)
                     {
-                        msg = "This user already exists. An invitation has been sent to confirm their email and access the assigned country.";
+                        msg = "This user already exists. An invitation has been sent to confirm their email and access the assigned program.";
                     }
                     else
                     {
-                        msg = "User added successfully. An invitation has been sent to access the assigned country.";
+                        msg = "User added successfully. An invitation has been sent to access the assigned program.";
                     }
                     return ResultResponseDto<object>.Success(new { }, new string[] { msg });
                 }
@@ -379,7 +382,7 @@ namespace VeridianClimatePulse.Services
                 return ResultResponseDto<object>.Failure(new string[] { "There is an error please try later" });
             }
         }
-        
+
         public async Task<ResultResponseDto<object>> UpdateInviteUser(UpdateInviteUserDto inviteUser)
         {
             try
@@ -406,76 +409,105 @@ namespace VeridianClimatePulse.Services
                 user.Tier = inviteUser.Tier;
                 _context.Users.Update(user);
 
-                // Determine added/deleted countries
-                var (countriesToAdd, countriesToDelete) = await GetCountryMappingChangesAsync(
+                // Determine added/deleted programs
+                var (programsToAdd, programsToDelete) = await GetProgramMappingChangesAsync(
                     user.UserID,
                     inviteUser.InvitedUserID,
                     inviteUser.Role,
-                    inviteUser.CountryID
+                    inviteUser.ClimateProgramID
                 );
 
-                // Handle country mappings based on role
-                if (inviteUser.Role == UserRole.CountryUser)
+                // Handle program mappings based on role
+                if (inviteUser.Role == UserRole.ProgramUser)
                 {
-                    // Delete old countries
-                    var existingCountries = await _context.PublicUserCountryMappings
+                    if (inviteUser.Tier == TieredAccessPlan.Premium)
+                    {
+                        var allPillarIds = await _context.Pillars.Select(p => p.PillarID).ToListAsync();
+                        inviteUser.Pillars = allPillarIds;
+
+                        if (inviteUser.IsAllPrograms)
+                        {
+                            inviteUser.ClimateProgramID = await _context.ClimatePrograms
+                                .Where(c => c.IsActive)
+                                .Select(c => c.ClimateProgramID)
+                                .ToListAsync();
+                        }
+                        else if (inviteUser.ClimateProgramID == null || inviteUser.ClimateProgramID.Count < 1)
+                        {
+                            return ResultResponseDto<object>.Failure(new[]
+                            {
+                                "Premium plan requires at least one country, or all countries."
+                            });
+                        }
+
+                        // Recompute add/delete after Premium normalization
+                        (programsToAdd, programsToDelete) = await GetProgramMappingChangesAsync(
+                            user.UserID,
+                            inviteUser.InvitedUserID,
+                            inviteUser.Role,
+                            inviteUser.ClimateProgramID
+                        );
+                    }
+
+                    // Delete old programs
+                    var existingPrograms = await _context.ClientProgramMappings
                         .Where(m => m.UserID == user.UserID)
                         .ToListAsync();
-                    var countriesToRemove = existingCountries.Where(c => countriesToDelete.Contains(c.CountryID)).ToList();
-                    _context.PublicUserCountryMappings.RemoveRange(countriesToRemove);
+                    var programsToRemove = existingPrograms.Where(c => programsToDelete.Contains(c.ClimateProgramID)).ToList();
+                    _context.ClientProgramMappings.RemoveRange(programsToRemove);
 
-                    // Add new countries
+                    // Add new programs
                     var utcNow = DateTime.UtcNow;
-                    var newCountries = countriesToAdd.Select(c => new PublicUserCountryMapping
+                    var newPrograms = programsToAdd.Select(c => new ClientProgramMapping
                     {
                         UserID = user.UserID,
-                        CountryID = c,
+                        ClimateProgramID = c,
                         IsActive = true,
                         UpdatedAt = utcNow
                     });
-                    await _context.PublicUserCountryMappings.AddRangeAsync(newCountries);
+                    await _context.ClientProgramMappings.AddRangeAsync(newPrograms);
 
                     // Update Pillars
                     if (inviteUser.Pillars != null)
                     {
-                        var existingPillars = await _context.CountryUserPillarMappings
+                        var existingPillars = await _context.ClientPillarMappings
                             .Where(m => m.UserID == user.UserID)
                             .ToListAsync();
-                        _context.CountryUserPillarMappings.RemoveRange(existingPillars);
+                        _context.ClientPillarMappings.RemoveRange(existingPillars);
 
-                        var newPillars = inviteUser.Pillars.Select(p => new CountryUserPillarMapping
+                        var newPillars = inviteUser.Pillars.Select(p => new ClientPillarMapping
                         {
                             UserID = user.UserID,
                             PillarID = p,
                             IsActive = true,
                             UpdatedAt = utcNow
                         });
-                        await _context.CountryUserPillarMappings.AddRangeAsync(newPillars);
+                        await _context.ClientPillarMappings.AddRangeAsync(newPillars);
                     }
                 }
                 else
                 {
-                    // Other roles use UserCountryMappings
-                    var existingMappings = _context.UserCountryMappings
+                    // Other roles use StaffProgramMappings
+                    var existingMappings = _context.StaffProgramMappings
                         .Where(m => m.UserID == user.UserID && m.AssignedByUserId == inviteUser.InvitedUserID && !m.IsDeleted)
                         .ToList();
 
                     // Add missing
-                    var addMappings = countriesToAdd.Select(c => new UserCountryMapping
+                    var addMappings = programsToAdd.Select(c => new StaffProgramMapping
                     {
                         UserID = user.UserID,
-                        CountryID = c,
+                        ClimateProgramID = c,
                         AssignedByUserId = inviteUser.InvitedUserID,
                         Role = user.Role
                     });
-                    _context.UserCountryMappings.AddRange(addMappings);
+                    _context.StaffProgramMappings.AddRange(addMappings);
 
                     // Delete removed
-                    var deleteMappings = existingMappings.Where(m => countriesToDelete.Contains(m.CountryID)).ToList();
+                    var deleteMappings = existingMappings.Where(m => programsToDelete.Contains(m.ClimateProgramID)).ToList();
                     foreach (var m in deleteMappings)
                     {
                         m.IsDeleted = true;
-                        _context.UserCountryMappings.Update(m);
+                        _context.StaffProgramMappings.Update(m);
                     }
                 }
 
@@ -487,24 +519,24 @@ namespace VeridianClimatePulse.Services
                 string msg = "User updated successfully";
 
                 var invitedUser = userList.FirstOrDefault(x => x.UserID == inviteUser.InvitedUserID);
-                var mergedCountries = (inviteUser.CountryID ?? new List<int>()).Concat(countriesToDelete).ToList();
-                var countryDetails = await _context.Countries
-                    .Where(c => mergedCountries.Contains(c.CountryID))
+                var mergedPrograms = (inviteUser.ClimateProgramID ?? new List<int>()).Concat(programsToAdd).ToList();
+                var programDetails = await _context.ClimatePrograms
+                    .Where(c => mergedPrograms.Contains(c.ClimateProgramID))
                     .ToListAsync();
 
-                if (countriesToAdd.Count > 0)
+                if (programsToAdd.Count > 0)
                 {
                     isMailSent = true;
-                    var addedNames = string.Join(", ", countryDetails.Where(c => countriesToAdd.Contains(c.CountryID)).Select(c => c.CountryName));
-                    msgText = $"You are receiving this email because {invitedUser?.FullName} recently requested country assignment ({addedNames}) for your AHI account.";
+                    var addedNames = string.Join(", ", programDetails.Where(c => programsToAdd.Contains(c.ClimateProgramID)).Select(c => c.ProgramName));
+                    msgText = $"You are receiving this email because {invitedUser?.FullName} recently requested program assignment ({addedNames}) for your VCP account.";
                 }
 
-                if (countriesToDelete.Count > 0)
+                if (programsToDelete.Count > 0)
                 {
-                    var removedNames = string.Join(", ", countryDetails.Where(c => countriesToDelete.Contains(c.CountryID)).Select(c => c.CountryName));
+                    var removedNames = string.Join(", ", programDetails.Where(c => programsToDelete.Contains(c.ClimateProgramID)).Select(c => c.ProgramName));
                     msgText = isMailSent
-                        ? msgText + $" Additionally, you no longer have access to the countries ({removedNames}) for your AHI account."
-                        : $"You are receiving this email because {invitedUser?.FullName} recently removed your access to the following countries ({removedNames}) for your AHI account.";
+                        ? msgText + $" Additionally, you no longer have access to the programs ({removedNames}) for your VCP account."
+                        : $"You are receiving this email because {invitedUser?.FullName} recently removed your access to the following programs ({removedNames}) for your VCP account.";
                     isMailSent = true;
                 }
 
@@ -512,9 +544,9 @@ namespace VeridianClimatePulse.Services
                 {
                     var hash = BCrypt.Net.BCrypt.HashPassword(inviteUser.Email);
                     var token = hash.Replace("+", " ");
-                    string roleName = inviteUser.Role == UserRole.CountryUser ? "Country User" : inviteUser.Role.ToString();
-                    string sub = $"{roleName} Access Granted – Africa Health Intelligence Platform";
-                    var url = user.Role != UserRole.CountryUser ? _appSettings.ApplicationUrl : _appSettings.PublicApplicationUrl;
+                    string roleName = inviteUser.Role == UserRole.ProgramUser ? "Program User" : inviteUser.Role.ToString();
+                    string sub = $"{roleName} Access Granted – Veridian Climate Pulse Platform";
+                    var url = user.Role != UserRole.ProgramUser ? _appSettings.ApplicationUrl : _appSettings.PublicApplicationUrl;
                     string passwordResetLink = url + "/auth/reset-password?PasswordToken=" + token;
 
                     var model = new EmailInvitationSendRequestDto
@@ -531,7 +563,7 @@ namespace VeridianClimatePulse.Services
                     {
                         UserRole.Analyst => "~/Views/EmailTemplates/AnalystSendInvitation.cshtml",
                         UserRole.Evaluator => "~/Views/EmailTemplates/EvaluatorSendInvitation.cshtml",
-                        UserRole.CountryUser => "~/Views/EmailTemplates/CountryUserSendInvitation.cshtml",
+                        UserRole.ProgramUser => "~/Views/EmailTemplates/ProgramUserSendInvitation.cshtml",
                         _ => ""
                     };
 
@@ -568,25 +600,25 @@ namespace VeridianClimatePulse.Services
                 user.IsDeleted = true;
                 _context.Users.Update(user);
 
-                if (user.Role == UserRole.CountryUser)
+                if (user.Role == UserRole.ProgramUser)
                 {
                     var utcNow = DateTime.UtcNow;
 
-                    // ?? Deactivate PublicUserCountryMappings
-                    var publicMappings = await _context.PublicUserCountryMappings
+                    // ?? Deactivate ClientProgramMappings
+                    var clientMappings = await _context.ClientProgramMappings
                         .Where(x => x.UserID == userId && x.IsActive)
                         .ToListAsync();
 
-                    foreach (var mapping in publicMappings)
+                    foreach (var mapping in clientMappings)
                     {
                         mapping.IsActive = false;
                         mapping.UpdatedAt = utcNow;
                     }
 
-                    _context.PublicUserCountryMappings.UpdateRange(publicMappings);
+                    _context.ClientProgramMappings.UpdateRange(clientMappings);
 
-                    // ?? Deactivate CountryUserPillarMappings
-                    var pillarMappings = await _context.CountryUserPillarMappings
+                    // ?? Deactivate ClientPillarMappings
+                    var pillarMappings = await _context.ClientPillarMappings
                         .Where(x => x.UserID == userId && x.IsActive)
                         .ToListAsync();
 
@@ -596,20 +628,20 @@ namespace VeridianClimatePulse.Services
                         mapping.UpdatedAt = utcNow;
                     }
 
-                    _context.CountryUserPillarMappings.UpdateRange(pillarMappings);
+                    _context.ClientPillarMappings.UpdateRange(pillarMappings);
                 }
                 else
                 {
                     // ?? Handle other roles (existing logic)
 
-                    var userMappings = await _context.UserCountryMappings
+                    var userMappings = await _context.StaffProgramMappings
                         .Where(x => x.UserID == userId && !x.IsDeleted)
                         .ToListAsync();
 
                     foreach (var m in userMappings)
                     {
                         m.IsDeleted = true;
-                        _context.UserCountryMappings.Update(m);
+                        _context.StaffProgramMappings.Update(m);
                     }
                 }
 
@@ -643,11 +675,12 @@ namespace VeridianClimatePulse.Services
                 return ResultResponseDto<UserResponseDto>.Failure(new string[] { "There is an error please try later" });
             }
         }
+
         public async Task<ResultResponseDto<object>> CheckEmailExist(EmailExistRequestDto request)
         {
             try
             {
-                var user =  _context.Users.FirstOrDefault(u => u.Email == request.Email.Trim() && !u.IsDeleted);
+                var user = _context.Users.FirstOrDefault(u => u.Email == request.Email.Trim() && !u.IsDeleted);
                 bool exists = user != null && user.UserID != request.UserID;
 
                 if (exists)
@@ -660,7 +693,7 @@ namespace VeridianClimatePulse.Services
 
                 return ResultResponseDto<object>.Success(
                     messages: new[] { "Email is Valid" }
-                    
+
                 );
             }
             catch (Exception ex)
@@ -669,6 +702,7 @@ namespace VeridianClimatePulse.Services
                 return ResultResponseDto<object>.Failure(new string[] { "There is an error please try later" });
             }
         }
+
         public async Task<ResultResponseDto<object>> InviteBulkUser(InviteBulkUserDto inviteUserList)
         {
             try
@@ -684,9 +718,9 @@ namespace VeridianClimatePulse.Services
                     .Where(u => emails.Contains(u.Email))
                     .ToDictionaryAsync(u => u.Email, u => u);
 
-                // Collect new users & country mappings
+                // Collect new users & program mappings
                 var newUsers = new List<User>();
-                var newMappings = new List<UserCountryMapping>();
+                var newMappings = new List<StaffProgramMapping>();
                 var emailTasks = new List<Task>();
 
                 foreach (var inviteUser in inviteUserList.users)
@@ -722,38 +756,38 @@ namespace VeridianClimatePulse.Services
                         return ResultResponseDto<object>.Failure(new[] { $"User {inviteUser.Email} already has a different role." });
                     }
 
-                    var existingCountryIds = _context.UserCountryMappings
-						.Where(m => m.UserID == user.UserID && m.AssignedByUserId == inviteUser.InvitedUserID && !m.IsDeleted)
-                        .Select(m => m.CountryID)
+                    var existingProgramIds = _context.StaffProgramMappings
+                        .Where(m => m.UserID == user.UserID && m.AssignedByUserId == inviteUser.InvitedUserID && !m.IsDeleted)
+                        .Select(m => m.ClimateProgramID)
                         .ToList();
 
-                    var countriesToAdd = inviteUser.CountryID.Except(existingCountryIds).ToList();
-                    foreach (var countryId in countriesToAdd)
+                    var programsToAdd = inviteUser.ClimateProgramID.Except(existingProgramIds).ToList();
+                    foreach (var programId in programsToAdd)
                     {
-                        newMappings.Add(new UserCountryMapping
-						{
+                        newMappings.Add(new StaffProgramMapping
+                        {
                             UserID = user.UserID,
-                            CountryID = countryId,
+                            ClimateProgramID = programId,
                             AssignedByUserId = inviteUser.InvitedUserID,
                             Role = user.Role
                         });
                     }
 
-                    if (countriesToAdd.Count() > 0)
+                    if (programsToAdd.Count() > 0)
                     {
                         // 5. Handle email invitation
                         var token = BCrypt.Net.BCrypt.HashPassword(inviteUser.Email).Replace("+", " ");
-                        var url = user.Role != UserRole.CountryUser ? _appSettings.ApplicationUrl : _appSettings.PublicApplicationUrl;
+                        var url = user.Role != UserRole.ProgramUser ? _appSettings.ApplicationUrl : _appSettings.PublicApplicationUrl;
 
                         string resetLink = $"{url}/auth/reset-password?PasswordToken={token}";
 
-                        var countryName = string.Join(", ",
-                         _context.Countries
-                         .Where(c => countriesToAdd.Contains(c.CountryID))
-                         .Select(c => c.CountryName));
+                        var programName = string.Join(", ",
+                         _context.ClimatePrograms
+                         .Where(c => programsToAdd.Contains(c.ClimateProgramID))
+                         .Select(c => c.ProgramName));
                         var invitedUser = _context.Users.FirstOrDefault(x => x.UserID == inviteUser.InvitedUserID);
 
-                        string sub = $"{inviteUser.Role.ToString()} Access Granted – Africa Health Intelligence Platform";
+                        string sub = $"{inviteUser.Role.ToString()} Access Granted – Veridian Climate Pulse Platform";
                         var model = new EmailInvitationSendRequestDto
                         {
                             ResetPasswordUrl = resetLink,
@@ -779,13 +813,13 @@ namespace VeridianClimatePulse.Services
                 }
 
 
-                if (newMappings.Any()) await _context.UserCountryMappings.AddRangeAsync(newMappings);
+                if (newMappings.Any()) await _context.StaffProgramMappings.AddRangeAsync(newMappings);
                 await _context.SaveChangesAsync();
 
                 // 8. Send all emails in parallel
                 if (emailTasks.Any()) await Task.WhenAll(emailTasks);
 
-                return ResultResponseDto<object>.Success(new { }, new[] { "Users will get invitation link to see assigned countries." });
+                return ResultResponseDto<object>.Success(new { }, new[] { "Users will get invitation link to see assigned programs." });
             }
             catch (Exception ex)
             {
@@ -794,7 +828,7 @@ namespace VeridianClimatePulse.Services
             }
         }
 
-        public async Task<ResultResponseDto<string>> SendMailForEditAssessment(SendRequestMailToUpdateCountry request)
+        public async Task<ResultResponseDto<string>> SendMailForEditAssessment(SendRequestMailToUpdateProgram request)
         {
             try
             {
@@ -809,19 +843,19 @@ namespace VeridianClimatePulse.Services
                 {
                     var user = users.FirstOrDefault(x => x.UserID == request.UserID);
                     var year = DateTime.Now.Year;
-                    var assessment = await _context.Assessments.Include(x => x.UserCountryMapping).FirstOrDefaultAsync(x => x.UserCountryMappingID == request.UserCountryMappingID && x.CreatedAt.Year== year);
+                    var assessment = await _context.Assessments.Include(x => x.StaffProgramMapping).FirstOrDefaultAsync(x => x.StaffProgramMappingID == request.StaffProgramMappingID && x.CreatedAt.Year== year);
                     if (assessment != null)
                     {
-                        var country = _context.Countries.FirstOrDefault(x => x.CountryID == assessment.UserCountryMapping.CountryID);
+                        var program = _context.ClimatePrograms.FirstOrDefault(x => x.ClimateProgramID == assessment.StaffProgramMapping.ClimateProgramID);
 
                         var url = string.Empty;
                         if (mailToUser.Role == UserRole.Admin)
                         {
-                            url = $"admin/assesment/2/{assessment.UserCountryMapping.CountryID}";
+                            url = $"admin/assesment/2/{assessment.StaffProgramMapping.ClimateProgramID}";
                         }
                         else
                         {
-                            url = $"analyst/evaluator-response/{request.UserID}/{assessment.UserCountryMapping.CountryID}";
+                            url = $"analyst/evaluator-response/{request.UserID}/{assessment.StaffProgramMapping.ClimateProgramID}";
                         }
 
                         string passwordResetLink = _appSettings.ApplicationUrl+"/" + url;
@@ -831,7 +865,7 @@ namespace VeridianClimatePulse.Services
                             Title = "Request to update assessment",
                             ApiUrl = _appSettings.ApiUrl,
                             ApplicationUrl = _appSettings.ApplicationUrl,
-                            MsgText = $"You are receiving this email because user {user?.FullName} recently requested to update assessment of {country?.CountryName} from their Africa Health Intelligence account.",
+                            MsgText = $"You are receiving this email because user {user?.FullName} recently requested to update assessment of {program?.ProgramName} from their Veridian Climate Pulse account.",
                             BtnText = "Give Access",
                             Mail = _appSettings.AdminMail
                         };
@@ -853,7 +887,8 @@ namespace VeridianClimatePulse.Services
                 return ResultResponseDto<string>.Failure(new string[] { "There is an error please try later" });
             }
         }
-        public async Task<ResultResponseDto<UserResponseDto>> CountryUserSignUp(CountryUserSignUpDto request)
+
+        public async Task<ResultResponseDto<UserResponseDto>> ClientSignUp(ClientSignUpDto request)
         {
             try
             {
@@ -905,7 +940,7 @@ namespace VeridianClimatePulse.Services
                         user.ResetTokenDate = DateTime.Now;
                     }
                 }
-                user.TemporaryEmail = user.Email;                
+                user.TemporaryEmail = user.Email;
 
                 _context.Users.Update(user);
 
@@ -918,25 +953,26 @@ namespace VeridianClimatePulse.Services
                 }
                 else if (isMailSend)
                 {
-                    return ResultResponseDto<UserResponseDto>.Success(new(), new[] 
-                    { 
-                        "We’ve sent you a verification link. Please check your email." 
+                    return ResultResponseDto<UserResponseDto>.Success(new(), new[]
+                    {
+                        "We’ve sent you a verification link. Please check your email."
                     });
                 }
                 else
                 {
-                    return ResultResponseDto<UserResponseDto>.Success(new(), new[] 
-                    { 
-                        "Email could not be sent. Please use 'Forgot Password' to generate a new one." 
+                    return ResultResponseDto<UserResponseDto>.Success(new(), new[]
+                    {
+                        "Email could not be sent. Please use 'Forgot Password' to generate a new one."
                     });
                 }
             }
             catch (Exception ex)
             {
                 await _appLogger.LogAsync("Error during user signup", ex);
-                return ResultResponseDto<UserResponseDto>.Failure(new[] { "Something went wrong. Please try again later."});
+                return ResultResponseDto<UserResponseDto>.Failure(new[] { "Something went wrong. Please try again later." });
             }
         }
+
         public async Task<ResultResponseDto<object>> ConfirmMail(string passwordToken)
         {
             try
@@ -980,6 +1016,7 @@ namespace VeridianClimatePulse.Services
                     new string[] { "There is an error please try later" });
             }
         }
+
         public async Task<ResultResponseDto<object>> ContactUs(ContactUsRequestDto requestDto)
         {
             try
@@ -992,7 +1029,7 @@ namespace VeridianClimatePulse.Services
                     ApplicationUrl = _appSettings.PublicApplicationUrl,
                     MsgText = requestDto.Message,
                     DescriptionAboutBtnText
-                        = $"This email was sent by {requestDto.Name} from {requestDto.Country}. You can reach them at: {requestDto.Email}.",
+                        = $"This email was sent by {requestDto.Name} from {requestDto.Program}. You can reach them at: {requestDto.Email}.",
                     IsLoginBtn = false,
                     IsShowBtnText = false,
                     Mail = _appSettings.AdminMail
@@ -1036,12 +1073,12 @@ namespace VeridianClimatePulse.Services
 
                 // 3?? Store hashed OTP + expiry
                 user.ResetToken = otp;
-                user.ResetTokenDate = DateTime.Now; 
+                user.ResetTokenDate = DateTime.Now;
 
                 _context.Users.Update(user);
                 await _context.SaveChangesAsync();
 
-                var url = user.Role != UserRole.CountryUser ? _appSettings.ApplicationUrl : _appSettings.PublicApplicationUrl;
+                var url = user.Role != UserRole.ProgramUser ? _appSettings.ApplicationUrl : _appSettings.PublicApplicationUrl;
                 // 4?? Send the OTP via email
                 var model = new EmailInvitationSendRequestDto
                 {
@@ -1054,7 +1091,7 @@ namespace VeridianClimatePulse.Services
                     IsLoginBtn = false,
                     IsShowBtnText = false,
                     Mail = _appSettings.AdminMail,
-                    DescriptionAboutBtnText = "You are receiving this email because a login attempt was made to your AHI account. " +
+                    DescriptionAboutBtnText = "You are receiving this email because a login attempt was made to your VCP account. " +
                                "If this was you, please use the above OTP to complete your sign-in. " +
                                "If you did not request this login, please secure your account immediately by resetting your password."
                 };
@@ -1156,7 +1193,7 @@ namespace VeridianClimatePulse.Services
 
                     user.ProfileImagePath = "/uploads/" + fileName;
                 }
-               
+
                 bool isMailSent = false;
                 if (requestDto.Email != user.Email)
                 {
@@ -1176,7 +1213,7 @@ namespace VeridianClimatePulse.Services
                         Title = "Verify Your Email",
                         ApiUrl = _appSettings.ApiUrl,
                         ApplicationUrl = _appSettings.PublicApplicationUrl,
-                        MsgText = "A request was made to update the Email for your Africa Health Intelligence (AHI) account. Please verify your email or reset your password.",
+                        MsgText = "A request was made to update the Email for your Veridian Climate Pulse (VCP) account. Please verify your email or reset your password.",
                         Mail = _appSettings.AdminMail,
                         BtnText = "Verify",
                         DescriptionAboutBtnText = "Please verify your email address by clicking the button above."
@@ -1187,13 +1224,13 @@ namespace VeridianClimatePulse.Services
                     );
 
                     if (isMailSent)
-                    {                       
+                    {
                         user.IsEmailConfirmed = false; // Require reconfirmation for new email                       
                         user.ResetToken = token;
                         user.ResetTokenDate = DateTime.Now;
                     }
                     else
-                    {                        
+                    {
                         return ResultResponseDto<UpdateUserResponseDto>.Failure(new List<string>()
                             { "Failed to send email confirmation. Please try again later." }
                         );
@@ -1227,7 +1264,7 @@ namespace VeridianClimatePulse.Services
                 {
                     messages.Add("Updated Successfully");
                 }
-                return ResultResponseDto<UpdateUserResponseDto>.Success(response, messages);               
+                return ResultResponseDto<UpdateUserResponseDto>.Success(response, messages);
             }
             catch (Exception ex)
             {
@@ -1235,7 +1272,88 @@ namespace VeridianClimatePulse.Services
                 return ResultResponseDto<UpdateUserResponseDto>.Failure(new string[] { "There is an error please try later" });
             }
         }
-        public async Task<ResultResponseDto<string>> AddCountryUserKpisCountryAndPillar(AddCountryUserKpisCountryAndPillar payload, int userId, string tierName)
+
+        //public async Task<ResultResponseDto<string>> AddProgramUserKpisProgramAndPillar(AddClientKpisProgramAndPillar payload, int userId, string tierName)
+        //{
+        //    try
+        //    {
+        //        if (string.IsNullOrWhiteSpace(tierName))
+        //            return ResultResponseDto<string>.Failure(new[] { "Access tier information is missing. Please log in again." });
+
+        //        if (!Enum.TryParse<TieredAccessPlan>(tierName, true, out var tier))
+        //            return ResultResponseDto<string>.Failure(new[] { "Invalid tier access. Please contact support team." });
+
+        //        var tierLimits = tier switch
+        //        {
+        //            TieredAccessPlan.Basic => new { Min = 5, Max = 7, Name = "Basic" },
+        //            TieredAccessPlan.Standard => new { Min = 8, Max = 12, Name = "Standard" },
+        //            TieredAccessPlan.Premium => new { Min = 13, Max = 23, Name = "Premium" },
+        //            _ => new { Min = 0, Max = 0, Name = "Unknown" }
+        //        };
+
+        //        if (tier != TieredAccessPlan.Premium)
+        //        {
+        //            bool isValid =
+        //                payload.Programs.Count >= tierLimits.Min && payload.Programs.Count <= tierLimits.Max &&
+        //                payload.Pillars.Count >= tierLimits.Min && payload.Pillars.Count <= tierLimits.Max;
+
+        //            if (!isValid)
+        //            {
+        //                return ResultResponseDto<string>.Failure(new[]
+        //                {
+        //                    $"Your {tierLimits.Name} plan allows between {tierLimits.Min} and {tierLimits.Max} selections per category (Program, Pillar, and KPI). Please adjust your selections accordingly."
+        //                });
+        //            }
+        //        }
+
+        //        //  Remove existing mappings
+        //        var existingPrograms = await _context.ClientProgramMappings
+        //            .Where(m => m.UserID == userId)
+        //            .ToListAsync();
+
+        //        var existingPillars = await _context.ClientPillarMappings
+        //            .Where(m => m.UserID == userId)
+        //            .ToListAsync();
+
+        //        _context.ClientProgramMappings.RemoveRange(existingPrograms);
+        //        _context.ClientPillarMappings.RemoveRange(existingPillars);
+
+        //        var utcNow = DateTime.UtcNow;
+
+        //        var newProgramMappings = payload.Programs.Select(programId => new ClientProgramMapping
+        //        {
+        //            ClimateProgramID = programId,
+        //            UserID = userId,
+        //            IsActive = true,
+        //            UpdatedAt = utcNow
+        //        });
+
+        //        var newPillarMappings = payload.Pillars.Select(pillarId => new ClientPillarMapping
+        //        {
+        //            PillarID = pillarId,
+        //            UserID = userId,
+        //            IsActive = true,
+        //            UpdatedAt = utcNow
+        //        });
+
+        //        await _context.ClientProgramMappings.AddRangeAsync(newProgramMappings);
+        //        await _context.ClientPillarMappings.AddRangeAsync(newPillarMappings);
+
+        //        await _context.SaveChangesAsync();
+
+        //        return ResultResponseDto<string>.Success("", new[] { "Your preferences have been saved successfully." });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        await _appLogger.LogAsync("Error occurred in AddProgramUserKpisProgramAndPillar", ex);
+        //        return ResultResponseDto<string>.Failure(new[]
+        //        {
+        //            "Something went wrong while saving your selections. Please try again later."
+        //        });
+        //    }
+        //}
+
+        public async Task<ResultResponseDto<string>> AddProgramUserKpisProgramAndPillar(AddClientKpisProgramAndPillar payload, int userId, string tierName)
         {
             try
             {
@@ -1245,52 +1363,72 @@ namespace VeridianClimatePulse.Services
                 if (!Enum.TryParse<TieredAccessPlan>(tierName, true, out var tier))
                     return ResultResponseDto<string>.Failure(new[] { "Invalid tier access. Please contact support team." });
 
-                var tierLimits = tier switch
-                {
-                    TieredAccessPlan.Basic => new { Min = 5, Max = 7, Name = "Basic" },
-                    TieredAccessPlan.Standard => new { Min = 8, Max = 12, Name = "Standard" },
-                    TieredAccessPlan.Premium => new { Min = 13, Max = 23, Name = "Premium" },
-                    _ => new { Min = 0, Max = 0, Name = "Unknown" }
-                };
+                var allPillarIds = await _context.Pillars.Select(p => p.PillarID).ToListAsync();
+                var allProgramIds = await _context.ClimatePrograms.Where(c => c.IsActive).Select(c => c.ClimateProgramID).ToListAsync();
 
-                if (tier != TieredAccessPlan.Premium)
+                if (tier == TieredAccessPlan.Premium)
                 {
-                    bool isValid =
-                        payload.Countries.Count >= tierLimits.Min && payload.Countries.Count <= tierLimits.Max &&
-                        payload.Pillars.Count >= tierLimits.Min && payload.Pillars.Count <= tierLimits.Max;
+                    // Premium always receives every pillar
+                    payload.Pillars = allPillarIds;
 
-                    if (!isValid)
+                    if (payload.IsAllPrograms)
+                    {
+                        payload.Programs = allProgramIds;
+                    }
+                    else if (payload.Programs == null || payload.Programs.Count < 1)
                     {
                         return ResultResponseDto<string>.Failure(new[]
                         {
-                            $"Your {tierLimits.Name} plan allows between {tierLimits.Min} and {tierLimits.Max} selections per category (Country, Pillar, and KPI). Please adjust your selections accordingly."
+                            "Premium plan requires at least one program, or all programs."
+                        });
+                    }
+                }
+                else
+                {
+                    var pillarLimits = tier switch
+                    {
+                        TieredAccessPlan.Basic => new { Min = 1, Max = 7, Name = "Basic" },
+                        TieredAccessPlan.Standard => new { Min = 1, Max = 12, Name = "Standard" },
+                        _ => new { Min = 0, Max = 0, Name = "Unknown" }
+                    };
+
+                    var programCount = payload.Programs?.Count ?? 0;
+                    var pillarCount = payload.Pillars?.Count ?? 0;
+                    var programsOk = programCount >= 1;
+                    var pillarsOk = pillarCount >= pillarLimits.Min && pillarCount <= pillarLimits.Max;
+
+                    if (!programsOk || !pillarsOk)
+                    {
+                        return ResultResponseDto<string>.Failure(new[]
+                        {
+                            $"Your {pillarLimits.Name} plan requires at least 1 program and between {pillarLimits.Min} and {pillarLimits.Max} pillars."
                         });
                     }
                 }
 
                 //  Remove existing mappings
-                var existingCountries = await _context.PublicUserCountryMappings
+                var existingPrograms = await _context.ClientProgramMappings
                     .Where(m => m.UserID == userId)
                     .ToListAsync();
 
-                var existingPillars = await _context.CountryUserPillarMappings
+                var existingPillars = await _context.ClientPillarMappings
                     .Where(m => m.UserID == userId)
                     .ToListAsync();
 
-                _context.PublicUserCountryMappings.RemoveRange(existingCountries);
-                _context.CountryUserPillarMappings.RemoveRange(existingPillars);
+                _context.ClientProgramMappings.RemoveRange(existingPrograms);
+                _context.ClientPillarMappings.RemoveRange(existingPillars);
 
                 var utcNow = DateTime.UtcNow;
 
-                var newCountryMappings = payload.Countries.Select(countryId => new PublicUserCountryMapping
+                var newProgramMappings = payload.Programs.Select(programId => new ClientProgramMapping
                 {
-                    CountryID = countryId,
+                    ClimateProgramID = programId,
                     UserID = userId,
                     IsActive = true,
                     UpdatedAt = utcNow
                 });
 
-                var newPillarMappings = payload.Pillars.Select(pillarId => new CountryUserPillarMapping
+                var newPillarMappings = payload.Pillars.Select(pillarId => new ClientPillarMapping
                 {
                     PillarID = pillarId,
                     UserID = userId,
@@ -1298,8 +1436,8 @@ namespace VeridianClimatePulse.Services
                     UpdatedAt = utcNow
                 });
 
-                await _context.PublicUserCountryMappings.AddRangeAsync(newCountryMappings);
-                await _context.CountryUserPillarMappings.AddRangeAsync(newPillarMappings);
+                await _context.ClientProgramMappings.AddRangeAsync(newProgramMappings);
+                await _context.ClientPillarMappings.AddRangeAsync(newPillarMappings);
 
                 await _context.SaveChangesAsync();
 
@@ -1307,7 +1445,7 @@ namespace VeridianClimatePulse.Services
             }
             catch (Exception ex)
             {
-                await _appLogger.LogAsync("Error occurred in AddCountryUserKpisCountryAndPillar", ex);
+                await _appLogger.LogAsync("Error occurred in AddProgramUserKpisProgramAndPillar", ex);
                 return ResultResponseDto<string>.Failure(new[]
                 {
                     "Something went wrong while saving your selections. Please try again later."
@@ -1315,22 +1453,21 @@ namespace VeridianClimatePulse.Services
             }
         }
 
-
-        private async Task<(List<int> countriesToAdd, List<int> countriesToDelete)> GetCountryMappingChangesAsync( int userId, int assignedByUserId,
-            UserRole role, List<int> newCountryIds)
+        private async Task<(List<int> programsToAdd, List<int> programsToDelete)> GetProgramMappingChangesAsync(int userId, int assignedByUserId,
+            UserRole role, List<int> newProgramIds)
         {
-            List<int> existingCountryIds;
+            List<int> existingProgramIds;
 
-            if (role == UserRole.CountryUser)
+            if (role == UserRole.ProgramUser)
             {
-                var existingCountries = await _context.PublicUserCountryMappings
+                var existingPrograms = await _context.ClientProgramMappings
                     .Where(m => m.UserID == userId && m.IsActive)
                     .ToListAsync();
 
-                existingCountryIds = existingCountries.Select(x => x.CountryID).ToList();
+                existingProgramIds = existingPrograms.Select(x => x.ClimateProgramID).ToList();
 
-                var updateCountries = existingCountries.Where(x => x.IsDeleted && newCountryIds.Contains(x.CountryID));
-                foreach (var c in updateCountries)
+                var updatePrograms = existingPrograms.Where(x => x.IsDeleted && newProgramIds.Contains(x.ClimateProgramID));
+                foreach (var c in updatePrograms)
                 {
                     c.IsDeleted = false;
                     _context.Update(c);
@@ -1338,24 +1475,24 @@ namespace VeridianClimatePulse.Services
             }
             else
             {
-                var existingCountries = _context.UserCountryMappings
+                var existingPrograms = _context.StaffProgramMappings
                     .Where(m => m.UserID == userId && m.AssignedByUserId == assignedByUserId)
                     .ToList();
-                existingCountryIds = existingCountries.Select(x => x.CountryID).ToList();
+                existingProgramIds = existingPrograms.Select(x => x.ClimateProgramID).ToList();
 
-                var updateCountries = existingCountries.Where(x=>x.IsDeleted && newCountryIds.Contains(x.CountryID));
-                foreach(var c in updateCountries)
+                var updatePrograms = existingPrograms.Where(x => x.IsDeleted && newProgramIds.Contains(x.ClimateProgramID));
+                foreach (var c in updatePrograms)
                 {
                     c.IsDeleted = false;
                     _context.Update(c);
                 }
             }
-            newCountryIds ??= new List<int>();
+            newProgramIds ??= new List<int>();
 
-            var countriesToAdd = newCountryIds.Except(existingCountryIds).ToList();
-            var countriesToDelete = existingCountryIds.Except(newCountryIds).ToList();
+            var programsToAdd = newProgramIds.Except(existingProgramIds).ToList();
+            var programsToDelete = existingProgramIds.Except(newProgramIds).ToList();
 
-            return (countriesToAdd, countriesToDelete);
+            return (programsToAdd, programsToDelete);
         }
 
         #endregion

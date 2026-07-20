@@ -1,8 +1,4 @@
-
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
 using VeridianClimatePulse.Common.Interface;
-using VeridianClimatePulse.Common.Models.settings;
 using VeridianClimatePulse.Dtos.AiDto;
 using VeridianClimatePulse.IServices;
 using VeridianClimatePulse.Models;
@@ -27,24 +23,24 @@ namespace VeridianClimatePulse.Common.Implementation
         #endregion
 
 
-        #region pdf pillars and country report
+        #region pdf pillars and program report
 
-        public async Task<byte[]> GenerateAllCountriesDetailsPdf(List<AiCountrySummeryDto> countries, Dictionary<int, List<AiCountryPillarResponse>> pillarsDict, List<KpiChartItem> kpis, UserRole userRole)
+        public async Task<byte[]> GenerateAllProgramsDetailsPdf(List<AiProgramSummeryDto> programs, Dictionary<int, List<AiProgramPillarResponse>> pillarsDict, List<KpiChartItem> kpis, UserRole userRole)
         {
             try
             {
                 QuestPDF.Settings.EnableDebugging = true;
                 var document = Document.Create(container =>
                 {
-                    foreach(var countryDetails in countries)
+                    foreach(var programDetails in programs)
                     {
-                        if(pillarsDict.TryGetValue(countryDetails.CountryID, out var pillars) && pillars.Count > 0)
+                        if(pillarsDict.TryGetValue(programDetails.ClimateProgramID, out var pillars) && pillars.Count > 0)
                         {
                             var kpiChartItems = kpis?
-                            .Where(x => x.CountryID == countryDetails.CountryID)
+                            .Where(x => x.ClimateProgramID == programDetails.ClimateProgramID)
                             .ToList() ?? new List<KpiChartItem>();
 
-                            AddCountryDetailsPdf(container, countryDetails, pillars, kpiChartItems,new(), userRole, true);
+                            AddProgramDetailsPdf(container, programDetails, pillars, kpiChartItems,new(), userRole, true);
                         }
                     }
                 });
@@ -53,32 +49,31 @@ namespace VeridianClimatePulse.Common.Implementation
             }
             catch (Exception ex)
             {
-                await _appLogger.LogAsync("Error Occured in GenerateCountryDetailsPdf", ex);
+                await _appLogger.LogAsync("Error Occured in GenerateAllProgramsDetailsPdf", ex);
                 return Array.Empty<byte>();
             }
         }
 
-        public async Task<byte[]> GenerateCountryDetailsPdf(AiCountrySummeryDto countryDetails, List<AiCountryPillarResponse> pillars, List<KpiChartItem> kpis, List<PeerCountryHistoryReportDto> peerCountry, UserRole userRole)
+        public async Task<byte[]> GenerateProgramDetailsPdf(AiProgramSummeryDto programDetails, List<AiProgramPillarResponse> pillars, List<KpiChartItem> kpis, List<PeerProgramHistoryReportDto> peerPrograms, UserRole userRole)
         {
             try
             {
-
                 QuestPDF.Settings.EnableDebugging = true;
                 var document = Document.Create(container =>
                 {
-                    AddCountryDetailsPdf(container, countryDetails, pillars, kpis, peerCountry, userRole);
+                    AddProgramDetailsPdf(container, programDetails, pillars, kpis, peerPrograms, userRole, false);
                 });
 
                 return document.GeneratePdf();
             }
             catch (Exception ex)
             {
-                await _appLogger.LogAsync("Error Occured in GenerateCountryDetailsPdf", ex);
+                await _appLogger.LogAsync("Error Occured in GenerateProgramDetailsPdf", ex);
                 return Array.Empty<byte>();
             }
         }
 
-        public async Task<byte[]> GeneratePillarDetailsPdf(AiCountryPillarResponse pillarData, UserRole userRole)
+        public async Task<byte[]> GeneratePillarDetailsPdf(AiProgramPillarResponse pillarData, UserRole userRole)
         {
             try
             {
@@ -108,8 +103,8 @@ namespace VeridianClimatePulse.Common.Implementation
             }
         }
 
-        public void AddCountryDetailsPdf(IDocumentContainer container, AiCountrySummeryDto countryDetails, List<AiCountryPillarResponse> pillars, List<KpiChartItem> kpis,
-            List<PeerCountryHistoryReportDto> peerCountries, UserRole userRole, bool isAllCountries = false)
+        public void AddProgramDetailsPdf(IDocumentContainer container, AiProgramSummeryDto programDetails, List<AiProgramPillarResponse> pillars, List<KpiChartItem> kpis,
+            List<PeerProgramHistoryReportDto> peerPrograms, UserRole userRole, bool isAllPrograms = false)
         {
             var kpiChartItems = kpis.ToList();
 
@@ -118,23 +113,23 @@ namespace VeridianClimatePulse.Common.Implementation
                   : SanitizeText(p.PillarName) ?? "-",  SanitizeText(p.PillarName) ?? "-", p.AIProgress)).ToList();
 
             // -- Section 1 : Global Dashboard ---------------------------------
-            if (!isAllCountries)
-                AddGlobalDashboardPage(container, countryDetails, pillarChartItems, kpis, userRole);
+            if (!isAllPrograms)
+                AddGlobalDashboardPage(container, programDetails, pillarChartItems, kpis, userRole);
 
 
-            // -- Section 2 : Country Summary -------------------------------------
+            // -- Section 2 : Program Summary -------------------------------------
             container.Page(page =>
             {
                 ApplyPageDefaults(page);
                 page.Header().Element(x =>
-                    CountryComposeHeader(x, countryDetails, userRole, null));
+                    ProgramComposeHeader(x, programDetails, userRole, null));
                 page.Content().Element(content =>
                 {
                     content.Column(column =>
                     {
                         column.Spacing(10);
                         column.Item().Element(x =>
-                            CountrySummeryComposeContent(x, countryDetails, userRole));
+                            ProgramSummeryComposeContent(x, programDetails, userRole));
                     });
                 });
                 PageFooter(page);
@@ -148,7 +143,7 @@ namespace VeridianClimatePulse.Common.Implementation
                 {
                     ApplyPageDefaults(page);
                     page.Header().Element(x =>
-                        CountryComposeHeader(x, countryDetails, userRole, "Pillar Performance Overview"));
+                        ProgramComposeHeader(x, programDetails, userRole, "Pillar Performance Overview"));
                     page.Content().Element(content =>
                         PillarLineChartPage(content, pillarChartItems));
                     PageFooter(page);
@@ -156,21 +151,21 @@ namespace VeridianClimatePulse.Common.Implementation
             }
 
             // -- Section 1 : Global Dashboard ---------------------------------
-            if (!isAllCountries)
+            if (!isAllPrograms)
             {
-                AddPeerCountryComparisonSection(container, peerCountries, countryDetails, userRole);
-                AddPerformanceTrendsSection(container, peerCountries, countryDetails, userRole);
+                AddPeerProgramComparisonSection(container, peerPrograms, programDetails, userRole);
+                AddPerformanceTrendsSection(container, peerPrograms, programDetails, userRole);
             }
 
             // -- Section 4+ : Per-Pillar Detail ------------------------------
-            var accessiblePillars = pillars.Where(x => x.IsAccess && UserRole.CountryUser == userRole || UserRole.CountryUser != userRole).ToList();
+            var accessiblePillars = pillars.Where(x => x.IsAccess && UserRole.ProgramUser == userRole || UserRole.ProgramUser != userRole).ToList();
             foreach (var p in accessiblePillars)
             {
                 container.Page(page =>
                 {
                     ApplyPageDefaults(page);
                     page.Header().Element(x =>
-                        CountryComposeHeader(x, countryDetails, userRole, SanitizeText(p.PillarName)));
+                        ProgramComposeHeader(x, programDetails, userRole, SanitizeText(p.PillarName)));
                     page.Content().Element(content =>
                     {
                         content.Column(column =>
@@ -186,13 +181,13 @@ namespace VeridianClimatePulse.Common.Implementation
 
 
             // -- Section 5 : KPI Dashboard ------------------------------------
-            if (kpiChartItems.Any() || !isAllCountries)
+            if (kpiChartItems.Any() || !isAllPrograms)
             {
                 container.Page(page =>
                 {
                     ApplyPageDefaults(page);
                     page.Header().Element(x =>
-                        CountryComposeHeader(x, countryDetails, userRole, "KPI Dashboard"));
+                        ProgramComposeHeader(x, programDetails, userRole, "KPI Dashboard"));
                     page.Content().Element(content =>
                         KpiDashboardPage(content, kpiChartItems));
                     PageFooter(page);
@@ -213,7 +208,7 @@ namespace VeridianClimatePulse.Common.Implementation
             page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
         }
 
-        /// <summary>Standard numeric footer for country pages.</summary>
+        /// <summary>Standard numeric footer for Program pages.</summary>
         static void PageFooter(PageDescriptor page)
         {
             page.Footer().AlignCenter().Text(x =>
@@ -223,7 +218,7 @@ namespace VeridianClimatePulse.Common.Implementation
         }        
         void AddGlobalDashboardPage(
             IDocumentContainer doc,
-            AiCountrySummeryDto country,
+            AiProgramSummeryDto Program,
             List<PillarChartItem> pillars,   // already filtered to max 14
             List<KpiChartItem> kpis,      // already filtered to max 107
             UserRole userRole)
@@ -234,9 +229,9 @@ namespace VeridianClimatePulse.Common.Implementation
             {
                 ApplyPageDefaults(page);
                 page.Header().Element(x =>
-                    CountryComposeHeader(x, country, userRole, "Country Performance Dashboard"));
+                    ProgramComposeHeader(x, Program, userRole, "Program Performance Dashboard"));
                 page.Content().Element(x =>
-                    RenderDashboardContent(x, vPillars, kpis, country));
+                    RenderDashboardContent(x, vPillars, kpis, Program));
                 PageFooter(page);
             });
         }
@@ -245,11 +240,11 @@ namespace VeridianClimatePulse.Common.Implementation
             IContainer container,
             List<PillarChartItem> pillars,
             List<KpiChartItem> kpis,
-            AiCountrySummeryDto country)
+            AiProgramSummeryDto program)
         {
             //var vKpis = kpis.Where(k => k.Value.HasValue).ToList();
 
-            float overall = (float)country.AIProgress.GetValueOrDefault();
+            float overall = (float)program.AIProgress.GetValueOrDefault();
             int kpiGreen = kpis.Count(k => k.Value >= 70);
             int kpiAmber = kpis.Count(k => k.Value >= 40 && k.Value < 70);
             int kpiRed = kpis.Count(k => k.Value == null || k.Value < 40);
@@ -264,7 +259,7 @@ namespace VeridianClimatePulse.Common.Implementation
                 col.Item().Height(280).Row(row =>
                 {
                     row.RelativeItem(5).Element(x =>
-                        RenderScoreDonutCard(x, country, pillars.Count, kpis.Count, best, worst));
+                        RenderScoreDonutCard(x, program, pillars.Count, kpis.Count, best, worst));
 
                     row.ConstantItem(10);
 
@@ -300,24 +295,24 @@ namespace VeridianClimatePulse.Common.Implementation
 
         void RenderScoreDonutCard(
             IContainer container,
-            AiCountrySummeryDto country,
+            AiProgramSummeryDto Program,
             int pillarCount,
             int kpiCount,
             PillarChartItem? best,
             PillarChartItem? worst)
         {
 
-            float score = (float)country.AIProgress.GetValueOrDefault();
+            float score = (float)Program.AIProgress.GetValueOrDefault();
 
             // Overall rank label
-            var globalRankLabel = country.Rank.HasValue && country.TotalCountry.HasValue && country.TotalCountry > 1
-                ? $"Continent Rank: {country.Rank} / {country.TotalCountry}"
-                : "Continent Rank: N/A";
+            var globalRankLabel = Program.Rank.HasValue && Program.TotalProgram.HasValue && Program.TotalProgram > 1
+                ? $"Location Rank: {Program.Rank} / {Program.TotalProgram}"
+                : "Location Rank: N/A";
 
             // Regional rank label
-            var regionRankLabel = country.RegionRank.HasValue && country.RegionTotalCountry.HasValue && country.RegionTotalCountry >= 1
-                ? $"{country.Region} Region: {country.RegionRank} / {country.RegionTotalCountry}"
-                : $"{country.Region} Region: N/A";
+            var regionRankLabel = Program.RegionRank.HasValue && Program.RegionTotalProgram.HasValue && Program.RegionTotalProgram >= 1
+                ? $"{Program.Location} Region: {Program.RegionRank} / {Program.RegionTotalProgram}"
+                : $"{Program.Location} Region: N/A";
 
 
             container
@@ -334,7 +329,7 @@ namespace VeridianClimatePulse.Common.Implementation
                     // ---------------------------------------------
                     col.Item()
                         .AlignCenter()
-                        .Text("Overall Country Score")
+                        .Text("Overall Program Score")
                         .FontSize(10)
                         .Bold()
                         .FontColor(ReportThemeColors.PdfDarkGreen);
@@ -403,7 +398,7 @@ namespace VeridianClimatePulse.Common.Implementation
                         });
 
                     // ---------------------------------------------
-                    // Best Pillar + Continent Rank
+                    // Best Pillar + Location Rank
                     // ---------------------------------------------
                     if (best != null)
                     {
@@ -534,7 +529,7 @@ namespace VeridianClimatePulse.Common.Implementation
                 IsAntialias = true,
                 TextAlign = SKTextAlign.Center
             };
-            canvas.DrawText("country score", cx, cy + 21, subTxt);
+            canvas.DrawText("Program score", cx, cy + 21, subTxt);
         }
 
         // -----------------------------------------------------------------------------
@@ -545,7 +540,7 @@ namespace VeridianClimatePulse.Common.Implementation
         {
             container
                 .Background(ReportThemeColors.White)
-                .Border(1).BorderColor(ReportThemeColors.BorderBlue)
+                .Border(1).BorderColor(ReportThemeColors.BorderGreen)
                 .Padding(4)
                 .Column(col =>
                 {
@@ -710,7 +705,7 @@ namespace VeridianClimatePulse.Common.Implementation
         {
             container
                 .Background(ReportThemeColors.White)
-                .Border(1).BorderColor(ReportThemeColors.BorderBlue)
+                .Border(1).BorderColor(ReportThemeColors.BorderGreen)
                 .Padding(10)
                 .Column(col =>
                 {
@@ -762,7 +757,7 @@ namespace VeridianClimatePulse.Common.Implementation
 
             container
                 .Background(ReportThemeColors.White)
-                .Border(1).BorderColor(ReportThemeColors.BorderBlue)
+                .Border(1).BorderColor(ReportThemeColors.BorderGreen)
                 .Padding(10)
                 .Column(col =>
                 {
@@ -1584,15 +1579,15 @@ namespace VeridianClimatePulse.Common.Implementation
         // -----------------------------------------------------------------------------
         //  HEADERS / FOOTERS
         // -----------------------------------------------------------------------------
-        void CountryComposeHeader(
+        void ProgramComposeHeader(
             IContainer container,
-            AiCountrySummeryDto data,
+            AiProgramSummeryDto data,
             UserRole userRole,
             string? pillarName)
         {
             var logoPath = Path.Combine(
                 Directory.GetCurrentDirectory(),
-                "wwwroot/assets/images/ahi.png");
+                "wwwroot/assets/images/vcp.png");
 
             container.Column(column =>
             {
@@ -1603,14 +1598,14 @@ namespace VeridianClimatePulse.Common.Implementation
                     {
                         col.Spacing(2);
 
-                        string? title = string.IsNullOrEmpty(pillarName) ? data.CountryName : pillarName!;
+                        string? title = string.IsNullOrEmpty(pillarName) ? data.ProgramName : pillarName!;
 
                         col.Item().Text(title)
                             .FontSize(21)
                             .Bold()
                             .FontColor(ReportThemeColors.White);
 
-                        col.Item().Text($"{data.CountryName}, {data.Continent} | Data Year: {data.Year}")
+                        col.Item().Text($"{data.ProgramName} | Data Year: {data.Year}")
                             .FontSize(10)
                             .FontColor(ReportThemeColors.HeaderTextPale);
 
@@ -1634,11 +1629,11 @@ namespace VeridianClimatePulse.Common.Implementation
             });
         }        
 
-        void PillarComposeHeader(IContainer container, AiCountryPillarResponse data)
+        void PillarComposeHeader(IContainer container, AiProgramPillarResponse data)
         {
             var logoPath = Path.Combine(
                 Directory.GetCurrentDirectory(),
-                "wwwroot/assets/images/ahi.png");
+                "wwwroot/assets/images/vcp.png");
 
             container.Column(column =>
             {
@@ -1654,7 +1649,7 @@ namespace VeridianClimatePulse.Common.Implementation
                             .Bold()
                             .FontColor(ReportThemeColors.White);
 
-                        col.Item().Text($"{data.CountryName}, {data.Continent} | Data Year: {data.AIDataYear}")
+                        col.Item().Text($"{data.ProgramName} | Data Year: {data.AIDataYear}")
                             .FontSize(10)
                             .FontColor(ReportThemeColors.HeaderTextPale);
 
@@ -1689,7 +1684,7 @@ namespace VeridianClimatePulse.Common.Implementation
                         text.Span(" of "); text.TotalPages();
                     });
                     col.Item().PaddingTop(5).AlignCenter()
-                        .Text("Country Assessment Platform").FontSize(8).FontColor(ReportThemeColors.Gray500);
+                        .Text("Program Assessment Platform").FontSize(8).FontColor(ReportThemeColors.Gray500);
                 });
             });
         }
@@ -1709,7 +1704,7 @@ namespace VeridianClimatePulse.Common.Implementation
                 .Normalize(NormalizationForm.FormKC);
         }
 
-        void CountrySummeryComposeContent(IContainer container, AiCountrySummeryDto data, UserRole userRole)
+        void ProgramSummeryComposeContent(IContainer container, AiProgramSummeryDto data, UserRole userRole)
         {
             container.PaddingTop(4).Column(column =>
             {
@@ -1718,7 +1713,7 @@ namespace VeridianClimatePulse.Common.Implementation
                 // =========================
 
                 column.Item().PaddingTop(10)
-                    .Element(c => CountryProgressSection(c, data, userRole));
+                    .Element(c => ProgramProgressSection(c, data, userRole));
 
                 // =========================
                 // EXECUTIVE SUMMARY
@@ -1853,7 +1848,7 @@ namespace VeridianClimatePulse.Common.Implementation
         }
 
         void PillarComposeContent(
-     IContainer container, AiCountryPillarResponse data, UserRole userRole)
+     IContainer container, AiProgramPillarResponse data, UserRole userRole)
         {
             container.PaddingTop(8).Column(column =>
             {
@@ -1970,7 +1965,7 @@ namespace VeridianClimatePulse.Common.Implementation
             });
         }
 
-        void CountryProgressSection(IContainer container, AiCountrySummeryDto data, UserRole userRole)
+        void ProgramProgressSection(IContainer container, AiProgramSummeryDto data, UserRole userRole)
         {
             container
                 .Background(ReportThemeColors.White)
@@ -2004,11 +1999,11 @@ namespace VeridianClimatePulse.Common.Implementation
 
                         col.Item().PaddingTop(8);
 
-                        RankRowModern(col, "Continent Rank", data.Rank, data.TotalCountry, ReportThemeColors.RankGreen);
+                        RankRowModern(col, "Location Rank", data.Rank, data.TotalProgram, ReportThemeColors.RankGreen);
 
                         col.Item().PaddingTop(2);
 
-                        RankRowModern(col, $"{data.Region} Region Rank", data.RegionRank, data.RegionTotalCountry, ReportThemeColors.RankBlue);
+                        RankRowModern(col, $"{data.Location} Region Rank", data.RegionRank, data.RegionTotalProgram, ReportThemeColors.RankBlue);
                     });
                 });
         }
@@ -2050,7 +2045,7 @@ namespace VeridianClimatePulse.Common.Implementation
         }
 
         void PillarProgressSection(
-            IContainer container, AiCountryPillarResponse data, UserRole userRole, bool isCity = false)
+            IContainer container, AiProgramPillarResponse data, UserRole userRole, bool isProgram = false)
         {
             container
                 .Background(ReportThemeColors.White)
@@ -2058,7 +2053,7 @@ namespace VeridianClimatePulse.Common.Implementation
                 .Padding(18)
                 .Column(column =>
                 {
-                    column.Item().Text(isCity ? "Total Overview" : "Pillar Score")
+                    column.Item().Text(isProgram ? "Total Overview" : "Pillar Score")
                         .FontSize(16)
                         .SemiBold()
                         .FontColor(ReportThemeColors.GrayTailwind800);
@@ -2272,69 +2267,69 @@ namespace VeridianClimatePulse.Common.Implementation
 
 
 
-        #endregion pdf pillars and country report
+        #endregion pdf pillars and Program report
 
     }
 
     public partial class PdfGeneratorService
     {   
 
-        // Palette: index 0 = selected country (gold), 1-5 = peer countries
-        private static readonly string[] CountryPalette = ReportThemeColors.CountryChartPalette;
+        // Palette: index 0 = selected Program (gold), 1-5 = peer programs
+        private static readonly string[] ProgramPalette = ReportThemeColors.ProgramChartPalette;
 
         // Pillar palette (up to 14 distinct colours)
         private static readonly string[] PillarPalette = ReportThemeColors.PillarChartPalette;
 
         // --------------------------------------------------------------------------
-        //  ENTRY POINTS  . called from AddCountryDetailsPdf
+        //  ENTRY POINTS  . called from AddProgramDetailsPdf
         // --------------------------------------------------------------------------
 
-        void AddPeerCountryComparisonSection(
+        void AddPeerProgramComparisonSection(
             IDocumentContainer container,
-            List<PeerCountryHistoryReportDto> peerCountries,
-            AiCountrySummeryDto countryDetails,
+            List<PeerProgramHistoryReportDto> peerPrograms,
+            AiProgramSummeryDto ProgramDetails,
             UserRole userRole)
         {
-            if (peerCountries == null || !peerCountries.Any()) return;
+            if (peerPrograms == null || !peerPrograms.Any()) return;
 
-            // Separate: main country entry + actual peer entries (cap at MaxpeerCountries)
-            var main = FindMainCountry(peerCountries, countryDetails);
-            var peers = peerCountries
-                .Where(p => !IsSameCountry(p.CountryName, countryDetails.CountryName))
+            // Separate: main Program entry + actual peer entries (cap at MaxpeerPrograms)
+            var main = FindMainProgram(peerPrograms, ProgramDetails);
+            var peers = peerPrograms
+                .Where(p => !IsSameProgram(p.ProgramName, ProgramDetails.ProgramName))
                 .ToList();
 
-            // -- 5.1  Population-Based --------------------------------------------
-            container.Page(page =>
-            {
-                ApplyPageDefaults(page);
-                page.Header().Element(x =>
-                    CountryComposeHeader(x, countryDetails, userRole, "Population-Based Peer Comparison"));
-                page.Content().Element(c =>
-                    PopulationPeerPage(c, peers, main, countryDetails));
-                PageFooter(page);
-            });
+            //// -- 5.1  Population-Based --------------------------------------------
+            //container.Page(page =>
+            //{
+            //    ApplyPageDefaults(page);
+            //    page.Header().Element(x =>
+            //        ProgramComposeHeader(x, ProgramDetails, userRole, "Population-Based Peer Comparison"));
+            //    //page.Content().Element(c =>
+            //    //    PopulationPeerPage(c, peers, main, ProgramDetails));
+            //    PageFooter(page);
+            //});
 
-            // -- 5.2  Regional ----------------------------------------------------
-            container.Page(page =>
-            {
-                ApplyPageDefaults(page);
-                page.Header().Element(x =>
-                    CountryComposeHeader(x, countryDetails, userRole, "Regional Peer Group Comparison"));
-                page.Content().Element(c =>
-                    RegionalPeerPage(c, peers, main, countryDetails));
-                PageFooter(page);
-            });
+            //// -- 5.2  Regional ----------------------------------------------------
+            //container.Page(page =>
+            //{
+            //    ApplyPageDefaults(page);
+            //    page.Header().Element(x =>
+            //        ProgramComposeHeader(x, ProgramDetails, userRole, "Regional Peer Group Comparison"));
+            //    page.Content().Element(c =>
+            //        RegionalPeerPage(c, peers, main, ProgramDetails));
+            //    PageFooter(page);
+            //});
 
-            // -- 5.3  Income-Level ------------------------------------------------
-            container.Page(page =>
-            {
-                ApplyPageDefaults(page);
-                page.Header().Element(x =>
-                    CountryComposeHeader(x, countryDetails, userRole, "Income-Level Peer Comparison"));
-                page.Content().Element(c =>
-                    IncomePeerPage(c, peers, main, countryDetails));
-                PageFooter(page);
-            });
+            //// -- 5.3  Income-Level ------------------------------------------------
+            //container.Page(page =>
+            //{
+            //    ApplyPageDefaults(page);
+            //    page.Header().Element(x =>
+            //        ProgramComposeHeader(x, ProgramDetails, userRole, "Income-Level Peer Comparison"));
+            //    page.Content().Element(c =>
+            //        IncomePeerPage(c, peers, main, ProgramDetails));
+            //    PageFooter(page);
+            //});
 
            
             // -- 5.5  Relative Ranking --------------------------------------------
@@ -2342,24 +2337,24 @@ namespace VeridianClimatePulse.Common.Implementation
             {
                 ApplyPageDefaults(page);
                 page.Header().Element(x =>
-                    CountryComposeHeader(x, countryDetails, userRole, "Relative Ranking Among Peer countries"));
+                    ProgramComposeHeader(x, ProgramDetails, userRole, "Relative Ranking Among Peer programs"));
                 page.Content().Element(c =>
-                    RelativeRankingPage(c, peers, main, countryDetails));
+                    RelativeRankingPage(c, peers, main, ProgramDetails));
                 PageFooter(page);
             });
         }
 
         void AddPerformanceTrendsSection(
             IDocumentContainer container,
-            List<PeerCountryHistoryReportDto> peerCountries,
-            AiCountrySummeryDto countryDetails,
+            List<PeerProgramHistoryReportDto> peerPrograms,
+            AiProgramSummeryDto ProgramDetails,
             UserRole userRole)
         {
-            if (peerCountries == null || !peerCountries.Any()) return;
+            if (peerPrograms == null || !peerPrograms.Any()) return;
 
-            var main = FindMainCountry(peerCountries, countryDetails);
-            var peers = peerCountries
-                .Where(p => !IsSameCountry(p.CountryName, countryDetails.CountryName))      
+            var main = FindMainProgram(peerPrograms, ProgramDetails);
+            var peers = peerPrograms
+                .Where(p => !IsSameProgram(p.ProgramName, ProgramDetails.ProgramName))      
                 .ToList();
 
             // -- 6.1 + 6.2  Historical & Five-Year Evolution ----------------------
@@ -2367,9 +2362,9 @@ namespace VeridianClimatePulse.Common.Implementation
             {
                 ApplyPageDefaults(page);
                 page.Header().Element(x =>
-                    CountryComposeHeader(x, countryDetails, userRole, "Performance Trends Over Time"));
+                    ProgramComposeHeader(x, ProgramDetails, userRole, "Performance Trends Over Time"));
                 page.Content().Element(c =>
-                    HistoricalTrendsPage(c, peers, main, countryDetails));
+                    HistoricalTrendsPage(c, peers, main, ProgramDetails));
                 PageFooter(page);
             });
 
@@ -2378,9 +2373,9 @@ namespace VeridianClimatePulse.Common.Implementation
             {
                 ApplyPageDefaults(page);
                 page.Header().Element(x =>
-                    CountryComposeHeader(x, countryDetails, userRole, "Pillar-Level Trend Analysis"));
+                    ProgramComposeHeader(x, ProgramDetails, userRole, "Pillar-Level Trend Analysis"));
                 page.Content().Element(c =>
-                    PillarTrendPage(c, main, countryDetails));
+                    PillarTrendPage(c, main, ProgramDetails));
                 PageFooter(page);
             });
         }
@@ -2389,321 +2384,321 @@ namespace VeridianClimatePulse.Common.Implementation
         //  5.1  POPULATION-BASED PEER GROUP COMPARISON
         // --------------------------------------------------------------------------
 
-        void PopulationPeerPage(
-            IContainer container,
-            List<PeerCountryHistoryReportDto> peers,
-            PeerCountryHistoryReportDto? main,
-            AiCountrySummeryDto countryDetails)
-        {
-            // All countries (main + peers) sorted by population desc
-            var all = BuildAllCountries(main, peers)
-                .Where(c => c.Population.HasValue)
-                .OrderByDescending(c => c.Population)
-                .ToList();
+        //void PopulationPeerPage(
+        //    IContainer container,
+        //    List<PeerProgramHistoryReportDto> peers,
+        //    PeerProgramHistoryReportDto? main,
+        //    AiProgramSummeryDto ProgramDetails)
+        //{
+        //    // All programs (main + peers) sorted by population desc
+        //    var all = BuildAllPrograms(main, peers)
+        //        .Where(c => c.Population.HasValue)
+        //        .OrderByDescending(c => c.Population)
+        //        .ToList();
 
-            if (!all.Any()) { DrawNoDataPage(container); return; }
+        //    if (!all.Any()) { DrawNoDataPage(container); return; }
 
-            long maxPop = (long)(all.Max(p => p.Population) ?? 1);
+        //    long maxPop = (long)(all.Max(p => p.Population) ?? 1);
 
-            container.Padding(16).Column(col =>
-            {
-                col.Spacing(12);
+        //    container.Padding(16).Column(col =>
+        //    {
+        //        col.Spacing(12);
 
-                col.Item().Element(x => DrawInsightBand(x,
-                    $"{all.Count} countries compared  |  " +
-                    $"Largest: {all.First().CountryName} ({FormatPop(all.First().Population)})  |  " +
-                    $"Smallest: {all.Last().CountryName} ({FormatPop(all.Last().Population)})"));
+        //        col.Item().Element(x => DrawInsightBand(x,
+        //            $"{all.Count} programs compared  |  " +
+        //            $"Largest: {all.First().ProgramName} ({FormatPop(all.First().Population)})  |  " +
+        //            $"Smallest: {all.Last().ProgramName} ({FormatPop(all.Last().Population)})"));
 
-                // -- Population bar chart --------------------------------------
-                col.Item().Text("Population Size by Country")
-                    .FontSize(11).Bold().FontColor(ReportThemeColors.PdfDarkGreen);
+        //        // -- Population bar chart --------------------------------------
+        //        col.Item().Text("Population Size by Program")
+        //            .FontSize(11).Bold().FontColor(ReportThemeColors.PdfDarkGreen);
 
-                col.Item().Height(all.Count * 40).Canvas((canvas, size) =>
-                    DrawPopulationBars(canvas, size, all, countryDetails, maxPop));
+        //        col.Item().Height(all.Count * 40).Canvas((canvas, size) =>
+        //            DrawPopulationBars(canvas, size, all, ProgramDetails, maxPop));
 
-                col.Item().Element(x => DrawCountryLegend(x, all, countryDetails));
+        //        col.Item().Element(x => DrawProgramLegend(x, all, ProgramDetails));
 
-                // -- Score vs Population scatter -------------------------------
-                col.Item().PaddingTop(8)
-                    .Text("Score vs Population  (each dot = one country)")
-                    .FontSize(11).Bold().FontColor(ReportThemeColors.PdfDarkGreen);
+        //        // -- Score vs Population scatter -------------------------------
+        //        col.Item().PaddingTop(8)
+        //            .Text("Score vs Population  (each dot = one Program)")
+        //            .FontSize(11).Bold().FontColor(ReportThemeColors.PdfDarkGreen);
 
-                col.Item().Height(all.Count * 40).Canvas((canvas, size) =>
-                    DrawScatterPlot(canvas, size, all, countryDetails,
-                        c => (float)(c.Population ?? 0),
-                        c => GetLatestScoreOrZero(c),
-                        "Population", "Score"));
-            });
-        }
+        //        col.Item().Height(all.Count * 40).Canvas((canvas, size) =>
+        //            DrawScatterPlot(canvas, size, all, ProgramDetails,
+        //                c => (float)(c.Population ?? 0),
+        //                c => GetLatestScoreOrZero(c),
+        //                "Population", "Score"));
+        //    });
+        //}
 
-        void DrawPopulationBars(
-            SKCanvas canvas, Size size,
-            List<PeerCountryHistoryReportDto> countries,
-            AiCountrySummeryDto countryDetails,
-            long maxPop)
-        {
-            float rowH = 30f;
-            float labelW = 130f;
-            float barArea = size.Width - labelW - 72f;
+        //void DrawPopulationBars(
+        //    SKCanvas canvas, Size size,
+        //    List<PeerProgramHistoryReportDto> programs,
+        //    AiProgramSummeryDto ProgramDetails,
+        //    long maxPop)
+        //{
+        //    float rowH = 30f;
+        //    float labelW = 130f;
+        //    float barArea = size.Width - labelW - 72f;
 
-            for (int i = 0; i < countries.Count; i++)
-            {
-                var country = countries[i];
-                float y = i * rowH + 4f;
-                float barW = (float)((country.Population ?? 0) / (double)maxPop * barArea);
-                bool isMain = IsSameCountry(country.CountryName, countryDetails.CountryName);
+        //    for (int i = 0; i < programs.Count; i++)
+        //    {
+        //        var program = programs[i];
+        //        float y = i * rowH + 4f;
+        //        //float barW = (float)((Program.Population ?? 0) / (double)maxPop * barArea);
+        //        bool isMain = IsSameProgram(program.ProgramName, ProgramDetails.ProgramName);
 
-                // Row background
-                if (i % 2 == 0)
-                    canvas.DrawRect(new SKRect(0, y - 2, size.Width, y + rowH - 4),
-                        new SKPaint { Color = SKColor.Parse(ReportThemeColors.SurfaceGreenRow) });
+        //        // Row background
+        //        if (i % 2 == 0)
+        //            canvas.DrawRect(new SKRect(0, y - 2, size.Width, y + rowH - 4),
+        //                new SKPaint { Color = SKColor.Parse(ReportThemeColors.SurfaceGreenRow) });
 
-                // Highlight selected country row
-                if (isMain)
-                    canvas.DrawRect(new SKRect(0, y - 2, size.Width, y + rowH - 4),
-                        new SKPaint { Color = SKColor.Parse(ReportThemeColors.WarningAmberBg) });
+        //        // Highlight selected Program row
+        //        if (isMain)
+        //            canvas.DrawRect(new SKRect(0, y - 2, size.Width, y + rowH - 4),
+        //                new SKPaint { Color = SKColor.Parse(ReportThemeColors.WarningAmberBg) });
 
-                DrawCanvasText(canvas, country.CountryName, 4, y + 5, 9,
-                    isMain ? ReportThemeColors.PdfDarkGreen : ReportThemeColors.Gray850, bold: isMain);
+        //        DrawCanvasText(canvas, program.ProgramName, 4, y + 5, 9,
+        //            isMain ? ReportThemeColors.PdfDarkGreen : ReportThemeColors.Gray850, bold: isMain);
 
-                string barColor = isMain ? CountryPalette[0] : CountryPalette[1 + (i % (CountryPalette.Length - 1))];
-                canvas.DrawRoundRect(
-                    new SKRoundRect(new SKRect(labelW, y + 4, labelW + barW, y + rowH - 6), 3),
-                    new SKPaint { Color = SKColor.Parse(barColor), IsAntialias = true });
+        //        string barColor = isMain ? ProgramPalette[0] : ProgramPalette[1 + (i % (ProgramPalette.Length - 1))];
+        //        canvas.DrawRoundRect(
+        //            new SKRoundRect(new SKRect(labelW, y + 4, labelW , y + rowH - 6), 3),
+        //            new SKPaint { Color = SKColor.Parse(barColor), IsAntialias = true });
 
-                DrawCanvasText(canvas, FormatPop(country.Population),
-                    labelW + barW + 5, y + 5, 9, ReportThemeColors.Gray800);
-            }
-        }
+        //        DrawCanvasText(canvas, FormatPop(program.Population),
+        //            labelW  + 5, y + 5, 9, ReportThemeColors.Gray800);
+        //    }
+        //}
 
         // --------------------------------------------------------------------------
         //  5.2  REGIONAL PEER GROUP COMPARISON
         // --------------------------------------------------------------------------
 
-        void RegionalPeerPage(
-            IContainer container,
-            List<PeerCountryHistoryReportDto> peers,
-            PeerCountryHistoryReportDto? main,
-            AiCountrySummeryDto countryDetails)
-        {
-            var all = BuildAllCountries(main, peers);
+        //void RegionalPeerPage(
+        //    IContainer container,
+        //    List<PeerProgramHistoryReportDto> peers,
+        //    PeerProgramHistoryReportDto? main,
+        //    AiProgramSummeryDto ProgramDetails)
+        //{
+        //    var all = BuildAllPrograms(main, peers);
 
-            var byRegion = all
-                .GroupBy(p => string.IsNullOrWhiteSpace(p.Region) ? p.Country ?? "Unknown" : p.Region)
-                .OrderByDescending(g => g.Count())
-                .ToList();
+        //    var byRegion = all
+        //        .GroupBy(p => string.IsNullOrWhiteSpace(p.Region) ? p.Program ?? "Unknown" : p.Region)
+        //        .OrderByDescending(g => g.Count())
+        //        .ToList();
 
-            container.Padding(16).Column(col =>
-            {
-                col.Spacing(12);
+        //    container.Padding(16).Column(col =>
+        //    {
+        //        col.Spacing(12);
 
-                col.Item().Element(x => DrawInsightBand(x,
-                    $"{byRegion.Count} region(s)  |  {all.Count} total countries analysed"));
+        //        col.Item().Element(x => DrawInsightBand(x,
+        //            $"{byRegion.Count} region(s)  |  {all.Count} total programs analysed"));
 
-                col.Item().Text("Country Distribution by Region")
-                    .FontSize(11).Bold().FontColor(ReportThemeColors.PdfDarkGreen);
+        //        col.Item().Text("Program Distribution by Region")
+        //            .FontSize(11).Bold().FontColor(ReportThemeColors.PdfDarkGreen);
 
-                col.Item().Height(180).Canvas((canvas, size) =>
-                    DrawDonutChart(canvas, size,
-                        byRegion.Select(g => (g.Key, (float)g.Count())).ToList()));
+        //        col.Item().Height(180).Canvas((canvas, size) =>
+        //            DrawDonutChart(canvas, size,
+        //                byRegion.Select(g => (g.Key, (float)g.Count())).ToList()));
 
-                col.Item().PaddingTop(4)
-                    .Text("Average Score per Region")
-                    .FontSize(11).Bold().FontColor(ReportThemeColors.PdfDarkGreen);
+        //        col.Item().PaddingTop(4)
+        //            .Text("Average Score per Region")
+        //            .FontSize(11).Bold().FontColor(ReportThemeColors.PdfDarkGreen);
 
-                col.Item().Canvas((canvas, size) =>
-                {
-                    var regionScores = byRegion
-                        .Select(g => (
-                            Region: g.Key,
-                            Avg: g.Average(c => GetLatestScoreOrZero(c)),  // includes 0
-                            Count: g.Count()
-                        ))
-                        .OrderByDescending(r => r.Avg)
-                        .ToList();
+        //        col.Item().Canvas((canvas, size) =>
+        //        {
+        //            var regionScores = byRegion
+        //                .Select(g => (
+        //                    Region: g.Key,
+        //                    Avg: g.Average(c => GetLatestScoreOrZero(c)),  // includes 0
+        //                    Count: g.Count()
+        //                ))
+        //                .OrderByDescending(r => r.Avg)
+        //                .ToList();
 
-                    float barH = 28f;
-                    float labelW = 120f;
-                    float barArea = size.Width - labelW - 65f;
+        //            float barH = 28f;
+        //            float labelW = 120f;
+        //            float barArea = size.Width - labelW - 65f;
 
-                    for (int i = 0; i < regionScores.Count; i++)
-                    {
-                        var r = regionScores[i];
-                        float y = i * barH + 4f;
-                        float barW = r.Avg / 100f * barArea;
+        //            for (int i = 0; i < regionScores.Count; i++)
+        //            {
+        //                var r = regionScores[i];
+        //                float y = i * barH + 4f;
+        //                float barW = r.Avg / 100f * barArea;
 
-                        if (i % 2 == 0)
-                            canvas.DrawRect(new SKRect(0, y - 2, size.Width, y + barH - 4),
-                                new SKPaint { Color = SKColor.Parse(ReportThemeColors.SurfaceGreenRow) });
+        //                if (i % 2 == 0)
+        //                    canvas.DrawRect(new SKRect(0, y - 2, size.Width, y + barH - 4),
+        //                        new SKPaint { Color = SKColor.Parse(ReportThemeColors.SurfaceGreenRow) });
 
-                        DrawCanvasText(canvas, r.Region, 4, y + 5, 9, ReportThemeColors.Gray900);
-                        canvas.DrawRoundRect(
-                            new SKRoundRect(new SKRect(labelW, y + 3, labelW + barW, y + barH - 6), 3),
-                            new SKPaint { Color = SKColor.Parse(ScoreColor(r.Avg)), IsAntialias = true });
-                        DrawCanvasText(canvas, $"{r.Avg:F1}  (n={r.Count})",
-                            labelW + barW + 5, y + 5, 9, ReportThemeColors.Gray800);
-                    }
-                });
-            });
-        }
+        //                DrawCanvasText(canvas, r.Region, 4, y + 5, 9, ReportThemeColors.Gray900);
+        //                canvas.DrawRoundRect(
+        //                    new SKRoundRect(new SKRect(labelW, y + 3, labelW + barW, y + barH - 6), 3),
+        //                    new SKPaint { Color = SKColor.Parse(ScoreColor(r.Avg)), IsAntialias = true });
+        //                DrawCanvasText(canvas, $"{r.Avg:F1}  (n={r.Count})",
+        //                    labelW + barW + 5, y + 5, 9, ReportThemeColors.Gray800);
+        //            }
+        //        });
+        //    });
+        //}
 
         // --------------------------------------------------------------------------
         //  5.3  INCOME-LEVEL PEER COMPARISON
         // --------------------------------------------------------------------------
-        public static string GetIncomeCategory(decimal income)
-        {
-            if (income < 5000) return "Low Income";
-            if (income <= 15000) return "Lower-Middle Income";
-            if (income <= 40000) return "Upper-Middle Income";
-            return "High Income";
-        }
-        private static string GetSegmentColor(string category)
-        {
-            return category switch
-            {
-                "Low Income" => ReportThemeColors.IncomeLow,          // softer red
-                "Lower-Middle Income" => ReportThemeColors.IncomeLowerMiddle, // amber
-                "Upper-Middle Income" => ReportThemeColors.BootstrapInfo, // blue-green
-                "High Income" => ReportThemeColors.SuccessGreen,         // strong green
-                _ => ReportThemeColors.GrayLight
-            };
-        }
+        //public static string GetIncomeCategory(decimal income)
+        //{
+        //    if (income < 5000) return "Low Income";
+        //    if (income <= 15000) return "Lower-Middle Income";
+        //    if (income <= 40000) return "Upper-Middle Income";
+        //    return "High Income";
+        //}
+        //private static string GetSegmentColor(string category)
+        //{
+        //    return category switch
+        //    {
+        //        "Low Income" => ReportThemeColors.IncomeLow,          // softer red
+        //        "Lower-Middle Income" => ReportThemeColors.IncomeLowerMiddle, // amber
+        //        "Upper-Middle Income" => ReportThemeColors.BootstrapInfo, // blue-green
+        //        "High Income" => ReportThemeColors.SuccessGreen,         // strong green
+        //        _ => ReportThemeColors.GrayLight
+        //    };
+        //}
 
-        void IncomePeerPage(
-              IContainer container,
-              List<PeerCountryHistoryReportDto> peers,
-              PeerCountryHistoryReportDto? main,
-              AiCountrySummeryDto countryDetails)
-        {
-            var categoryOrder = new[]
-            {
-                "Low Income", "Lower-Middle Income", "Upper-Middle Income", "High Income"
-            };
+        //void IncomePeerPage(
+        //      IContainer container,
+        //      List<PeerProgramHistoryReportDto> peers,
+        //      PeerProgramHistoryReportDto? main,
+        //      AiProgramSummeryDto ProgramDetails)
+        //{
+        //    var categoryOrder = new[]
+        //    {
+        //        "Low Income", "Lower-Middle Income", "Upper-Middle Income", "High Income"
+        //    };
 
-            var all = BuildAllCountries(main, peers);
-            var withIncome = all.Where(p => p.Income.HasValue).OrderBy(p => p.Income).ToList();
+        //    var all = BuildAllPrograms(main, peers);
+        //    //var withIncome = all.Where(p => p.Income.HasValue).OrderBy(p => p.Income).ToList();
 
-            if (!withIncome.Any()) { DrawNoDataPage(container); return; }
+        //    if (!withIncome.Any()) { DrawNoDataPage(container); return; }
 
-            var segments = all
-                .GroupBy(x => GetIncomeCategory(x.Income ?? 0))
-                .ToDictionary(g => g.Key, g => g.ToList());
+        //    var segments = all
+        //        .GroupBy(x => GetIncomeCategory(x.Income ?? 0))
+        //        .ToDictionary(g => g.Key, g => g.ToList());
 
-            container.Padding(16).Column(col =>
-            {
-                col.Spacing(12);
+        //    container.Padding(16).Column(col =>
+        //    {
+        //        col.Spacing(12);
 
-                // -- Insight band ---------------------------------------------
-                col.Item().Element(x => DrawInsightBand(x,
-                    $"Income quartile analysis  |  {withIncome.Count} countries  |  " +
-                    $"Range: {withIncome.Min(p => p.Income):C0} . {withIncome.Max(p => p.Income):C0}"));
+        //        // -- Insight band ---------------------------------------------
+        //        col.Item().Element(x => DrawInsightBand(x,
+        //            $"Income quartile analysis  |  {withIncome.Count} programs  |  " +
+        //            $"Range: {withIncome.Min(p => p.Income):C0} . {withIncome.Max(p => p.Income):C0}"));
 
-                // -- Avg score per quartile bars (UNCHANGED) ------------------
-                col.Item().Text("Average Score by Income Quartile")
-                    .FontSize(11).Bold().FontColor(ReportThemeColors.PdfDarkGreen);
+        //        // -- Avg score per quartile bars (UNCHANGED) ------------------
+        //        col.Item().Text("Average Score by Income Quartile")
+        //            .FontSize(11).Bold().FontColor(ReportThemeColors.PdfDarkGreen);
 
-                col.Item().Height(130).Canvas((canvas, size) =>
-                {
-                    float barAreaW = (size.Width - 40f) / 4f - 8f;
-                    for (int i = 0; i < categoryOrder.Length; i++)
-                    {
-                        var label = categoryOrder[i];
-                        if (!segments.TryGetValue(label, out var countries) || !countries.Any()) continue;
+        //        col.Item().Height(130).Canvas((canvas, size) =>
+        //        {
+        //            float barAreaW = (size.Width - 40f) / 4f - 8f;
+        //            for (int i = 0; i < categoryOrder.Length; i++)
+        //            {
+        //                var label = categoryOrder[i];
+        //                if (!segments.TryGetValue(label, out var programs) || !programs.Any()) continue;
 
-                        float avg = countries.Average(c => GetLatestScoreOrZero(c));
-                        float barH = avg / 100f * 90f;
-                        float x = 20 + i * ((size.Width - 40f) / 4f);
+        //                float avg = programs.Average(c => GetLatestScoreOrZero(c));
+        //                float barH = avg / 100f * 90f;
+        //                float x = 20 + i * ((size.Width - 40f) / 4f);
 
-                        canvas.DrawRoundRect(
-                            new SKRoundRect(new SKRect(x, 100 - barH, x + barAreaW, 100), 6),
-                            new SKPaint { Color = SKColor.Parse(GetSegmentColor(label)), IsAntialias = true });
+        //                canvas.DrawRoundRect(
+        //                    new SKRoundRect(new SKRect(x, 100 - barH, x + barAreaW, 100), 6),
+        //                    new SKPaint { Color = SKColor.Parse(GetSegmentColor(label)), IsAntialias = true });
 
-                        DrawCanvasText(canvas, $"{avg:F1}", x + barAreaW / 2 - 10, 100 - barH - 14, 9, ReportThemeColors.PdfDarkGreen, true);
-                        DrawCanvasText(canvas, label, x, 108, 8, ReportThemeColors.Gray800);
-                        DrawCanvasText(canvas, $"n={countries.Count}", x, 118, 8, ReportThemeColors.Gray600);
-                    }
-                });
+        //                DrawCanvasText(canvas, $"{avg:F1}", x + barAreaW / 2 - 10, 100 - barH - 14, 9, ReportThemeColors.PdfDarkGreen, true);
+        //                DrawCanvasText(canvas, label, x, 108, 8, ReportThemeColors.Gray800);
+        //                DrawCanvasText(canvas, $"n={programs.Count}", x, 118, 8, ReportThemeColors.Gray600);
+        //            }
+        //        });
 
-                // -- Scatter: Income vs Score (UNCHANGED) ---------------------
-                col.Item().PaddingTop(4)
-                    .Text("Income vs Composite Score  (each dot = one country)")
-                    .FontSize(11).Bold().FontColor(ReportThemeColors.PdfDarkGreen);
+        //        // -- Scatter: Income vs Score (UNCHANGED) ---------------------
+        //        col.Item().PaddingTop(4)
+        //            .Text("Income vs Composite Score  (each dot = one Program)")
+        //            .FontSize(11).Bold().FontColor(ReportThemeColors.PdfDarkGreen);
 
-                col.Item().Height(160).Canvas((canvas, size) =>
-                    DrawScatterPlot(canvas, size, withIncome, countryDetails,
-                        c => (float)(c.Income ?? 0),
-                        c => GetLatestScoreOrZero(c),
-                        "Income (USD)", "Score"));
-
-
-                // -- Top performers table (UPDATED . PPP column added) --------
-                col.Item().PaddingTop(8)
-                    .Text("Top Performers by Income Group")
-                    .FontSize(11).Bold().FontColor(ReportThemeColors.PdfDarkGreen);
-
-                col.Item().Table(table =>
-                {
-                    table.ColumnsDefinition(cols =>
-                    {
-                        cols.ConstantColumn(100);  // Country
-                        cols.ConstantColumn(55);   // Country
-                        cols.ConstantColumn(40);   // Score
-                        cols.RelativeColumn();     // Income Group
-                        cols.ConstantColumn(55);   // Income
-                        //cols.ConstantColumn(60);   // PPP  ? NEW
-                    });
-
-                    DrawTableHeader(table, new[]
-                    {
-                        "Country", "Continent", "Score", "Income Group", "Income"
-                    });
-
-                    foreach (var (label, countries) in segments)
-                    {
-                        foreach (var country in countries.OrderByDescending(c => GetLatestScoreOrZero(c)))
-                        {
-                            bool isMain = IsSameCountry(country.CountryName, countryDetails.Continent);
-                            string rowBg = isMain ? ReportThemeColors.SurfaceSelected : ReportThemeColors.White;
-                            float score = GetLatestScoreOrZero(country);
-
-                            table.Cell().Background(rowBg).BorderBottom(0.5f).BorderColor(ReportThemeColors.Gray350)
-                                .Padding(5).Text(country.CountryName).FontSize(8)
-                                .FontColor(isMain ? ReportThemeColors.PdfDarkGreen : ReportThemeColors.Gray900);
-                            table.Cell().Background(rowBg).BorderBottom(0.5f).BorderColor(ReportThemeColors.Gray350)
-                                .Padding(5).Text(country.Country ?? ".").FontSize(8).FontColor(ReportThemeColors.Gray800);
-                            table.Cell().Background(rowBg).BorderBottom(0.5f).BorderColor(ReportThemeColors.Gray350)
-                                .Padding(5).Text($"{score:F1}").FontSize(8).Bold().FontColor(ScoreColor(score));
-                            table.Cell().Background(rowBg).BorderBottom(0.5f).BorderColor(ReportThemeColors.Gray350)
-                                .Padding(5).Text(label).FontSize(8).FontColor(ReportThemeColors.Gray800);
-                            table.Cell().Background(rowBg).BorderBottom(0.5f).BorderColor(ReportThemeColors.Gray350)
-                                .Padding(5).Text(FormatPop(country.Income).ToString()).FontSize(8).FontColor(ReportThemeColors.Gray800);
+        //        col.Item().Height(160).Canvas((canvas, size) =>
+        //            DrawScatterPlot(canvas, size, withIncome, ProgramDetails,
+        //                c => (float)(c.Income ?? 0),
+        //                c => GetLatestScoreOrZero(c),
+        //                "Income (USD)", "Score"));
 
 
-                        }
-                    }
-                });
-            });
-        }
+        //        // -- Top performers table (UPDATED . PPP column added) --------
+        //        col.Item().PaddingTop(8)
+        //            .Text("Top Performers by Income Group")
+        //            .FontSize(11).Bold().FontColor(ReportThemeColors.PdfDarkGreen);
+
+        //        col.Item().Table(table =>
+        //        {
+        //            table.ColumnsDefinition(cols =>
+        //            {
+        //                cols.ConstantColumn(100);  // Program
+        //                cols.ConstantColumn(55);   // Program
+        //                cols.ConstantColumn(40);   // Score
+        //                cols.RelativeColumn();     // Income Group
+        //                cols.ConstantColumn(55);   // Income
+        //                //cols.ConstantColumn(60);   // PPP  ? NEW
+        //            });
+
+        //            DrawTableHeader(table, new[]
+        //            {
+        //                "Program", "Location", "Score", "Income Group", "Income"
+        //            });
+
+        //            foreach (var (label, programs) in segments)
+        //            {
+        //                foreach (var Program in programs.OrderByDescending(c => GetLatestScoreOrZero(c)))
+        //                {
+        //                    bool isMain = IsSameProgram(Program.ProgramName, ProgramDetails.Location);
+        //                    string rowBg = isMain ? ReportThemeColors.SurfaceSelected : ReportThemeColors.White;
+        //                    float score = GetLatestScoreOrZero(Program);
+
+        //                    table.Cell().Background(rowBg).BorderBottom(0.5f).BorderColor(ReportThemeColors.Gray350)
+        //                        .Padding(5).Text(Program.ProgramName).FontSize(8)
+        //                        .FontColor(isMain ? ReportThemeColors.PdfDarkGreen : ReportThemeColors.Gray900);
+        //                    table.Cell().Background(rowBg).BorderBottom(0.5f).BorderColor(ReportThemeColors.Gray350)
+        //                        .Padding(5).Text(Program.Program ?? ".").FontSize(8).FontColor(ReportThemeColors.Gray800);
+        //                    table.Cell().Background(rowBg).BorderBottom(0.5f).BorderColor(ReportThemeColors.Gray350)
+        //                        .Padding(5).Text($"{score:F1}").FontSize(8).Bold().FontColor(ScoreColor(score));
+        //                    table.Cell().Background(rowBg).BorderBottom(0.5f).BorderColor(ReportThemeColors.Gray350)
+        //                        .Padding(5).Text(label).FontSize(8).FontColor(ReportThemeColors.Gray800);
+        //                    table.Cell().Background(rowBg).BorderBottom(0.5f).BorderColor(ReportThemeColors.Gray350)
+        //                        .Padding(5).Text(FormatPop(Program.Income).ToString()).FontSize(8).FontColor(ReportThemeColors.Gray800);
+
+
+        //                }
+        //            }
+        //        });
+        //    });
+        //}
 
 
         // --------------------------------------------------------------------------
-        //  5.5  RELATIVE RANKING AMONG PEER countries
+        //  5.5  RELATIVE RANKING AMONG PEER programs
         // --------------------------------------------------------------------------
 
         void RelativeRankingPage(
             IContainer container,
-            List<PeerCountryHistoryReportDto> peers,
-            PeerCountryHistoryReportDto? main,
-            AiCountrySummeryDto countryDetails)
+            List<PeerProgramHistoryReportDto> peers,
+            PeerProgramHistoryReportDto? main,
+            AiProgramSummeryDto ProgramDetails)
         {
-            // Build ranked list including main country; include 0-score countries
-            var all = BuildAllCountries(main, peers)
-                .Select(c => (Country: c, Score: GetLatestScoreOrZero(c)))
+            // Build ranked list including main Program; include 0-score programs
+            var all = BuildAllPrograms(main, peers)
+                .Select(c => (Program: c, Score: GetLatestScoreOrZero(c)))
                 .OrderByDescending(x => x.Score)
                 .ToList();
 
             int total = all.Count;
-            int mainRank = all.FindIndex(r => IsSameCountry(r.Country.CountryName, countryDetails.CountryName)) + 1;
+            int mainRank = all.FindIndex(r => IsSameProgram(r.Program.ProgramName, ProgramDetails.ProgramName)) + 1;
             float mainScore = mainRank > 0 ? all[mainRank - 1].Score : 0f;
             float pctile = mainRank > 0 ? (1f - (float)mainRank / total) * 100f : 0f;
 
@@ -2718,7 +2713,7 @@ namespace VeridianClimatePulse.Common.Implementation
                     {
                         c.Item().Text($"#{mainRank} of {total}")
                             .FontSize(32).Bold().FontColor(ReportThemeColors.WarningGold);
-                        c.Item().Text($"{countryDetails.CountryName}  \u00b7  {countryDetails.Continent}")
+                        c.Item().Text($"{ProgramDetails.ProgramName}  \u00b7  {ProgramDetails.Location}")
                             .FontSize(12).FontColor(ReportThemeColors.SuccessGreenSoft);
                     });
                     row.ConstantItem(130).Column(c =>
@@ -2732,7 +2727,7 @@ namespace VeridianClimatePulse.Common.Implementation
                 });
 
                 // -- Score distribution histogram ------------------------------
-                col.Item().Text("Score Distribution Among All countries")
+                col.Item().Text("Score Distribution Among All programs")
                     .FontSize(11).Bold().FontColor(ReportThemeColors.PdfDarkGreen);
 
                 col.Item().Height(150).Canvas((canvas, size) =>
@@ -2740,26 +2735,26 @@ namespace VeridianClimatePulse.Common.Implementation
                         all.Select(r => r.Score).ToList(), mainScore, 10));
 
                 // -- Full ranking table ----------------------------------------
-                col.Item().Text("Full Country Ranking").FontSize(11).Bold().FontColor(ReportThemeColors.PdfDarkGreen);
+                col.Item().Text("Full Program Ranking").FontSize(11).Bold().FontColor(ReportThemeColors.PdfDarkGreen);
 
                 col.Item().Table(table =>
                 {
                     table.ColumnsDefinition(cols =>
                     {
                         cols.ConstantColumn(24);   // rank
-                        cols.RelativeColumn();     // country name
-                        cols.ConstantColumn(65);   // country
+                        cols.RelativeColumn();     // Program name
+                        cols.ConstantColumn(65);   // Program
                         cols.ConstantColumn(55);   // region
                         cols.ConstantColumn(52);   // population
                         cols.ConstantColumn(70);   // score bar
                     });
 
-                    DrawTableHeader(table, new[] { "#", "Country", "Continent", "Region", "Pop.", "Score" });
+                    DrawTableHeader(table, new[] { "#", "Program", "Location", "Region", "Score" });
 
 
                     foreach (var (entry, idx) in all.Select((e, i) => (e, i)))
                     {
-                        bool isMain = IsSameCountry(entry.Country.CountryName, countryDetails.CountryName);
+                        bool isMain = IsSameProgram(entry.Program.ProgramName, ProgramDetails.ProgramName);
                         string bg = isMain ? ReportThemeColors.SurfaceSelected : (idx % 2 == 0 ? ReportThemeColors.White : ReportThemeColors.PageBg);
                         string rankColor = idx == 0 ? ReportThemeColors.WarningGold
                                          : idx == 1 ? ReportThemeColors.GraySilver
@@ -2768,15 +2763,15 @@ namespace VeridianClimatePulse.Common.Implementation
                         table.Cell().Background(bg).BorderBottom(0.5f).BorderColor(ReportThemeColors.Gray250)
                             .Padding(4).Text($"{idx + 1}").FontSize(8).FontColor(rankColor);
                         table.Cell().Background(bg).BorderBottom(0.5f).BorderColor(ReportThemeColors.Gray250)
-                            .Padding(4).Text(entry.Country.CountryName).FontSize(8)
+                            .Padding(4).Text(entry.Program.ProgramName).FontSize(8)
                             .FontColor(isMain ? ReportThemeColors.PdfDarkGreen : ReportThemeColors.Gray900);
                         table.Cell().Background(bg).BorderBottom(0.5f).BorderColor(ReportThemeColors.Gray250)
-                            .Padding(4).Text(entry.Country.Continent ?? ".").FontSize(8).FontColor(ReportThemeColors.Gray800);
+                            .Padding(4).Text(entry.Program.Location ?? ".").FontSize(8).FontColor(ReportThemeColors.Gray800);
                         table.Cell().Background(bg).BorderBottom(0.5f).BorderColor(ReportThemeColors.Gray250)
-                            .Padding(4).Text(entry.Country.Region ?? ".").FontSize(8).FontColor(ReportThemeColors.Gray800);
-                        table.Cell().Background(bg).BorderBottom(0.5f).BorderColor(ReportThemeColors.Gray250)
-                            .Padding(4).AlignRight()
-                            .Text(FormatPop(entry.Country.Population)).FontSize(8).FontColor(ReportThemeColors.Gray800);
+                            .Padding(4).Text(entry.Program.Location ?? ".").FontSize(8).FontColor(ReportThemeColors.Gray800);
+                        //table.Cell().Background(bg).BorderBottom(0.5f).BorderColor(ReportThemeColors.Gray250)
+                        //    .Padding(4).AlignRight()
+                        //    .Text(FormatPop(entry.Program.Population)).FontSize(8).FontColor(ReportThemeColors.Gray800);
 
                         table.Cell()
                         .Background(bg)
@@ -2810,18 +2805,18 @@ namespace VeridianClimatePulse.Common.Implementation
 
         void HistoricalTrendsPage(
             IContainer container,
-            List<PeerCountryHistoryReportDto> peers,
-            PeerCountryHistoryReportDto? main,
-            AiCountrySummeryDto countryDetails)
+            List<PeerProgramHistoryReportDto> peers,
+            PeerProgramHistoryReportDto? main,
+            AiProgramSummeryDto ProgramDetails)
         {
-            var all = BuildAllCountries(main, peers);
-            var mainCountry = main ?? peers.FirstOrDefault();
+            var all = BuildAllPrograms(main, peers);
+            var mainProgram = main ?? peers.FirstOrDefault();
 
-            if (mainCountry == null) { DrawNoDataPage(container); return; }
+            if (mainProgram == null) { DrawNoDataPage(container); return; }
 
-            // All distinct years across all countries
+            // All distinct years across all programs
             var allYears = all
-                .SelectMany(c => c.CountryHistory ?? Enumerable.Empty<PeerCountryYearHistoryDto>())
+                .SelectMany(c => c.ProgramHistory ?? Enumerable.Empty<PeerProgramYearHistoryDto>())
                 .Select(h => h.Year)
                 .Distinct()
                 .OrderBy(y => y)
@@ -2829,14 +2824,14 @@ namespace VeridianClimatePulse.Common.Implementation
 
             if (!allYears.Any()) { DrawNoDataPage(container); return; }
 
-            var mainHistory = (mainCountry.CountryHistory ?? new())
+            var mainHistory = (mainProgram.ProgramHistory ?? new())
                 .OrderBy(h => h.Year).ToList();
 
             // Peer average per year (include 0-score years)
             var peerAvg = allYears.Select(yr =>
             {
                 var scores = peers
-                    .Select(p => p.CountryHistory?.FirstOrDefault(h => h.Year == yr))
+                    .Select(p => p.ProgramHistory?.FirstOrDefault(h => h.Year == yr))
                     .Select(h => h != null ? (float?)h.ScoreProgress : null)
                     .Where(s => s.HasValue)
                     .Select(s => s!.Value)
@@ -2856,9 +2851,9 @@ namespace VeridianClimatePulse.Common.Implementation
                     float delta = last - first;
                     col.Item().Element(x => DrawInsightBand(x,
                         $"Period: {allYears.First()} . {allYears.Last()}  |  " +
-                        $"{mainCountry.CountryName}: {(delta >= 0 ? "+" : "")}{delta:F1} pts  |  " +
+                        $"{mainProgram.ProgramName}: {(delta >= 0 ? "+" : "")}{delta:F1} pts  |  " +
                         $"Latest score: {last:F1}  |  " +
-                        $"{peers.Count} peer country(ies)"));
+                        $"{peers.Count} peer Program(ies)"));
                 }
 
                 // -- 6.1  Multi-line trend ------------------------------------
@@ -2866,10 +2861,10 @@ namespace VeridianClimatePulse.Common.Implementation
                     .FontSize(12).Bold().FontColor(ReportThemeColors.PdfDarkGreen);
 
                 col.Item().Height(190).Canvas((canvas, size) =>
-                    DrawMultiLineTrendChart(canvas, size, allYears, peers, mainCountry, countryDetails, peerAvg));
+                    DrawMultiLineTrendChart(canvas, size, allYears, peers, mainProgram, ProgramDetails, peerAvg));
 
-                // Legend: one entry per country
-                col.Item().Element(x => DrawCountryLineLegend(x, mainCountry, peers, countryDetails));
+                // Legend: one entry per Program
+                col.Item().Element(x => DrawProgramLineLegend(x, mainProgram, peers, ProgramDetails));
 
                 col.Item().PaddingVertical(4).LineHorizontal(0.5f).LineColor(ReportThemeColors.Gray350);
 
@@ -2898,7 +2893,7 @@ namespace VeridianClimatePulse.Common.Implementation
         void DrawYoYTable(
             IContainer container,
             List<int> years,
-            List<PeerCountryYearHistoryDto> mainHistory,
+            List<PeerProgramYearHistoryDto> mainHistory,
             List<(int Year, float Avg)> peerAvg)
         {
             container.Table(table =>
@@ -2961,24 +2956,24 @@ namespace VeridianClimatePulse.Common.Implementation
         }
 
         // --------------------------------------------------------------------------
-        //  6.3  PILLAR-LEVEL TREND  (main country only; up to 14 pillars)
+        //  6.3  PILLAR-LEVEL TREND  (main Program only; up to 14 pillars)
         // --------------------------------------------------------------------------
 
         void PillarTrendPage(
             IContainer container,
-            PeerCountryHistoryReportDto? mainCountry,
-            AiCountrySummeryDto countryDetails)
+            PeerProgramHistoryReportDto? mainProgram,
+            AiProgramSummeryDto ProgramDetails)
         {
-            if (mainCountry == null) { DrawNoDataPage(container); return; }
+            if (mainProgram == null) { DrawNoDataPage(container); return; }
 
-            var history = mainCountry.CountryHistory ?? new();            
+            var history = mainProgram.ProgramHistory ?? new();            
             var allYears = history.Select(h => h.Year).OrderBy(y => y).ToList();
 
             if (!allYears.Any()) { DrawNoDataPage(container); return; }
 
             // Collect all unique pillars (cap at MaxPillars = 23)
             var pillars = history
-                .SelectMany(h => h.Pillars ?? Enumerable.Empty<PeerCountryPillarHistoryReportDto>())
+                .SelectMany(h => h.Pillars ?? Enumerable.Empty<PeerProgramPillarHistoryReportDto>())
                 .GroupBy(p => p.PillarID)
                 .Select(g => g.OrderBy(p => p.DisplayOrder).First())
                 .OrderBy(p => p.DisplayOrder)
@@ -2989,7 +2984,7 @@ namespace VeridianClimatePulse.Common.Implementation
                 col.Spacing(12);
 
                 col.Item().Element(x => DrawInsightBand(x,
-                    $"{pillars.Count} pillar(s)  |  {allYears.Count} year(s)  |  Country: {mainCountry.CountryName}"));
+                    $"{pillars.Count} pillar(s)  |  {allYears.Count} year(s)  |  Program: {mainProgram.ProgramName}"));
 
                 col.Item().Text("Pillar Score Trajectory Over Time")
                     .FontSize(11).Bold().FontColor(ReportThemeColors.PdfDarkGreen);
@@ -3103,15 +3098,15 @@ namespace VeridianClimatePulse.Common.Implementation
         // --------------------------------------------------------------------------
 
         /// <summary>
-        /// Multi-line trend chart: one coloured line per country (gold = main, palette = peers).
+        /// Multi-line trend chart: one coloured line per Program (gold = main, palette = peers).
         /// Thin grey peer lines are no longer used; each peer gets its own distinct colour.
         /// </summary>
         void DrawMultiLineTrendChart(
             SKCanvas canvas, Size size,
             List<int> years,
-            List<PeerCountryHistoryReportDto> peers,
-            PeerCountryHistoryReportDto mainCountry,
-            AiCountrySummeryDto countryDetails,
+            List<PeerProgramHistoryReportDto> peers,
+            PeerProgramHistoryReportDto mainProgram,
+            AiProgramSummeryDto ProgramDetails,
             List<(int Year, float Avg, bool HasData)> peerAvg)
         {
             if (years.Count < 2) return;
@@ -3155,9 +3150,9 @@ namespace VeridianClimatePulse.Common.Implementation
             for (int pi = 0; pi < peers.Count; pi++)
             {
                 var peer = peers[pi];
-                string clr = CountryPalette[1 + (pi % (CountryPalette.Length - 1))];
+                string clr = ProgramPalette[1 + (pi % (ProgramPalette.Length - 1))];
 
-                var pts = (peer.CountryHistory ?? new())
+                var pts = (peer.ProgramHistory ?? new())
                     .Where(h => years.Contains(h.Year))
                     .OrderBy(h => h.Year)
                     .Select(h => new SKPoint(Xp(h.Year), Yp((float)h.ScoreProgress)))
@@ -3173,8 +3168,8 @@ namespace VeridianClimatePulse.Common.Implementation
                     });
             }
 
-            // Main country line (gold, bold)
-            var mainPts = (mainCountry.CountryHistory ?? new())
+            // Main Program line (gold, bold)
+            var mainPts = (mainProgram.ProgramHistory ?? new())
                 .Where(h => years.Contains(h.Year))
                 .OrderBy(h => h.Year)
                 .Select(h => new SKPoint(Xp(h.Year), Yp((float)h.ScoreProgress)))
@@ -3183,7 +3178,7 @@ namespace VeridianClimatePulse.Common.Implementation
             DrawPolyline(canvas, mainPts,
                 new SKPaint
                 {
-                    Color = SKColor.Parse(CountryPalette[0]),
+                    Color = SKColor.Parse(ProgramPalette[0]),
                     StrokeWidth = 2.5f,
                     IsAntialias = true,
                     IsStroke = true
@@ -3191,13 +3186,13 @@ namespace VeridianClimatePulse.Common.Implementation
 
             foreach (var pt in mainPts)
                 canvas.DrawCircle(pt.X, pt.Y, 4f,
-                    new SKPaint { Color = SKColor.Parse(CountryPalette[0]), IsAntialias = true });
+                    new SKPaint { Color = SKColor.Parse(ProgramPalette[0]), IsAntialias = true });
         }
 
         void DrawAreaComparisonChart(
             SKCanvas canvas, Size size,
             List<int> years,
-            List<PeerCountryYearHistoryDto> mainHistory,
+            List<PeerProgramYearHistoryDto> mainHistory,
             List<(int Year, float Avg)> peerAvg)
         {
             if (years.Count < 2) return;
@@ -3243,7 +3238,7 @@ namespace VeridianClimatePulse.Common.Implementation
             mainPath.LineTo(Xp(years.Last()), Yp(0));
             mainPath.Close();
             canvas.DrawPath(mainPath,
-                new SKPaint { Color = SKColor.Parse(CountryPalette[0]).WithAlpha(50), IsAntialias = true });
+                new SKPaint { Color = SKColor.Parse(ProgramPalette[0]).WithAlpha(50), IsAntialias = true });
 
             // Outlines
             DrawPolyline(canvas,
@@ -3262,7 +3257,7 @@ namespace VeridianClimatePulse.Common.Implementation
                     Yp((float)(mainHistory.FirstOrDefault(h => h.Year == yr)?.ScoreProgress ?? 0)))).ToList(),
                 new SKPaint
                 {
-                    Color = SKColor.Parse(CountryPalette[0]),
+                    Color = SKColor.Parse(ProgramPalette[0]),
                     StrokeWidth = 2f,
                     IsAntialias = true,
                     IsStroke = true
@@ -3273,8 +3268,8 @@ namespace VeridianClimatePulse.Common.Implementation
         void DrawPillarLineChart(
             SKCanvas canvas, Size size,
             List<int> years,
-            List<PeerCountryYearHistoryDto> history,
-            List<PeerCountryPillarHistoryReportDto> pillars)
+            List<PeerProgramYearHistoryDto> history,
+            List<PeerProgramPillarHistoryReportDto> pillars)
         {
             if (years.Count < 2) return;
 
@@ -3327,113 +3322,113 @@ namespace VeridianClimatePulse.Common.Implementation
             }
         }
 
-        void DrawScatterPlot(
-            SKCanvas canvas, Size size,
-            List<PeerCountryHistoryReportDto> countries,
-            AiCountrySummeryDto countryDetails,
-            Func<PeerCountryHistoryReportDto, float> xVal,
-            Func<PeerCountryHistoryReportDto, float> yVal,
-            string xLabel, string yLabel)
-        {
-            const float padL = 42f, padR = 14f, padT = 8f, padB = 24f;
-            float w = size.Width - padL - padR;
-            float h = size.Height - padT - padB;
+        //void DrawScatterPlot(
+        //    SKCanvas canvas, Size size,
+        //    List<PeerProgramHistoryReportDto> programs,
+        //    AiProgramSummeryDto ProgramDetails,
+        //    Func<PeerProgramHistoryReportDto, float> xVal,
+        //    Func<PeerProgramHistoryReportDto, float> yVal,
+        //    string xLabel, string yLabel)
+        //{
+        //    const float padL = 42f, padR = 14f, padT = 8f, padB = 24f;
+        //    float w = size.Width - padL - padR;
+        //    float h = size.Height - padT - padB;
 
-            float xMin = countries.Any() ? countries.Min(xVal) : 0f;
-            float xMax = countries.Any() ? countries.Max(xVal) : 1f;
-            if (xMax <= xMin) xMax = xMin + 1;
+        //    float xMin = programs.Any() ? programs.Min(xVal) : 0f;
+        //    float xMax = programs.Any() ? programs.Max(xVal) : 1f;
+        //    if (xMax <= xMin) xMax = xMin + 1;
 
-            float Xp(float v) => padL + (v - xMin) / (xMax - xMin) * w;
-            float Yp(float v) => padT + h - Math.Clamp(v, 0, 100) / 100f * h;
+        //    float Xp(float v) => padL + (v - xMin) / (xMax - xMin) * w;
+        //    float Yp(float v) => padT + h - Math.Clamp(v, 0, 100) / 100f * h;
 
-            // Axes
-            canvas.DrawLine(padL, padT, padL, padT + h,
-                new SKPaint { Color = SKColor.Parse(ReportThemeColors.GrayMuted), StrokeWidth = 0.8f });
-            canvas.DrawLine(padL, padT + h, padL + w, padT + h,
-                new SKPaint { Color = SKColor.Parse(ReportThemeColors.GrayMuted), StrokeWidth = 0.8f });
+        //    // Axes
+        //    canvas.DrawLine(padL, padT, padL, padT + h,
+        //        new SKPaint { Color = SKColor.Parse(ReportThemeColors.GrayMuted), StrokeWidth = 0.8f });
+        //    canvas.DrawLine(padL, padT + h, padL + w, padT + h,
+        //        new SKPaint { Color = SKColor.Parse(ReportThemeColors.GrayMuted), StrokeWidth = 0.8f });
 
-            foreach (int s in new[] { 0, 25, 50, 75, 100 })
-            {
-                float y = Yp(s);
-                canvas.DrawLine(padL, y, padL + w, y,
-                    new SKPaint { Color = SKColor.Parse(ReportThemeColors.BorderLight), StrokeWidth = 0.5f });
-                DrawCanvasText(canvas, s.ToString(), 2, y - 5, 7, ReportThemeColors.GrayLight);
-            }
+        //    foreach (int s in new[] { 0, 25, 50, 75, 100 })
+        //    {
+        //        float y = Yp(s);
+        //        canvas.DrawLine(padL, y, padL + w, y,
+        //            new SKPaint { Color = SKColor.Parse(ReportThemeColors.BorderLight), StrokeWidth = 0.5f });
+        //        DrawCanvasText(canvas, s.ToString(), 2, y - 5, 7, ReportThemeColors.GrayLight);
+        //    }
 
-            for (int i = 0; i < countries.Count; i++)
-            {
-                var country = countries[i];
-                bool isMain = IsSameCountry(country.CountryName, countryDetails.CountryName);
-                float x = Xp(xVal(country));
-                float y = Yp(yVal(country));
-                string clr = isMain ? CountryPalette[0] : CountryPalette[1 + (i % (CountryPalette.Length - 1))];
+        //    for (int i = 0; i < programs.Count; i++)
+        //    {
+        //        var Program = programs[i];
+        //        bool isMain = IsSameProgram(Program.ProgramName, ProgramDetails.ProgramName);
+        //        float x = Xp(xVal(Program));
+        //        float y = Yp(yVal(Program));
+        //        string clr = isMain ? ProgramPalette[0] : ProgramPalette[1 + (i % (ProgramPalette.Length - 1))];
 
-                canvas.DrawCircle(x, y, isMain ? 6f : 4.5f,
-                    new SKPaint { Color = SKColor.Parse(clr), IsAntialias = true });
+        //        canvas.DrawCircle(x, y, isMain ? 6f : 4.5f,
+        //            new SKPaint { Color = SKColor.Parse(clr), IsAntialias = true });
 
-                if (isMain)
-                    canvas.DrawCircle(x, y, 6f,
-                        new SKPaint
-                        {
-                            Color = SKColor.Parse(ReportThemeColors.PdfDarkGreen),
-                            IsStroke = true,
-                            StrokeWidth = 1.5f,
-                            IsAntialias = true
-                        });
-            }
+        //        if (isMain)
+        //            canvas.DrawCircle(x, y, 6f,
+        //                new SKPaint
+        //                {
+        //                    Color = SKColor.Parse(ReportThemeColors.PdfDarkGreen),
+        //                    IsStroke = true,
+        //                    StrokeWidth = 1.5f,
+        //                    IsAntialias = true
+        //                });
+        //    }
 
-            DrawCanvasText(canvas, xLabel, padL + w / 2 - 22, padT + h + 14, 8, ReportThemeColors.Gray700);
-            DrawCanvasText(canvas, yLabel, 2, padT + h / 2, 8, ReportThemeColors.Gray700);
-        }
+        //    DrawCanvasText(canvas, xLabel, padL + w / 2 - 22, padT + h + 14, 8, ReportThemeColors.Gray700);
+        //    DrawCanvasText(canvas, yLabel, 2, padT + h / 2, 8, ReportThemeColors.Gray700);
+        //}
 
-        void DrawDonutChart(SKCanvas canvas, Size size, List<(string Label, float Value)> segments)
-        {
-            float total = segments.Sum(s => s.Value);
-            if (total <= 0) return;
+        //void DrawDonutChart(SKCanvas canvas, Size size, List<(string Label, float Value)> segments)
+        //{
+        //    float total = segments.Sum(s => s.Value);
+        //    if (total <= 0) return;
 
-            float cx = size.Height / 2f;
-            float cy = size.Height / 2f;
-            float outerR = size.Height / 2f - 6f;
-            float innerR = outerR * 0.52f;
+        //    float cx = size.Height / 2f;
+        //    float cy = size.Height / 2f;
+        //    float outerR = size.Height / 2f - 6f;
+        //    float innerR = outerR * 0.52f;
 
-            float startAngle = -90f;
-            for (int i = 0; i < segments.Count; i++)
-            {
-                float sweep = segments[i].Value / total * 360f;
-                using var path = new SKPath();
-                var outer = new SKRect(cx - outerR, cy - outerR, cx + outerR, cy + outerR);
-                path.AddArc(outer, startAngle, sweep);
-                path.ArcTo(new SKRect(cx - innerR, cy - innerR, cx + innerR, cy + innerR),
-                    startAngle + sweep, -sweep, false);
-                path.Close();
+        //    float startAngle = -90f;
+        //    for (int i = 0; i < segments.Count; i++)
+        //    {
+        //        float sweep = segments[i].Value / total * 360f;
+        //        using var path = new SKPath();
+        //        var outer = new SKRect(cx - outerR, cy - outerR, cx + outerR, cy + outerR);
+        //        path.AddArc(outer, startAngle, sweep);
+        //        path.ArcTo(new SKRect(cx - innerR, cy - innerR, cx + innerR, cy + innerR),
+        //            startAngle + sweep, -sweep, false);
+        //        path.Close();
 
-                canvas.DrawPath(path, new SKPaint
-                { Color = SKColor.Parse(PillarPalette[i % PillarPalette.Length]), IsAntialias = true });
+        //        canvas.DrawPath(path, new SKPaint
+        //        { Color = SKColor.Parse(PillarPalette[i % PillarPalette.Length]), IsAntialias = true });
 
-                startAngle += sweep;
-            }
+        //        startAngle += sweep;
+        //    }
 
-            // Centre count
-            DrawCanvasText(canvas, $"{segments.Count}", cx - 8, cy - 8, 14, ReportThemeColors.PdfDarkGreen, bold: true);
-            DrawCanvasText(canvas, "groups", cx - 16, cy + 6, 7, ReportThemeColors.Gray800);
+        //    // Centre count
+        //    DrawCanvasText(canvas, $"{segments.Count}", cx - 8, cy - 8, 14, ReportThemeColors.PdfDarkGreen, bold: true);
+        //    DrawCanvasText(canvas, "groups", cx - 16, cy + 6, 7, ReportThemeColors.Gray800);
 
-            // Legend right of donut
-            float lx = cx + outerR + 14f;
-            for (int i = 0; i < segments.Count; i++)
-            {
-                float ly = 12 + i * 17f;
-                canvas.DrawRoundRect(
-                    new SKRoundRect(new SKRect(lx, ly, lx + 10, ly + 10), 2),
-                    new SKPaint
-                    {
-                        Color = SKColor.Parse(PillarPalette[i % PillarPalette.Length]),
-                        IsAntialias = true
-                    });
-                DrawCanvasText(canvas,
-                    $"{Shorten(segments[i].Label, 18)}  ({segments[i].Value:F0})",
-                    lx + 14, ly, 8, ReportThemeColors.Gray900);
-            }
-        }
+        //    // Legend right of donut
+        //    float lx = cx + outerR + 14f;
+        //    for (int i = 0; i < segments.Count; i++)
+        //    {
+        //        float ly = 12 + i * 17f;
+        //        canvas.DrawRoundRect(
+        //            new SKRoundRect(new SKRect(lx, ly, lx + 10, ly + 10), 2),
+        //            new SKPaint
+        //            {
+        //                Color = SKColor.Parse(PillarPalette[i % PillarPalette.Length]),
+        //                IsAntialias = true
+        //            });
+        //        DrawCanvasText(canvas,
+        //            $"{Shorten(segments[i].Label, 18)}  ({segments[i].Value:F0})",
+        //            lx + 14, ly, 8, ReportThemeColors.Gray900);
+        //    }
+        //}
 
         void DrawHistogram(
             SKCanvas canvas, Size size,
@@ -3473,16 +3468,16 @@ namespace VeridianClimatePulse.Common.Implementation
                 DrawCanvasText(canvas, (b * bucketSz).ToString("F0"),
                     padL + b * binW - 6, padT + h + 5, 7, ReportThemeColors.Gray600);
 
-            // Marker for selected country
+            // Marker for selected Program
             float mx = padL + Math.Clamp(markerValue, 0, 100) / 100f * w;
             canvas.DrawLine(mx, padT, mx, padT + h,
                 new SKPaint
                 {
-                    Color = SKColor.Parse(CountryPalette[0]),
+                    Color = SKColor.Parse(ProgramPalette[0]),
                     StrokeWidth = 2f,
                     PathEffect = SKPathEffect.CreateDash(new[] { 4f, 3f }, 0)
                 });
-            DrawCanvasText(canvas, $"^{markerValue:F1}", mx - 12, padT - 1, 7, CountryPalette[0], bold: true);
+            DrawCanvasText(canvas, $"^{markerValue:F1}", mx - 12, padT - 1, 7, ProgramPalette[0], bold: true);
         }
 
         // --------------------------------------------------------------------------
@@ -3541,41 +3536,41 @@ namespace VeridianClimatePulse.Common.Implementation
             });
         }
 
-        /// <summary>Country-specific legend: gold dot for selected country, palette dots for peers.</summary>
-        void DrawCountryLineLegend(
+        /// <summary>Program-specific legend: gold dot for selected Program, palette dots for peers.</summary>
+        void DrawProgramLineLegend(
             IContainer container,
-            PeerCountryHistoryReportDto mainCountry,
-            List<PeerCountryHistoryReportDto> peers,
-            AiCountrySummeryDto countryDetails)
+            PeerProgramHistoryReportDto mainProgram,
+            List<PeerProgramHistoryReportDto> peers,
+            AiProgramSummeryDto ProgramDetails)
         {
             var items = new List<(string Color, string Label)>
             {
-                (CountryPalette[0],  $"{countryDetails.CountryName} (selected)"),
+                (ProgramPalette[0],  $"{ProgramDetails.ProgramName} (selected)"),
                 (ReportThemeColors.PdfTealGreen,       "Peer Average")
             };
             for (int i = 0; i < peers.Count; i++)
-                items.Add((CountryPalette[1 + (i % (CountryPalette.Length - 1))], peers[i].CountryName));
+                items.Add((ProgramPalette[1 + (i % (ProgramPalette.Length - 1))], peers[i].ProgramName));
 
             DrawLegend(container, items.ToArray());
         }
 
-        /// <summary>Legend row showing a coloured dot for every country in the chart.</summary>
-        void DrawCountryLegend(
-            IContainer container,
-            List<PeerCountryHistoryReportDto> allcountries,
-            AiCountrySummeryDto countryDetails)
-        {
-            var items = allcountries
-                .Select((c, i) => (
-                    Color: IsSameCountry(c.CountryName, countryDetails.CountryName)
-                        ? CountryPalette[0]
-                        : CountryPalette[1 + (i % (CountryPalette.Length - 1))],
-                    Label: c.CountryName
-                ))
-                .ToArray();
+        /// <summary>Legend row showing a coloured dot for every Program in the chart.</summary>
+        //void DrawProgramLegend(
+        //    IContainer container,
+        //    List<PeerProgramHistoryReportDto> allprograms,
+        //    AiProgramSummeryDto ProgramDetails)
+        //{
+        //    var items = allprograms
+        //        .Select((c, i) => (
+        //            Color: IsSameProgram(c.ProgramName, ProgramDetails.ProgramName)
+        //                ? ProgramPalette[0]
+        //                : ProgramPalette[1 + (i % (ProgramPalette.Length - 1))],
+        //            Label: c.ProgramName
+        //        ))
+        //        .ToArray();
 
-            DrawLegend(container, items);
-        }
+        //    DrawLegend(container, items);
+        //}
 
         static void DrawTableHeader(TableDescriptor table, string[] headers)
         {
@@ -3621,29 +3616,29 @@ namespace VeridianClimatePulse.Common.Implementation
         /// Returns the latest year's score including 0.
         /// Returns -1 only when there is genuinely NO history entry at all.
         /// </summary>
-        static float GetLatestScoreOrZero(PeerCountryHistoryReportDto country)
+        static float GetLatestScoreOrZero(PeerProgramHistoryReportDto Program)
         {
-            var last = country.CountryHistory?
+            var last = Program.ProgramHistory?
                 .OrderByDescending(h => h.Year)
                 .FirstOrDefault();
             return last != null ? (float)last.ScoreProgress : -1f;
         }
 
-        /// <summary>Returns main-country entry from the combined list; null if not found.</summary>
-        static PeerCountryHistoryReportDto? FindMainCountry(
-            List<PeerCountryHistoryReportDto> all, AiCountrySummeryDto countryDetails) =>
-            all.FirstOrDefault(p => IsSameCountry(p.CountryName, countryDetails.CountryName));
+        /// <summary>Returns main-Program entry from the combined list; null if not found.</summary>
+        static PeerProgramHistoryReportDto? FindMainProgram(
+            List<PeerProgramHistoryReportDto> all, AiProgramSummeryDto ProgramDetails) =>
+            all.FirstOrDefault(p => IsSameProgram(p.ProgramName, ProgramDetails.ProgramName));
 
-        /// <summary>Case-insensitive country name equality check.</summary>
-        static bool IsSameCountry(string? a, string? b) =>
+        /// <summary>Case-insensitive Program name equality check.</summary>
+        static bool IsSameProgram(string? a, string? b) =>
             string.Equals(a?.Trim(), b?.Trim(), StringComparison.OrdinalIgnoreCase);
 
-        /// <summary>Builds a deduplicated list: main country first, then peers.</summary>
-        static List<PeerCountryHistoryReportDto> BuildAllCountries(
-            PeerCountryHistoryReportDto? main,
-            List<PeerCountryHistoryReportDto> peers)
+        /// <summary>Builds a deduplicated list: main Program first, then peers.</summary>
+        static List<PeerProgramHistoryReportDto> BuildAllPrograms(
+            PeerProgramHistoryReportDto? main,
+            List<PeerProgramHistoryReportDto> peers)
         {
-            var list = new List<PeerCountryHistoryReportDto>();
+            var list = new List<PeerProgramHistoryReportDto>();
             if (main != null) list.Add(main);
             list.AddRange(peers);
             return list;
@@ -3652,14 +3647,14 @@ namespace VeridianClimatePulse.Common.Implementation
         static string ScoreColor(float score) =>
             score >= 70 ? ReportThemeColors.PdfMediumGreen : score >= 40 ? ReportThemeColors.WarningGoldAlt : ReportThemeColors.DangerRedAccent;
 
-        static string DeriveRole(PeerCountryHistoryReportDto country)
-        {
-            if (country.Population >= 5_000_000) return "Metropolis";
-            if (country.Population >= 1_000_000) return "Major Country";
-            if (country.Population >= 300_000) return "Mid-Sized Country";
-            if (country.Population >= 100_000) return "Large Town";
-            return "Small Country";
-        }
+        //static string DeriveRole(PeerProgramHistoryReportDto Program)
+        //{
+        //    if (Program.Population >= 5_000_000) return "Metropolis";
+        //    if (Program.Population >= 1_000_000) return "Major Program";
+        //    if (Program.Population >= 300_000) return "Mid-Sized Program";
+        //    if (Program.Population >= 100_000) return "Large Town";
+        //    return "Small Program";
+        //}
 
         static string FormatPop(decimal? value)
         {

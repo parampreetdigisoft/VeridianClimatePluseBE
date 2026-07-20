@@ -1,7 +1,7 @@
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using VeridianClimatePulse.Dtos.CountryDto;
+using VeridianClimatePulse.Dtos.ProgramDto;
 using VeridianClimatePulse.Dtos.EmailExistDto;
 using VeridianClimatePulse.Dtos.UserDtos;
 using VeridianClimatePulse.IServices;
@@ -57,10 +57,10 @@ namespace VeridianClimatePulse.Controllers
             return Ok(response);
         }
 
-        [HttpPost("CountryUserSignUp")]
-        public async Task<IActionResult> CountryUserSignUp([FromBody] CountryUserSignUpDto request)
+        [HttpPost("ClientSignUp")]
+        public async Task<IActionResult> ClientSignUp([FromBody] ClientSignUpDto request)
         {
-            var user = await _authService.CountryUserSignUp(request);
+            var user = await _authService.ClientSignUp(request);
             return Ok(user);
         }
 
@@ -153,7 +153,7 @@ namespace VeridianClimatePulse.Controllers
 
         [HttpPost("sendMailForEditAssessment")]
         [Authorize]
-        public async Task<IActionResult> SendMailForEditAssessment([FromBody] SendRequestMailToUpdateCountry request)
+        public async Task<IActionResult> SendMailForEditAssessment([FromBody] SendRequestMailToUpdateProgram request)
         {
             var user = await _authService.SendMailForEditAssessment(request);
             if (user == null)

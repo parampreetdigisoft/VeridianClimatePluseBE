@@ -4,7 +4,7 @@ namespace VeridianClimatePulse.Dtos.dashboard
 {
     public class DashboardModeResponseDto
     {
-        public int CountryID { get; set; }
+        public int ClimateProgramID { get; set; }
         public int DashboardModeID { get; set; }
         public string ModeName { get; set; } = string.Empty;
         public string? Description { get; set; }

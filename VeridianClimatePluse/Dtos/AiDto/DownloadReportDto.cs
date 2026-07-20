@@ -2,7 +2,7 @@ namespace VeridianClimatePulse.Dtos.AiDto
 {
     public class DownloadReportDto
     {
-        public List<int>? CityIDs { get; set; }
+        public List<int>? ClimateProgramIDs { get; set; }
         public IServices.DocumentFormat Format { get; set; } = IServices.DocumentFormat.Pdf;
 
     }

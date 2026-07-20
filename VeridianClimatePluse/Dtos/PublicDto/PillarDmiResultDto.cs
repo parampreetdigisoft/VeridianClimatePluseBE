@@ -2,7 +2,7 @@ namespace VeridianClimatePulse.Dtos.PublicDto
 {
     public class PillarDmiResultDto
     {
-        //public int CountryID { get; set; }
+        //public int ClimateProgramID { get; set; }
         public int PillarID { get; set; }
         public string PillarName { get; set; }
         public int DisplayOrder { get; set; }

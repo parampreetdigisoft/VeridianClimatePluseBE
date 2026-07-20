@@ -30,10 +30,10 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                var newCountriesIds = _context.Countries.Where(x => x.IsActive && !x.IsDeleted).Select(x => x.CountryID).ToList();
-                foreach (var id in newCountriesIds)
+                var newProgramIds = _context.ClimatePrograms.Where(x => x.IsActive && !x.IsDeleted).Select(x => x.ClimateProgramID).ToList();
+                foreach (var id in newProgramIds)
                 {
-                    await AnalyzeSingleCountryFull(id);
+                    await AnalyzeSingleProgramFull(id);
                 }
             }
             catch (Exception ex)
@@ -59,7 +59,7 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                await ImportAllCountryImmediateSummary();
+                await ImportAllProgramImmediateSummary();
                 await ImportRemainingDocumentsToVectorDB();
                 await DeleteRemainingDocumentsToVectorDB();
 
@@ -73,13 +73,13 @@ namespace VeridianClimatePulse.Services
         {
             // if new city added
             var totalPillar = (await _commonService.GetPillars()).Count;
-            var allCountriesIds = _context.Countries.Where(x=>x.IsActive && !x.IsDeleted).Select(x=>x.CountryID).ToList();
-            var importedCountriesIds = _context.AICountryScores.Select(x => x.CountryID);
+            var allProgramIds = _context.ClimatePrograms.Where(x=>x.IsActive && !x.IsDeleted).Select(x=>x.ClimateProgramID).ToList();
+            var importedProgramIds = _context.AIProgramScores.Select(x => x.ClimateProgramID);
 
-            var newCountriesIds = allCountriesIds.Where(x=> !importedCountriesIds.Contains(x)).ToList();
-            foreach (var id in newCountriesIds)
+            var newProgramIds = allProgramIds.Where(x=> !importedProgramIds.Contains(x)).ToList();
+            foreach (var id in newProgramIds)
             {
-                await AnalyzeSingleCountryFull(id);
+                await AnalyzeSingleProgramFull(id);
             }
 
             var now = DateTime.UtcNow;
@@ -88,36 +88,36 @@ namespace VeridianClimatePulse.Services
             var date = new DateTime(now.Year, now.Month, 1, 1, 0, 0, DateTimeKind.Utc)
                             .AddMonths(-1);
 
-            var importPillarscountryIds = _context.AIPillarScores
-                .GroupBy(x => x.CountryID)
+            var importPillarsClimateProgramIDs = _context.AIPillarScores
+                .GroupBy(x => x.ClimateProgramID)
                 .Where(g => g.Max(x => x.UpdatedAt) < date || g.Count() < totalPillar)
                 .Select(g => g.Key)
                 .ToList();
 
 
-            foreach (var id in importPillarscountryIds)
+            foreach (var id in importPillarsClimateProgramIDs)
             {
-                await AnalyzeCountryPillars(id);
+                await AnalyzeProgramPillars(id);
             }
 
 
-            var needtoImportcountryIds = _context.AICountryScores.Where(x => x.UpdatedAt < date).Select(x=>x.CountryID);
-            foreach (var id in needtoImportcountryIds)
+            var needtoImportClimateProgramIDs = _context.AIProgramScores.Where(x => x.UpdatedAt < date).Select(x=>x.ClimateProgramID);
+            foreach (var id in needtoImportClimateProgramIDs)
             {
-                await AnalyzeSingleCountry(id);
+                await AnalyzeSingleProgram(id);
             }
         }
 
-        public async Task ImportAllCountryImmediateSummary()
+        public async Task ImportAllProgramImmediateSummary()
         {
-            var allCountriesIds = await _context.Countries
+            var allProgramIds = await _context.ClimatePrograms
                      .Where(x => x.IsActive && !x.IsDeleted)
-                     .Select(x => x.CountryID)
+                     .Select(x => x.ClimateProgramID)
                      .ToListAsync();
 
-            foreach (var id in allCountriesIds)
+            foreach (var id in allProgramIds)
             {
-                await AnalyzeCountryImmediateSituation(id);
+                await AnalyzeProgramImmediateSituation(id);
                 await Task.Delay(200);
             }
 
@@ -125,18 +125,18 @@ namespace VeridianClimatePulse.Services
 
         public async Task ImportRemainingDocumentsToVectorDB()
         {
-            var activeDocumentIds = _context.CountryDocuments
+            var activeDocumentIds = _context.ProgramDocuments
                     .Where(x => !x.IsDeleted)
-                    .Select(x => x.CountryDocumentID);
+                    .Select(x => x.ProgramDocumentID);
 
             var data = await _context.DocumentChunks
-                .Where(x => !activeDocumentIds.Contains(x.CountryDocumentID))
-                .Select(x => x.CountryDocumentID)
+                .Where(x => !activeDocumentIds.Contains(x.ProgramDocumentID))
+                .Select(x => x.ProgramDocumentID)
 
                 .Union(
                     _context.DocumentTOC
-                        .Where(x => !activeDocumentIds.Contains(x.CountryDocumentID))
-                        .Select(x => x.CountryDocumentID)
+                        .Where(x => !activeDocumentIds.Contains(x.ProgramDocumentID))
+                        .Select(x => x.ProgramDocumentID)
                 )
                 .Distinct()
                 .ToListAsync();
@@ -150,18 +150,18 @@ namespace VeridianClimatePulse.Services
         }
         public async Task DeleteRemainingDocumentsToVectorDB()
         {
-            var activeDocumentIds = _context.CountryDocuments
+            var activeDocumentIds = _context.ProgramDocuments
                     .Where(x => x.IsDeleted)
-                    .Select(x => x.CountryDocumentID);
+                    .Select(x => x.ProgramDocumentID);
 
             var data = await _context.DocumentChunks
-                .Where(x => activeDocumentIds.Contains(x.CountryDocumentID))
-                .Select(x => x.CountryDocumentID)
+                .Where(x => activeDocumentIds.Contains(x.ProgramDocumentID))
+                .Select(x => x.ProgramDocumentID)
 
                 .Union(
                     _context.DocumentTOC
-                        .Where(x => activeDocumentIds.Contains(x.CountryDocumentID))
-                        .Select(x => x.CountryDocumentID)
+                        .Where(x => activeDocumentIds.Contains(x.ProgramDocumentID))
+                        .Select(x => x.ProgramDocumentID)
                 )
                 .Distinct()
                 .ToListAsync();
@@ -175,49 +175,49 @@ namespace VeridianClimatePulse.Services
 
         #region Ai api calls       
 
-        public async Task AnalyzeAllCountriesFull()
+        public async Task AnalyzeAllProgramsFull()
         {
-            var url = aiUrl + AiEndpoints.AnalyzeAllCountriesFull;
+            var url = aiUrl + AiEndpoints.AnalyzeAllProgramsFull;
             await _httpService.SendAsync<dynamic>(HttpMethod.Post, url, null, headers);
         }
 
-        public async Task AnalyzeSingleCountryFull(int countryId)
+        public async Task AnalyzeSingleProgramFull(int climateProgramID)
         {
-            var url = aiUrl + AiEndpoints.AnalyzeSingleCountryFull(countryId);
+            var url = aiUrl + AiEndpoints.AnalyzeSingleProgramFull(climateProgramID);
             await _httpService.SendAsync<dynamic>(HttpMethod.Post, url, null, headers);
         }
 
-        public async Task AnalyzeSingleCountry(int countryId)
+        public async Task AnalyzeSingleProgram(int climateProgramID)
         {
-            var url = aiUrl + AiEndpoints.AnalyzeSingleCountry(countryId);
+            var url = aiUrl + AiEndpoints.AnalyzeSingleProgram(climateProgramID);
             await _httpService.SendAsync<dynamic>(HttpMethod.Post, url, null, headers);
         }
 
-        public async Task AnalyzeCountryPillars(int countryId)
+        public async Task AnalyzeProgramPillars(int climateProgramID)
         {
-            var url = aiUrl + AiEndpoints.AnalyzeCountryPillars(countryId);
+            var url = aiUrl + AiEndpoints.AnalyzeProgramPillars(climateProgramID);
             await _httpService.SendAsync<dynamic>(HttpMethod.Post, url, null, headers);
         }
-        public async Task AnalyzeSinglePillar(int countryId, int pillarId)
+        public async Task AnalyzeSinglePillar(int climateProgramID, int pillarId)
         {
-            var url = aiUrl + AiEndpoints.AnalyzeSinglePillar(countryId, pillarId);
-            await _httpService.SendAsync<dynamic>(HttpMethod.Post, url, null, headers);
-        }
-
-        public async Task AnalyzeQuestionsOfCountry(int countryId)
-        {
-            var url = aiUrl + AiEndpoints.AnalyzeCountryQuestions(countryId);
+            var url = aiUrl + AiEndpoints.AnalyzeSinglePillar(climateProgramID, pillarId);
             await _httpService.SendAsync<dynamic>(HttpMethod.Post, url, null, headers);
         }
 
-        public async Task AnalyzeQuestionsOfCountryPillar(int countryId, int pillarId)
+        public async Task AnalyzeQuestionsOfProgram(int climateProgramID)
         {
-            var url = aiUrl + AiEndpoints.AnalyzeCountryPillarQuestions(countryId, pillarId);
+            var url = aiUrl + AiEndpoints.AnalyzeProgramQuestions(climateProgramID);
             await _httpService.SendAsync<dynamic>(HttpMethod.Post, url, null, headers);
         }
-        public async Task AnalyzeCountryImmediateSituation(int countryId)
+
+        public async Task AnalyzeQuestionsOfProgramPillar(int climateProgramID, int pillarId)
         {
-            var url = aiUrl + AiEndpoints.AnalyzeCountryImmediateSituation(countryId);
+            var url = aiUrl + AiEndpoints.AnalyzeProgramPillarQuestions(climateProgramID, pillarId);
+            await _httpService.SendAsync<dynamic>(HttpMethod.Post, url, null, headers);
+        }
+        public async Task AnalyzeProgramImmediateSituation(int climateProgramID)
+        {
+            var url = aiUrl + AiEndpoints.AnalyzeProgramImmediateSituation(climateProgramID);
             await _httpService.SendAsync<dynamic>(HttpMethod.Post, url, null, headers);
         }
         public async Task ProcessDocument(int documentID)
@@ -230,45 +230,45 @@ namespace VeridianClimatePulse.Services
             var url = aiUrl + AiEndpoints.DeleteDocument(documentID);
             await _httpService.SendAsync<dynamic>(HttpMethod.Post, url, null, headers);
         }
-        public async Task<ChatCountryAskQuestionResponse> ChatCountryAsk(ChatCountryAskQuestionRequest request)
+        public async Task<ChatProgramAskQuestionResponse> ChatProgramAsk(ChatProgramAskQuestionRequest request)
         {
-            var url = aiUrl + AiEndpoints.ChatCountryAsk();
-            var result =  await _httpService.SendAsync<ChatCountryAskQuestionResponse>(HttpMethod.Post, url, request, headers);
+            var url = aiUrl + AiEndpoints.ChatProgramAsk();
+            var result =  await _httpService.SendAsync<ChatProgramAskQuestionResponse>(HttpMethod.Post, url, request, headers);
 
             return result;
         }
-        public async Task<ChatCountryAskQuestionResponse> ChatGlobalAsk(ChatGlobalAskQuestionRequest request)
+        public async Task<ChatProgramAskQuestionResponse> ChatGlobalAsk(ChatGlobalAskQuestionRequest request)
         {
                 var url = aiUrl + AiEndpoints.ChatGlobalAsk();
-                var result = await _httpService.SendAsync<ChatCountryAskQuestionResponse>(HttpMethod.Post, url, request, headers);
+                var result = await _httpService.SendAsync<ChatProgramAskQuestionResponse>(HttpMethod.Post, url, request, headers);
     
                 return result;
         }
-        public async Task<ChatCountryAskQuestionResponse> CrossComparision(CrossComparisionRequest request)
+        public async Task<ChatProgramAskQuestionResponse> CrossComparision(CrossComparisionRequest request)
         {
             var url = aiUrl + AiEndpoints.CrossComparision();
-            var result = await _httpService.SendAsync<ChatCountryAskQuestionResponse>(HttpMethod.Post, url, request, headers);
+            var result = await _httpService.SendAsync<ChatProgramAskQuestionResponse>(HttpMethod.Post, url, request, headers);
 
             return result;
         }
-        public async Task<ChatCountryExecutiveSlidesResponse?> GetCountrySlides(int countryId)
+        public async Task<ChatProgramExecutiveSlidesResponse?> GetProgramSlides(int climateProgramID)
         {
-            var url = aiUrl + AiEndpoints.CountrySlides();
+            var url = aiUrl + AiEndpoints.ProgramSlides();
 
-            return await _httpService.SendAsync<ChatCountryExecutiveSlidesResponse>(
+            return await _httpService.SendAsync<ChatProgramExecutiveSlidesResponse>(
                 HttpMethod.Post,
                 url,
-                new CountrySlidesRequest
+                new ProgramSlidesRequest
                 {
-                    CountryId = countryId
+                    ClimateProgramID = climateProgramID
                 },
                 headers
             );
         }
 
-        public async Task<ChatEmergingTrendsResponse?> GetEmergingTrendsAndIssues(int countryCount)
+        public async Task<ChatEmergingTrendsResponse?> GetEmergingTrendsAndIssues(int ProgramCount)
         {
-            var url = aiUrl + AiEndpoints.EmergingTrendsAndIssues(countryCount);
+            var url = aiUrl + AiEndpoints.EmergingTrendsAndIssues(ProgramCount);
 
             return await _httpService.SendAsync<ChatEmergingTrendsResponse>(
                 HttpMethod.Get,
@@ -290,7 +290,7 @@ namespace VeridianClimatePulse.Services
             );
         }
 
-        public async Task AnalyzeCountryMissingQuestions(MissingCountryQuestionRequest r)
+        public async Task AnalyzeProgramMissingQuestions(MissingProgramQuestionRequest r)
         {
             var url = aiUrl + AiEndpoints.AnalyzeCityMissingQuestions();
             await _httpService.SendAsync<dynamic>(HttpMethod.Post, url, r, headers);
@@ -303,47 +303,46 @@ namespace VeridianClimatePulse.Services
 
     public static class AiEndpoints
     {
-        private const string BasePath = "/api/countries-score-analysis";
-        private const string DocumentPath = "/api/rag";
+        private const string BasePath = "/api/programs-score-analysis";
+        private const string DocumentPath = "/api/r ag";
         private const string ChatPath = "/api/chat";
 
-        public static string AnalyzeAllCountriesFull =>
+        public static string AnalyzeAllProgramsFull =>
             $"{BasePath}/analyze/full";
 
-        public static string AnalyzeSingleCountryFull(int countryId) =>
-            $"{BasePath}/analyze/{countryId}/full";
+        public static string AnalyzeSingleProgramFull(int climateProgramID) =>
+            $"{BasePath}/analyze/{climateProgramID}/full";
 
-        public static string AnalyzeSingleCountry(int countryId) =>
-            $"{BasePath}/analyze/{countryId}";
+        public static string AnalyzeSingleProgram(int climateProgramID) =>
+            $"{BasePath}/analyze/{climateProgramID}";
 
-        public static string AnalyzeCountryPillars(int countryId) =>
-            $"{BasePath}/analyze/{countryId}/pillars";
-        public static string AnalyzeSinglePillar(int countryId, int pillarId) =>
-            $"{BasePath}/analyze/{countryId}/single-pillar/{pillarId}";
+        public static string AnalyzeProgramPillars(int climateProgramID) =>
+            $"{BasePath}/analyze/{climateProgramID}/pillars";
+        public static string AnalyzeSinglePillar(int climateProgramID, int pillarId) =>
+            $"{BasePath}/analyze/{climateProgramID}/single-pillar/{pillarId}";
 
-        public static string AnalyzeCountryQuestions(int countryId) =>
-            $"{BasePath}/analyze/{countryId}/questions";
+        public static string AnalyzeProgramQuestions(int climateProgramID) =>
+            $"{BasePath}/analyze/{climateProgramID}/questions";
 
-        public static string AnalyzeCountryPillarQuestions(int countryId, int pillarId) =>
-            $"{BasePath}/analyze/{countryId}/pillars/{pillarId}/questions";
-        public static string AnalyzeCountryImmediateSituation(int countryId) =>
-            $"{BasePath}/analyze/{countryId}/immediateSituation";
+        public static string AnalyzeProgramPillarQuestions(int climateProgramID, int pillarId) =>
+            $"{BasePath}/analyze/{climateProgramID}/pillars/{pillarId}/questions";
+        public static string AnalyzeProgramImmediateSituation(int climateProgramID) =>
+            $"{BasePath}/analyze/{climateProgramID}/immediateSituation";
 
         public static string ProcessDocument(int documentId) =>
             $"{DocumentPath}/process-document/{documentId}";
         public static string DeleteDocument(int documentId) =>
             $"{DocumentPath}/delete-document/{documentId}";
 
-        public static string ChatCountryAsk() => $"{ChatPath}/country";
+        public static string ChatProgramAsk() => $"{ChatPath}/Program";
         public static string ChatGlobalAsk() => $"{ChatPath}/global";
         public static string CrossComparision() => $"{ChatPath}/cross-comparision";
-        public static string CountrySlides() => $"{ChatPath}/executive-slides";
-        public static string EmergingTrendsAndIssues(int countryCount) =>
-            $"{ChatPath}/emerging-trends-and-issues?countryCount={countryCount}";
+        public static string ProgramSlides() => $"{ChatPath}/executive-slides";
+        public static string EmergingTrendsAndIssues(int ProgramCount) =>
+            $"{ChatPath}/emerging-trends-and-issues?ProgramCount={ProgramCount}";
         public static string PillarLiveSignals() => $"{ChatPath}/pillar-live-signals";
         public static string AnalyzeCityMissingQuestions() =>
           $"{BasePath}/analyze/missing-pillar-questions";
-
 
     }
     #endregion
@@ -351,15 +350,15 @@ namespace VeridianClimatePulse.Services
 
     #region Ai Models 
 
-    public class MissingCountryQuestionRequest 
+    public class MissingProgramQuestionRequest 
     {
-        public int CountryID { get; set; }
+        public int ClimateProgramID { get; set; }
         public int? PillarID { get; set; }
     }
 
-    public class ChatCountryAskQuestionRequest : ChatGlobalAskQuestionRequest
+    public class ChatProgramAskQuestionRequest : ChatGlobalAskQuestionRequest
     {
-        public int CountryID { get; set; }
+        public int ClimateProgramID { get; set; }
         public int? PillarID { get; set; }
     }
     public class ChatGlobalAskQuestionRequest
@@ -371,11 +370,11 @@ namespace VeridianClimatePulse.Services
 
     public class CrossComparisionRequest
     {
-        public List<int> CountryIDs { get; set; }
+        public List<int> ClimateProgramIDs { get; set; }
         public string QuestionText { get; set; }
         public string? HistoryText { get; set; }
     }
-    public class ChatCountryAskQuestionResponse
+    public class ChatProgramAskQuestionResponse
     {
         public bool Success { get; set; }
         public string? Message { get; set; }

@@ -24,13 +24,13 @@ namespace VeridianClimatePulse.Backgroundjob
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var countryCount = _configuration.GetValue("EmergingTrendsCache:CountryCount", 8);
+            var programCount = _configuration.GetValue("EmergingTrendsCache:ProgramCount", 8);
             var refreshInterval = TimeSpan.FromMinutes(
                 _configuration.GetValue("EmergingTrendsCache:RefreshIntervalMinutes", 10));
             var retryDelay = TimeSpan.FromSeconds(
                 _configuration.GetValue("EmergingTrendsCache:RetryDelaySeconds", 10));
 
-            await RefreshUntilCachedAsync(countryCount, retryDelay, stoppingToken);
+            await RefreshUntilCachedAsync(programCount, retryDelay, stoppingToken);
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -43,18 +43,18 @@ namespace VeridianClimatePulse.Backgroundjob
                     break;
                 }
 
-                await TryRefreshAsync(countryCount, stoppingToken);
+                await TryRefreshAsync(programCount, stoppingToken);
             }
         }
 
         private async Task RefreshUntilCachedAsync(
-            int countryCount,
+            int programCount,
             TimeSpan retryDelay,
             CancellationToken stoppingToken)
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                if (await TryRefreshAsync(countryCount, stoppingToken))
+                if (await TryRefreshAsync(programCount, stoppingToken))
                 {
                     return;
                 }
@@ -70,7 +70,7 @@ namespace VeridianClimatePulse.Backgroundjob
             }
         }
 
-        private async Task<bool> TryRefreshAsync(int countryCount, CancellationToken stoppingToken)
+        private async Task<bool> TryRefreshAsync(int programCount, CancellationToken stoppingToken)
         {
             try
             {
@@ -78,14 +78,14 @@ namespace VeridianClimatePulse.Backgroundjob
                 var publicService = scope.ServiceProvider.GetRequiredService<IPublicService>();
 
                 var preserved = await publicService.RefreshEmergingTrendsCacheAsync(
-                    countryCount,
+                    programCount,
                     stoppingToken);
 
                 if (!preserved)
                 {
                     _logger.LogWarning(
-                        "Emerging trends cache refresh produced no usable data and no prior snapshot was available (countryCount={CountryCount})",
-                        countryCount);
+                        "Emerging trends cache refresh produced no usable data and no prior snapshot was available (programCount={ProgramCount})",
+                        programCount);
                 }
 
                 return preserved;
@@ -94,8 +94,8 @@ namespace VeridianClimatePulse.Backgroundjob
             {
                 _logger.LogWarning(
                     ex,
-                    "Emerging trends cache refresh failed (countryCount={CountryCount})",
-                    countryCount);
+                    "Emerging trends cache refresh failed (programCount={ProgramCount})",
+                    programCount);
                 return false;
             }
         }

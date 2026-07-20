@@ -4,7 +4,7 @@ using VeridianClimatePulse.Common.Models;
 using VeridianClimatePulse.Data;
 using VeridianClimatePulse.Dtos.AssessmentDto;
 using VeridianClimatePulse.Dtos.CommonDto;
-using VeridianClimatePulse.Dtos.CountryDto;
+using VeridianClimatePulse.Dtos.ProgramDto;
 using VeridianClimatePulse.Dtos.UserDtos;
 using VeridianClimatePulse.Enums;
 using VeridianClimatePulse.IServices;
@@ -28,12 +28,12 @@ namespace VeridianClimatePulse.Services
         {
             return _context.Users.FirstOrDefault(u => u.Email == email);
         }
-        public async Task<PaginationResponse<GetUserByRoleResponse>> GetUserByRoleWithAssignedCountry(GetUserByRoleRequestDto request, int userid, UserRole userRole)
+        public async Task<PaginationResponse<GetUserByRoleResponse>> GetUserByRoleWithAssignedProgram(GetUserByRoleRequestDto request, int userid, UserRole userRole)
         {
             try
             {
                 var filteredMappings =
-                    _context.UserCountryMappings
+                    _context.StaffProgramMappings
                         .Where(x => !x.IsDeleted &&
                                (x.AssignedByUserId == request.UserID || userRole == UserRole.Admin));
 
@@ -66,7 +66,7 @@ namespace VeridianClimatePulse.Services
                         CreatedAt = u.CreatedAt,
                         CreatedByName = ab != null ? ab.FullName : null,
                         Tier = u.Tier,
-                        Countries = new List<AddUpdateCountryDto>(),
+                        ClimatePrograms = new List<AddUpdateProgramDto>(),
                         Pillars = new List<int>()  // initialize empty list
                     };
 
@@ -78,58 +78,58 @@ namespace VeridianClimatePulse.Services
 
                 var userIds = response.Data.Select(x => x.UserID).Distinct().ToList();
 
-                if (request.GetUserRole == UserRole.CountryUser)
+                if (request.GetUserRole == UserRole.ProgramUser)
                 {
-                    // Fetch countries from PublicUserCountryMappings
-                    var countryMap = await _context.PublicUserCountryMappings
+                    // Fetch programs from PublicStaffProgramMappings
+                    var programMap = await _context.ClientProgramMappings
                         .Where(x => x.IsActive && userIds.Contains(x.UserID))
-                        .Join(_context.Countries,
-                            cm => cm.CountryID,
-                            c => c.CountryID,
-                            (cm, c) => new { cm.UserID, Country = new AddUpdateCountryDto { CountryID = c.CountryID, CountryName = c.CountryName, Region = c.Region, Continent = c.Continent } })
+                        .Join(_context.ClimatePrograms,
+                            cm => cm.ClimateProgramID,
+                            p => p.ClimateProgramID,
+                            (cm, p) => new { cm.UserID, Program = new AddUpdateProgramDto { ClimateProgramID = p.ClimateProgramID, ProgramName = p.ProgramName } })
                         .ToListAsync();
 
-                    // Fetch pillar IDs from CountryUserPillarMappings
-                    var pillarMap = await _context.CountryUserPillarMappings
+                    // Fetch pillar IDs from ClientPillarMappings
+                    var pillarMap = await _context.ClientPillarMappings
                         .Where(x => x.IsActive && userIds.Contains(x.UserID))
                         .Select(x => new { x.UserID, x.PillarID })
                         .ToListAsync();
 
-                    var countriesGrouped = countryMap.GroupBy(x => x.UserID)
-                        .ToDictionary(g => g.Key, g => g.Select(x => x.Country).ToList());
+                    var programsGrouped = programMap.GroupBy(x => x.UserID)
+                        .ToDictionary(g => g.Key, g => g.Select(x => x.Program).ToList());
 
                     var pillarsGrouped = pillarMap.GroupBy(x => x.UserID)
                         .ToDictionary(g => g.Key, g => g.Select(x => x.PillarID).ToList());
 
                     foreach (var item in response.Data)
                     {
-                        countriesGrouped.TryGetValue(item.UserID, out var countries);
+                        programsGrouped.TryGetValue(item.UserID, out var programs);
                         pillarsGrouped.TryGetValue(item.UserID, out var pillars);
 
-                        item.Countries = countries ?? new List<AddUpdateCountryDto>();
+                        item.ClimatePrograms = programs ?? new List<AddUpdateProgramDto>();
                         item.Pillars = pillars ?? new List<int>();
                     }
                 }
                 else
                 {
-                    // For Evaluator / Analyst, keep your existing logic for countries
-                    var countryMap = await _context.UserCountryMappings
+                    // For Evaluator / Analyst, keep your existing logic for programs
+                    var programMap = await _context.StaffProgramMappings
                         .Where(x => !x.IsDeleted &&
                                userIds.Contains(x.UserID) &&
                                (x.AssignedByUserId == request.UserID || userRole == UserRole.Admin))
-                        .Join(_context.Countries,
-                            cm => cm.CountryID,
-                            c => c.CountryID,
-                            (cm, c) => new { cm.UserID, Country = new AddUpdateCountryDto { CountryID = c.CountryID, CountryName = c.CountryName, Region = c.Region, Continent = c.Continent } })
+                        .Join(_context.ClimatePrograms,
+                            cm => cm.ClimateProgramID,
+                            p => p.ClimateProgramID,
+                            (cm, p) => new { cm.UserID, Program = new AddUpdateProgramDto { ClimateProgramID = p.ClimateProgramID, ProgramName = p.ProgramName } })
                         .ToListAsync();
 
-                    var countriesGrouped = countryMap.GroupBy(x => x.UserID)
-                        .ToDictionary(g => g.Key, g => g.Select(x => x.Country).ToList());
+                    var programsGrouped = programMap.GroupBy(x => x.UserID)
+                        .ToDictionary(g => g.Key, g => g.Select(x => x.Program).ToList());
 
                     foreach (var item in response.Data)
                     {
-                        countriesGrouped.TryGetValue(item.UserID, out var countries);
-                        item.Countries = countries ?? new List<AddUpdateCountryDto>();
+                        programsGrouped.TryGetValue(item.UserID, out var programs);
+                        item.ClimatePrograms = programs ?? new List<AddUpdateProgramDto>();
                         item.Pillars = new List<int>(); // no pillars for other roles
                     }
                 }
@@ -138,7 +138,7 @@ namespace VeridianClimatePulse.Services
             }
             catch (Exception ex)
             {
-                await _appLogger.LogAsync("Error Occure in GetUserByRoleWithAssignedCity", ex);
+                await _appLogger.LogAsync("Error Occure in GetUserByRoleWithAssignedProgram", ex);
                 return new PaginationResponse<GetUserByRoleResponse>();
             }
         }
@@ -147,11 +147,11 @@ namespace VeridianClimatePulse.Services
             try
             {
                 var query =
-                    from uc in _context.UserCountryMappings
+                    from uc in _context.StaffProgramMappings
                     where !uc.IsDeleted
                           && uc.AssignedByUserId == request.UserID
                           && (!request.SearchedUserID.HasValue || uc.UserID == request.SearchedUserID.Value)
-                          && (!request.CountryID.HasValue || uc.CountryID == request.CountryID.Value)
+                          && (!request.ClimateProgramID.HasValue || uc.ClimateProgramID == request.ClimateProgramID.Value)
                     join u in _context.Users
                         .Where(x => !x.IsDeleted)
                         on uc.UserID equals u.UserID
@@ -184,7 +184,7 @@ namespace VeridianClimatePulse.Services
             }
         }
 
-        public async Task<ResultResponseDto<List<GetAssessmentResponseDto>>> GetUsersAssignedToCountry(int countryId)
+        public async Task<ResultResponseDto<List<GetAssessmentResponseDto>>> GetUsersAssignedToProgram(int climateProgramID)
         {
             try
             {
@@ -192,11 +192,11 @@ namespace VeridianClimatePulse.Services
                 var query =
                 from u in _context.Users
                 where !u.IsDeleted
-                join uc in _context.UserCountryMappings
-                        .Where(x => !x.IsDeleted && x.CountryID == countryId)
+                join uc in _context.StaffProgramMappings
+                        .Where(x => !x.IsDeleted && x.ClimateProgramID == climateProgramID)
                     on u.UserID equals uc.UserID
-                join c in _context.Countries.Where(x => !x.IsDeleted)
-                    on uc.CountryID equals c.CountryID
+                join c in _context.ClimatePrograms.Where(x => !x.IsDeleted)
+                    on uc.ClimateProgramID equals c.ClimateProgramID
                 join createdBy in _context.Users.Where(x => !x.IsDeleted)
                     on uc.AssignedByUserId equals createdBy.UserID into createdByUser
                 from createdBy in createdByUser.DefaultIfEmpty()
@@ -205,22 +205,21 @@ namespace VeridianClimatePulse.Services
                 join a in _context.Assessments
                         .Include(q => q.PillarAssessments)
                             .ThenInclude(q => q.Responses).Where(x=>x.IsActive && x.CreatedAt.Year == year)
-                    on uc.UserCountryMappingID equals a.UserCountryMappingID into userAssessment
+                    on uc.StaffProgramMappingID equals a.StaffProgramMappingID into userAssessment
                 from a in userAssessment.DefaultIfEmpty()
 
                 select new GetAssessmentResponseDto
                 {
                     AssessmentID = a != null ? a.AssessmentID : 0,
-                    UserCountryMappingID = uc.UserCountryMappingID,
+                    StaffProgramMappingID = uc.StaffProgramMappingID,
                     CreatedAt = a != null ? a.CreatedAt : null,
-                    CountryID = c.CountryID,
-                    CountryName = c.CountryName,
-                    Continent = c.Continent,
+                    ClimateProgramID = c.ClimateProgramID,
+                    ProgramName = c.ProgramName,
                     UserID = u.UserID,
                     UserName = u.FullName,
                     Score = a != null
                         ? a.PillarAssessments.SelectMany(x => x.Responses)
-                            .Where(r => r.Score.HasValue && (int)r.Score.Value <= (int)ScoreValue.Four)
+                            .Where(r => r.Score.HasValue && (int)r.Score.Value <= (int)ScoreValue.Score1)
                             .Sum(r => (int?)r.Score ?? 0)
                         : 0,
                     AssignedByUser = createdBy != null ? createdBy.FullName : "",
@@ -237,7 +236,7 @@ namespace VeridianClimatePulse.Services
             }
             catch (Exception ex)
             {
-                await _appLogger.LogAsync("Error Occure in GetUsersAssignedToCity", ex);
+                await _appLogger.LogAsync("Error Occure in GetUsersAssignedToProgram", ex);
                 return ResultResponseDto<List<GetAssessmentResponseDto>>.Failure(new string[] { "There is an error please try later" });
             }
         }

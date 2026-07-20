@@ -44,7 +44,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="Dtos\CountryDto\SendRequestMailToUpdateCountry.cs" />
+    <None Include="Dtos\ProgramDto\SendRequestMailToUpdateProgram.cs" />
   </ItemGroup>
 
 </Project>

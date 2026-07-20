@@ -1,12 +1,11 @@
 using AssessmentPlatform.Dtos.AiDto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using VeridianClimatePulse.Dtos.AiDto;
-using VeridianClimatePulse.Dtos.AssessmentDto;
 using VeridianClimatePulse.IServices;
 using VeridianClimatePulse.Models;
 using System.Security.Claims;
+using HealthIntelligence.Dtos.AiDto;
 
 namespace VeridianClimatePulse.Controllers
 {
@@ -30,10 +29,11 @@ namespace VeridianClimatePulse.Controllers
 
             return null;
         }
-        private string? GetTierFromClaims()
-        {
-            return User.FindFirst("Tier")?.Value;
-        }
+
+        //private string? GetTierFromClaims()
+        //{
+        //    return User.FindFirst("Tier")?.Value;
+        //}
         private string? GetRoleFromClaims()
         {
             return User.FindFirst(ClaimTypes.Role)?.Value;
@@ -44,8 +44,9 @@ namespace VeridianClimatePulse.Controllers
         {
             return Ok(await _aIComputationService.GetAITrustLevels());
         }
-        [HttpGet("getAICountries")]
-        public async Task<IActionResult> GetAICountries([FromQuery] AiCountrySummeryRequestDto request)
+
+        [HttpGet("getAIPrograms")]
+        public async Task<IActionResult> GetAIPrograms([FromQuery] AiProgramSummaryRequestDto request)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
@@ -60,11 +61,11 @@ namespace VeridianClimatePulse.Controllers
                 return Unauthorized("You Don't have access.");
             }
 
-            return Ok(await _aIComputationService.GetAICountries(request, userId.Value, userRole));
+            return Ok(await _aIComputationService.GetAIPrograms(request, userId.Value, userRole));
         }
 
-        [HttpGet("getAICountryPillars")]
-        public async Task<IActionResult> GetAICountryPillars([FromQuery] AiCountryPillarRequestDto request)
+        [HttpGet("getAIProgramPillars")]
+        public async Task<IActionResult> GetAIProgramPillars([FromQuery] AiProgramPillarRequestDto request)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
@@ -79,11 +80,11 @@ namespace VeridianClimatePulse.Controllers
                 return Unauthorized("You Don't have access.");
             }
 
-            return Ok(await _aIComputationService.GetAICountryPillars(request.CountryID, userId.Value, userRole, request.Year));
+            return Ok(await _aIComputationService.GetAIProgramPillars(request.ClimateProgramID, userId.Value, userRole, request.Year));
         }
 
         [HttpGet("getAIPillarQuestions")]
-        public async Task<IActionResult> GetAIPillarQuestions([FromQuery] AiCountryPillarSummeryRequestDto r)
+        public async Task<IActionResult> GetAIPillarQuestions([FromQuery] AiProgramPillarSummeryRequestDto r)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
@@ -101,9 +102,9 @@ namespace VeridianClimatePulse.Controllers
             return Ok(await _aIComputationService.GetAIPillarsQuestion(r, userId.Value, userRole));
         }
 
-        [HttpGet("aiCountryDetailsReport")]
-        [Authorize(Roles = "Admin, CountryUser")]
-        public async Task<IActionResult> DownloadCountryReport([FromQuery] AiCountrySummeryRequestPdfDto request)
+        [HttpGet("aiProgramDetailsReport")]
+        [Authorize(Roles = "Admin, ProgramUser")]
+        public async Task<IActionResult> DownloadProgramReport([FromQuery] AiProgramSummeryRequestPdfDto request)
         {
             try
             {
@@ -120,7 +121,7 @@ namespace VeridianClimatePulse.Controllers
                     return Unauthorized("You Don't have access.");
                 }
 
-                var countryDetails = await _aIComputationService.GetCountryAiSummeryDetail(userId ?? 0, userRole, request.CountryID,request.Year, request.ReportType);
+                var programDetails = await _aIComputationService.GetProgramAiSummeryDetail(userId ?? 0, userRole, request.ClimateProgramID,request.Year, request.ReportType);
 
                 // Generate PDF               
 
@@ -128,17 +129,17 @@ namespace VeridianClimatePulse.Controllers
                 byte[] fileBytes;
                 string contentType;
 
-                fileBytes = await _aIComputationService.GenerateCountryDetailsReport(countryDetails, userRole, userId ?? 0, request.Format, request.ReportType);
+                fileBytes = await _aIComputationService.GenerateProgramDetailsReport(programDetails, userRole, userId ?? 0, request.Format, request.ReportType);
 
                 if (request.Format == IServices.DocumentFormat.Docx)
                 {
                     contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-                    fileName = $"{countryDetails.CountryName}_Details_{DateTime.Now:yyyyMMdd}.docx";
+                    fileName = $"{programDetails.ProgramName}_Details_{DateTime.Now:yyyyMMdd}.docx";
                 }
                 else
                 {
                     contentType = "application/pdf";
-                    fileName = $"{countryDetails.CountryName}_Details_{DateTime.Now:yyyyMMdd}.pdf";
+                    fileName = $"{programDetails.ProgramName}_Details_{DateTime.Now:yyyyMMdd}.pdf";
                 }
 
                 return File(fileBytes, contentType, fileName);
@@ -153,9 +154,10 @@ namespace VeridianClimatePulse.Controllers
                 });
             }
         }
+
         [HttpGet("aiPillarDetailsReport")]
-        [Authorize(Roles = "Admin, CountryUser")]
-        public async Task<IActionResult> DownloadPillarReport([FromQuery] AiCountrySummeryRequestPdfDto request)
+        [Authorize(Roles = "Admin, ProgramUser")]
+        public async Task<IActionResult> DownloadPillarReport([FromQuery] AiProgramSummeryRequestPdfDto request)
         {
             try
             {
@@ -171,11 +173,11 @@ namespace VeridianClimatePulse.Controllers
                 {
                     return Unauthorized("You Don't have access.");
                 }
-                if (userRole != UserRole.Admin && userRole != UserRole.CountryUser)
+                if (userRole != UserRole.Admin && userRole != UserRole.ProgramUser)
                     return Unauthorized("You Don't have access.");
 
 
-                var pillars = await _aIComputationService.GetAICountryPillars(request.CountryID, userId.Value, userRole, request.Year);
+                var pillars = await _aIComputationService.GetAIProgramPillars(request.ClimateProgramID, userId.Value, userRole, request.Year);
 
                 var pillarDetails = pillars.Result.Pillars.FirstOrDefault(x => x.PillarID == request.PillarID);
                 if (pillarDetails != null)
@@ -216,8 +218,8 @@ namespace VeridianClimatePulse.Controllers
             }
         }
 
-        [HttpPost("getAICrossCountryPillars")]
-        public async Task<IActionResult> GetAICrossCountryPillars([FromBody] AiCountryIdsDto aiCountryIdsDto)
+        [HttpPost("getAICrossProgramPillars")]
+        public async Task<IActionResult> GetAICrossProgramPillars([FromBody] AiClimateProgramIDsDto aiClimateProgramIDsDto)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
@@ -232,12 +234,12 @@ namespace VeridianClimatePulse.Controllers
                 return Unauthorized("You Don't have access.");
             }
 
-            return Ok(await _aIComputationService.GetAICrossCountryPillars(aiCountryIdsDto, userId.Value, userRole));
+            return Ok(await _aIComputationService.GetAICrossProgramPillars(aiClimateProgramIDsDto, userId.Value, userRole));
         }
 
-        [HttpPost("changedAiCountryEvaluationStatus")]
+        [HttpPost("changedAiProgramEvaluationStatus")]
         [Authorize(Policy = "StaffOnly")]
-        public async Task<IActionResult> ChangedAiCountryEvaluationStatus([FromBody] ChangedAiCountryEvaluationStatusDto aiCountryIdsDto)
+        public async Task<IActionResult> ChangedAiProgramEvaluationStatus([FromBody] ChangedAiProgramEvaluationStatusDto aiClimateProgramIDsDto)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
@@ -252,13 +254,13 @@ namespace VeridianClimatePulse.Controllers
                 return Unauthorized("You Don't have access.");
             }
 
-            return Ok(await _aIComputationService.ChangedAiCountryEvaluationStatus(aiCountryIdsDto, userId.Value, userRole));
+            return Ok(await _aIComputationService.ChangedAiProgramEvaluationStatus(aiClimateProgramIDsDto, userId.Value, userRole));
         }
 
         [HttpPost("regenerateAiSearch")]
         [Authorize(Roles = "Admin, Analyst")]
 
-        public async Task<IActionResult> RegenerateAiSearch([FromBody] RegenerateAiSearchDto aiCountryIdsDto)
+        public async Task<IActionResult> RegenerateAiSearch([FromBody] RegenerateAiSearchDto aiClimateProgramIDsDto)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
@@ -273,12 +275,12 @@ namespace VeridianClimatePulse.Controllers
                 return Unauthorized("You Don't have access.");
             }
 
-            return Ok(await _aIComputationService.RegenerateAiSearch(aiCountryIdsDto, userId.Value, userRole));
+            return Ok(await _aIComputationService.RegenerateAiSearch(aiClimateProgramIDsDto, userId.Value, userRole));
         }
 
         [HttpPost("addComment")]
         [Authorize(Policy = "StaffOnly")]
-        public async Task<IActionResult> AddComment([FromBody] AddCommentDto aiCountryIdsDto)
+        public async Task<IActionResult> AddComment([FromBody] AddCommentDto aiClimateProgramIDsDto)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
@@ -293,11 +295,11 @@ namespace VeridianClimatePulse.Controllers
                 return Unauthorized("You Don't have access.");
             }
 
-            return Ok(await _aIComputationService.AddComment(aiCountryIdsDto, userId.Value, userRole));
+            return Ok(await _aIComputationService.AddComment(aiClimateProgramIDsDto, userId.Value, userRole));
         }
         [HttpPost("regeneratePillarAiSearch")]
         [Authorize(Roles = "Admin, Analyst")]
-        public async Task<IActionResult> RegeneratePillarAiSearch([FromBody] RegeneratePillarAiSearchDto aiCountryIdsDto)
+        public async Task<IActionResult> RegeneratePillarAiSearch([FromBody] RegeneratePillarAiSearchDto aiClimateProgramIDsDto)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
@@ -312,11 +314,11 @@ namespace VeridianClimatePulse.Controllers
                 return Unauthorized("You Don't have access.");
             }
 
-            return Ok(await _aIComputationService.RegeneratePillarAiSearch(aiCountryIdsDto, userId.Value, userRole));
+            return Ok(await _aIComputationService.RegeneratePillarAiSearch(aiClimateProgramIDsDto, userId.Value, userRole));
         }
-        [HttpGet("aiAllCountryDetailsReport")]
-        [Authorize(Roles = "Admin, CountryUser")]
-        public async Task<IActionResult> DownloadAllCountryPdf([FromQuery] DownloadReportDto request)
+        [HttpGet("aiAllProgramDetailsReport")]
+        [Authorize(Roles = "Admin, ProgramUser")]
+        public async Task<IActionResult> DownloadAllProgramPdf([FromQuery] DownloadReportDto request)
         {
             try
             {
@@ -333,29 +335,29 @@ namespace VeridianClimatePulse.Controllers
                     return Unauthorized("You Don't have access.");
                 }
                 var year = DateTime.Now.Year;
-                var countryDetails = await _aIComputationService.GetAllCountryAiSummeryDetail(userId ?? 0, userRole, year);
+                var programDetails = await _aIComputationService.GetAllProgramAiSummeryDetail(userId ?? 0, userRole, year);
                 
-                if (countryDetails.Count > 0)
+                if (programDetails.Count > 0)
                 {
                     string fileName;
                     string contentType;
-                    var pdfBytes = await _aIComputationService.GenerateAllCountryDetailsReport(countryDetails, userRole, userId.GetValueOrDefault(), year, request.Format);
+                    var pdfBytes = await _aIComputationService.GenerateAllProgramDetailsReport(programDetails, userRole, userId.GetValueOrDefault(), year, request.Format);
 
                     if (request.Format == IServices.DocumentFormat.Docx)
                     {
                         contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-                        fileName = $"Countries_Details_{DateTime.Now:yyyyMMdd}.docx";
+                        fileName = $"Programs_Details_{DateTime.Now:yyyyMMdd}.docx";
                     }
                     else
                     {
                         contentType = "application/pdf";
-                        fileName = $"Countries_Details_{DateTime.Now:yyyyMMdd}.pdf";
+                        fileName = $"Programs_Details_{DateTime.Now:yyyyMMdd}.pdf";
                     }
 
                     return File(pdfBytes, contentType, fileName);
                 }
 
-                return NotFound("No Country Found.");
+                return NotFound("No Program Found.");
 
             }
             catch (Exception ex)
@@ -370,7 +372,7 @@ namespace VeridianClimatePulse.Controllers
         }
         [HttpPost("aiResultTransfer")]
         [Authorize(Roles = "Admin, Analyst")]
-        public async Task<IActionResult> AiResultTransfer([FromBody] AITransferAssessmentRequestDto aiCountryIdsDto)
+        public async Task<IActionResult> AiResultTransfer([FromBody] AITransferAssessmentRequestDto aiClimateProgramIDsDto)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
@@ -385,7 +387,7 @@ namespace VeridianClimatePulse.Controllers
                 return Unauthorized("You Don't have access.");
             }
 
-            return Ok(await _aIComputationService.AITransferAssessment(aiCountryIdsDto, userId.Value, userRole));
+            return Ok(await _aIComputationService.AITransferAssessment(aiClimateProgramIDsDto, userId.Value, userRole));
         }
 
         [HttpGet("reCalculateKpis")]
@@ -432,9 +434,9 @@ namespace VeridianClimatePulse.Controllers
             return Ok(await _aIComputationService.UploadAiDocuments(uploadAiDocumentRequest ,userId.Value, userRole));
         }
 
-        [HttpGet("getAICountryDocuments")]
+        [HttpGet("getAIProgramDocuments")]
         [Authorize(Roles = "Admin,Analyst")]
-        public async Task<IActionResult> GetAICountryDocuments([FromQuery] AiCountryDocumentRequestDto uploadAiDocumentRequest)
+        public async Task<IActionResult> GetAIProgramDocuments([FromQuery] AiProgramDocumentRequestDto uploadAiDocumentRequest)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
@@ -449,12 +451,12 @@ namespace VeridianClimatePulse.Controllers
                 return Unauthorized("You Don't have access.");
             }
 
-            return Ok(await _aIComputationService.GetAICountryDocuments(uploadAiDocumentRequest, userId.Value, userRole));
+            return Ok(await _aIComputationService.GetAIProgramDocuments(uploadAiDocumentRequest, userId.Value, userRole));
         }
 
-        [HttpGet("getAICountryPillarDocuments")]
+        [HttpGet("getAIProgramPillarDocuments")]
         [Authorize(Roles = "Admin,Analyst")]
-        public async Task<IActionResult> GetAICountryPillarDocuments([FromQuery] AiCountryPillarDocumentRequestDto uploadAiDocumentRequest)
+        public async Task<IActionResult> GetAIProgramPillarDocuments([FromQuery] AiProgramPillarDocumentRequestDto uploadAiDocumentRequest)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
@@ -469,12 +471,12 @@ namespace VeridianClimatePulse.Controllers
                 return Unauthorized("You Don't have access.");
             }
 
-            return Ok(await _aIComputationService.GetAICountryPillarDocuments(uploadAiDocumentRequest, userId.Value, userRole));
+            return Ok(await _aIComputationService.GetAIProgramPillarDocuments(uploadAiDocumentRequest, userId.Value, userRole));
         }
 
         [HttpPost("deleteDocument")]
         [Authorize(Roles = "Admin,Analyst")]
-        public async Task<IActionResult> DeleteDocument([FromBody] DeleteCountryDocumentRequestDto uploadAiDocumentRequest)
+        public async Task<IActionResult> DeleteDocument([FromBody] DeleteProgramDocumentRequestDto uploadAiDocumentRequest)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
@@ -514,6 +516,66 @@ namespace VeridianClimatePulse.Controllers
             var result = await _aIComputationService.DownloadDocument(Id, userId.GetValueOrDefault(), userRole);
 
             return result;
+        }
+
+        [HttpPost("updateAIProgramScore")]
+        [Authorize(Roles = "Admin,Analyst")]
+        public async Task<IActionResult> UpdateAIProgramScore([FromBody] UpdateAIProgramScoreDto request)
+        {
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+                return Unauthorized("User ID not found in token.");
+
+            var role = GetRoleFromClaims();
+            if (role == null || !Enum.TryParse<UserRole>(role, true, out var userRole))
+                return Unauthorized("You Don't have access.");
+
+            return Ok(await _aIComputationService.UpdateAIProgramScore(request, userId.Value, userRole));
+        }
+
+        [HttpPost("updateAIPillarScore")]
+        [Authorize(Roles = "Admin,Analyst")]
+        public async Task<IActionResult> UpdateAIPillarScore([FromBody] UpdateAIPillarScoreDto request)
+        {
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+                return Unauthorized("User ID not found in token.");
+
+            var role = GetRoleFromClaims();
+            if (role == null || !Enum.TryParse<UserRole>(role, true, out var userRole))
+                return Unauthorized("You Don't have access.");
+
+            return Ok(await _aIComputationService.UpdateAIPillarScore(request, userId.Value, userRole));
+        }
+
+        [HttpPost("updateAIDataSourceCitation")]
+        [Authorize(Roles = "Admin,Analyst")]
+        public async Task<IActionResult> UpdateAIDataSourceCitation([FromBody] UpdateAIDataSourceCitationDto request)
+        {
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+                return Unauthorized("User ID not found in token.");
+
+            var role = GetRoleFromClaims();
+            if (role == null || !Enum.TryParse<UserRole>(role, true, out var userRole))
+                return Unauthorized("You Don't have access.");
+
+            return Ok(await _aIComputationService.UpdateAIDataSourceCitation(request, userId.Value, userRole));
+        }
+
+        [HttpPost("updateAIEstimatedQuestionScore")]
+        [Authorize(Roles = "Admin,Analyst")]
+        public async Task<IActionResult> UpdateAIEstimatedQuestionScore([FromBody] UpdateAIEstimatedQuestionScoreDto request)
+        {
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+                return Unauthorized("User ID not found in token.");
+
+            var role = GetRoleFromClaims();
+            if (role == null || !Enum.TryParse<UserRole>(role, true, out var userRole))
+                return Unauthorized("You Don't have access.");
+
+            return Ok(await _aIComputationService.UpdateAIEstimatedQuestionScore(request, userId.Value, userRole));
         }
     }
 }

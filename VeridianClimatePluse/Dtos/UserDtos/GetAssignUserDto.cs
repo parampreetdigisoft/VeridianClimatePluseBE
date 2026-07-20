@@ -3,7 +3,7 @@ namespace VeridianClimatePulse.Dtos.UserDtos
     public class GetAssignUserDto : UserIdDto
     {
         public int? SearchedUserID { get; set; }
-        public int? CountryID { get; set; }
+        public int? ClimateProgramID { get; set; }
     }
     public class UserIdDto
     {

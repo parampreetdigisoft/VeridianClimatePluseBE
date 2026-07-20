@@ -1,5 +1,5 @@
 using VeridianClimatePulse.Common.Models;
-using VeridianClimatePulse.Dtos.CountryDto;
+using VeridianClimatePulse.Dtos.ProgramDto;
 using VeridianClimatePulse.Dtos.EmailExistDto;
 using VeridianClimatePulse.Dtos.UserDtos;
 using VeridianClimatePulse.Models;
@@ -21,8 +21,8 @@ namespace VeridianClimatePulse.IServices
         Task<ResultResponseDto<object>> UpdateInviteUser(UpdateInviteUserDto inviteUser);
         Task<ResultResponseDto<object>> DeleteUser(int userId);
         Task<ResultResponseDto<UserResponseDto>> RefreshToken(int userId);
-        Task<ResultResponseDto<string>> SendMailForEditAssessment(SendRequestMailToUpdateCountry request);
-        Task<ResultResponseDto<UserResponseDto>> CountryUserSignUp(CountryUserSignUpDto request);
+        Task<ResultResponseDto<string>> SendMailForEditAssessment(SendRequestMailToUpdateProgram request);
+        Task<ResultResponseDto<UserResponseDto>> ClientSignUp(ClientSignUpDto request);
         Task<ResultResponseDto<object>> ConfirmMail(string passwordToken);
         Task<ResultResponseDto<object>> ContactUs(ContactUsRequestDto passwordToken);
         Task<ResultResponseDto<UserResponseDto>> TwofaVerification(string email, int otp);

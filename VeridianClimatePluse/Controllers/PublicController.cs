@@ -16,24 +16,24 @@ namespace VeridianClimatePulse.Controllers
             _publicService = publicService;
         }
 
-        [HttpGet("getAllCountries")]
-        public async Task<IActionResult> getAllCountries()
+        [HttpGet("getAllPrograms")]
+        public async Task<IActionResult> getAllPrograms()
         {
-            var response = await _publicService.getAllCountries();
+            var response = await _publicService.GetAllPrograms();
             return Ok(response);
         }
 
-        [HttpGet("GetPartnerCountriesFilterRecord")]
-        public async Task<IActionResult> GetPartnerCountriesFilterRecord() => Ok(await _publicService.GetPartnerCountriesFilterRecord());
+        [HttpGet("GetPartnerProgramsFilterRecord")]
+        public async Task<IActionResult> GetPartnerProgramsFilterRecord() => Ok(await _publicService.GetPartnerProgramsFilterRecord());
 
         [HttpGet]
         [Route("GetAllPillarAsync")]
         public async Task<IActionResult> GetAllPillarAsync() => Ok(await _publicService.GetAllPillarAsync());
 
-        [HttpGet("GetPartnerCountries")]
-        public async Task<IActionResult> GetPartnerCountries([FromQuery] PartnerCountryRequestDto r)
+        [HttpGet("GetPartnerPrograms")]
+        public async Task<IActionResult> GetPartnerPrograms([FromQuery] PartnerProgramRequestDto r)
         {
-            var response = await _publicService.GetPartnerCountries(r);
+            var response = await _publicService.GetPartnerPrograms(r);
             return Ok(response);
         }
         [HttpGet("DownloadExecutiveSummeryPdf")]
@@ -76,17 +76,17 @@ namespace VeridianClimatePulse.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
-        [HttpGet("countries-Countries")]
-        public async Task<IActionResult> GetCountriesCountries()
+        [HttpGet("programs-WithStaleSupport")]
+        public async Task<IActionResult> GetProgramsAndPrograms_WithStaleSupport()
         {
-            var data = await _publicService.GetCountriesAndCountries_WithStaleSupport();
+            var data = await _publicService.GetProgramsAndPrograms_WithStaleSupport();
             return Ok(data);
         }
 
-        [HttpGet("promoted-Countries")]
-        public async Task<IActionResult> GetPromotedCountries()
+        [HttpGet("promoted-Programs")]
+        public async Task<IActionResult> GetPromotedPrograms()
         {
-            var data = await _publicService.GetPromotedCountries();
+            var data = await _publicService.GetPromotedPrograms();
             return Ok(data);
         }
 

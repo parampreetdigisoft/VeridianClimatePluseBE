@@ -51,7 +51,7 @@ namespace VeridianClimatePulse
                 client.Timeout = TimeSpan.FromHours(3); // supports very long API calls
             });
 
-               ServiceRegistration.AddDependencyInjection(services);     
+            ServiceRegistration.AddDependencyInjection(services);
 
             services.AddCors(options =>
             {
@@ -91,7 +91,7 @@ namespace VeridianClimatePulse
             {
                 c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
                 {
-                    Title = "Africa Health Intelligence Api",
+                    Title = "Veridian Climate Pulse Api",
                     Version = "v1"
                 });
 
@@ -103,7 +103,7 @@ namespace VeridianClimatePulse
                     BearerFormat = "JWT",
                     In = Microsoft.OpenApi.Models.ParameterLocation.Header,
                     Description = "Enter 'Bearer' [space] and then your valid token.\nExample: Bearer abc123xyz"
-                });
+                                 });
 
                 c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
                 {
@@ -148,9 +148,9 @@ namespace VeridianClimatePulse
             services.AddAuthorization(options =>
             {
                 // CityUser with Standard or higher
-                options.AddPolicy("PaidCountryUserOnly", policy =>
+                options.AddPolicy("PaidProgramUserOnly", policy =>
                 {
-                    policy.RequireRole("CountryUser");
+                    policy.RequireRole("ProgramUser");
                     policy.RequireAssertion(context =>
                     {
                         var tier = context.User.FindFirst("Tier")?.Value;
@@ -164,7 +164,7 @@ namespace VeridianClimatePulse
                     policy.RequireRole("Admin"));
 
                 options.AddPolicy("StaffOnly", policy =>
-                    policy.RequireRole(UserRole.Admin.ToString(),UserRole.Analyst.ToString(), UserRole.Evaluator.ToString()));
+                    policy.RequireRole(UserRole.Admin.ToString(), UserRole.Analyst.ToString(), UserRole.Evaluator.ToString()));
             });
 
         }
@@ -185,9 +185,9 @@ namespace VeridianClimatePulse
             // Enable middleware to serve Swagger UI (HTML, JS, CSS, etc.)
             app.UseSwaggerUI(c =>
             {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Africa Health Intelligence Api");
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Veridian Climate Pulse Api");
                 c.RoutePrefix = string.Empty; // Swagger UI at root URL (e.g. https://localhost:5001/)
-            });           
+            });
 
             app.UseHttpsRedirection();
 

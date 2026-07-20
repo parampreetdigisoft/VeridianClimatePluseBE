@@ -22,25 +22,25 @@ namespace VeridianClimatePulse.IServices
     /// </summary>
     public interface IDocumentGeneratorService
     {
-        /// <summary>Full country report: dashboard, summary, pillars, peer comparison, trends, KPI dashboard.</summary>
-        Task<byte[]> GenerateCountryDetails(
-            AiCountrySummeryDto country,
-            List<AiCountryPillarResponse> pillars,
+        /// <summary>Full program report: dashboard, summary, pillars, peer comparison, trends, KPI dashboard.</summary>
+        Task<byte[]> GenerateProgramDetails(
+            AiProgramSummeryDto programDetails,
+            List<AiProgramPillarResponse> pillars,
             List<KpiChartItem> kpis,
-            List<PeerCountryHistoryReportDto> peerCountry,
+            List<PeerProgramHistoryReportDto> peerPrograms,
             UserRole userRole,
             DocumentFormat format = DocumentFormat.Pdf);
 
         /// <summary>Single pillar detail report.</summary>
         Task<byte[]> GeneratePillarDetails(
-            AiCountryPillarResponse pillarData,
+            AiProgramPillarResponse pillarData,
             UserRole userRole,
             DocumentFormat format = DocumentFormat.Pdf);
 
-        /// <summary>Combined report covering every country in the list.</summary>
-        Task<byte[]> GenerateAllCountriesDetails(
-            List<AiCountrySummeryDto> countries,
-            Dictionary<int, List<AiCountryPillarResponse>> pillarsDict,
+        /// <summary>Combined report covering every program in the list.</summary>
+        Task<byte[]> GenerateAllProgramsDetails(
+            List<AiProgramSummeryDto> programs,
+            Dictionary<int, List<AiProgramPillarResponse>> pillarsDict,
             List<KpiChartItem> kpis,
             UserRole userRole,
             DocumentFormat format = DocumentFormat.Pdf);

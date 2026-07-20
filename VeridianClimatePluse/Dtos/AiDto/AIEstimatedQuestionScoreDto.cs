@@ -4,7 +4,7 @@ namespace VeridianClimatePulse.Dtos.AiDto
 {
     public class AIEstimatedQuestionScoreDto
     {
-        public int CountryID { get; set; }
+        public int ClimateProgramID { get; set; }
         public int PillarID { get; set; }
         public int QuestionID { get; set; }
         public string? QuestionText { get; set; }

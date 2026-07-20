@@ -2,7 +2,7 @@ using SkiaSharp;
 
 namespace VeridianClimatePulse.Common.Implementation
 {
-    /// <summary>Brand palette aligned with the AHI web application CSS variables.</summary>
+    /// <summary>Brand palette aligned with the VCP web application CSS variables.</summary>
     internal static class ReportThemeColors
     {
         public const string Primary = "#006D77";
@@ -217,7 +217,7 @@ namespace VeridianClimatePulse.Common.Implementation
         public const string PinkRed = "#E91E63";
         public const string SlateBlue = "#607D8B";
 
-        public static readonly string[] CountryChartPalette =
+        public static readonly string[] ProgramChartPalette =
         {
             WarningGold,
             PdfTealGreen,
@@ -239,7 +239,7 @@ namespace VeridianClimatePulse.Common.Implementation
             IncomeLow, IncomeLowerMiddle, IncomeUpperMiddle, AccentGreen
         };
 
-        public static SKShader CreateAhiGradient(float width, float height) =>
+        public static SKShader CreateVcpGradient(float width, float height) =>
             SKShader.CreateLinearGradient(
                 new SKPoint(0, 0),
                 new SKPoint(width, height),
@@ -252,9 +252,9 @@ namespace VeridianClimatePulse.Common.Implementation
                 new[] { 0f, 0.52f, 1f },
                 SKShaderTileMode.Clamp);
 
-        public static void DrawAhiGradient(SKCanvas canvas, float width, float height)
+        public static void DrawVcpGradient(SKCanvas canvas, float width, float height)
         {
-            using var paint = new SKPaint { IsAntialias = true, Shader = CreateAhiGradient(width, height) };
+            using var paint = new SKPaint { IsAntialias = true, Shader = CreateVcpGradient(width, height) };
             canvas.DrawRect(0, 0, width, height, paint);
         }
     }

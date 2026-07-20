@@ -1,9 +1,9 @@
-using VeridianClimatePulse.Dtos.CountryDto;
+using VeridianClimatePulse.Dtos.ProgramDto;
 
 namespace VeridianClimatePulse.Dtos.UserDtos
 {
     public class GetUserByRoleResponse : PublicUserResponse
     {
-        public List<AddUpdateCountryDto> Countries { get; set; } = new();
+        public List<AddUpdateProgramDto> ClimatePrograms { get; set; } = new();
     }
 }

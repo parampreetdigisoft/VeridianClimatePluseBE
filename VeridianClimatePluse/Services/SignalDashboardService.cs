@@ -27,27 +27,27 @@ namespace VeridianClimatePulse.Services
             _commonService = commonService;
         }
 
-        public Task<ResultResponseDto<DashboardModeResponseDto>> GetPeaceStressTestDashboard(int countryID, int userId, UserRole userRole)
-            => GetDashboardMode(HealthStressTestModeId, countryID, userId, userRole, "Health stress test dashboard generated successfully.");
+        public Task<ResultResponseDto<DashboardModeResponseDto>> GetPeaceStressTestDashboard(int climateProgramID, int userId, UserRole userRole)
+            => GetDashboardMode(HealthStressTestModeId, climateProgramID, userId, userRole, "Health stress test dashboard generated successfully.");
 
-        public Task<ResultResponseDto<DashboardModeResponseDto>> GetEarlyWarningDashboard(int countryID, int userId, UserRole userRole)
-            => GetDashboardMode(EarlyWarningModeId, countryID, userId, userRole, "Early warning dashboard generated successfully.");
+        public Task<ResultResponseDto<DashboardModeResponseDto>> GetEarlyWarningDashboard(int climateProgramID, int userId, UserRole userRole)
+            => GetDashboardMode(EarlyWarningModeId, climateProgramID, userId, userRole, "Early warning dashboard generated successfully.");
 
-        public Task<ResultResponseDto<DashboardModeResponseDto>> GetResilienceScorecard(int countryID, int userId, UserRole userRole)
-            => GetDashboardMode(ResilienceModeId, countryID, userId, userRole, "Resilience scorecard generated successfully.");
+        public Task<ResultResponseDto<DashboardModeResponseDto>> GetResilienceScorecard(int climateProgramID, int userId, UserRole userRole)
+            => GetDashboardMode(ResilienceModeId, climateProgramID, userId, userRole, "Resilience scorecard generated successfully.");
 
         private async Task<ResultResponseDto<DashboardModeResponseDto>> GetDashboardMode(
             int dashboardModeId,
-            int countryID,
+            int climateProgramID,
             int userId,
             UserRole userRole,
             string successMessage)
         {
             try
             {
-                if (userRole == UserRole.CountryUser && !await ValidateCountryAccess(countryID, userId))
+                if (userRole == UserRole.ProgramUser && !await ValidateProgramAccess(climateProgramID, userId))
                 {
-                    return ResultResponseDto<DashboardModeResponseDto>.Failure(new[] { "You don't have access to this country data." });
+                    return ResultResponseDto<DashboardModeResponseDto>.Failure(new[] { "You don't have access to this program data." });
                 }
 
                 var dashboardMode = await _context.DashboardModes
@@ -70,7 +70,7 @@ namespace VeridianClimatePulse.Services
                     .Where(x => x.DashboardModeID == dashboardModeId)
                     .ToListAsync();
 
-                var spResults = await _commonService.GetDashboardModeResults(userId, (int)userRole, dashboardModeId, countryID);
+                var spResults = await _commonService.GetDashboardModeResults(userId, (int)userRole, dashboardModeId, climateProgramID);
                 var spResultsByQuestion = spResults
                     .Where(x => x.QuestionID.HasValue)
                     .GroupBy(x => x.QuestionID!.Value)
@@ -78,14 +78,14 @@ namespace VeridianClimatePulse.Services
 
 
 
-                var isCountryUser = userRole == UserRole.CountryUser;
+                var isProgramUser = userRole == UserRole.ProgramUser;
 
-                var Questions = mappings.Select(q => MapQuestionScore(q, spResultsByQuestion, interpretations, isCountryUser)).ToList();
+                var Questions = mappings.Select(q => MapQuestionScore(q, spResultsByQuestion, interpretations, isProgramUser)).ToList();
 
 
                 var response = new DashboardModeResponseDto
                 {
-                    CountryID = countryID,
+                    ClimateProgramID = climateProgramID,
                     DashboardModeID = dashboardModeId,
                     ModeName = dashboardMode.ModeName,
                     Description = dashboardMode.Description,
@@ -107,7 +107,7 @@ namespace VeridianClimatePulse.Services
             DashboardModeKPIMapping question,
             IReadOnlyDictionary<int, GetDashboardModeResult> spResultsByQuestion,
             IReadOnlyList<DashboardInterpretation> interpretations,
-            bool isCountryUser)
+            bool isProgramUser)
         {
             var hasData = spResultsByQuestion.TryGetValue(question.QuestionID, out var result);
             var dto = new DashboardQuestionScoreDto
@@ -129,7 +129,7 @@ namespace VeridianClimatePulse.Services
             dto.AiTotalUnknown = result.AiTotalUnknown;
             dto.AiUpdatedAt = result.AiUpdatedAt;
 
-            if (!isCountryUser)
+            if (!isProgramUser)
             {
                 dto.EvaluationScore = result.QuestionScore;
                 dto.EvaluationTotalScore = result.TotalScore;
@@ -139,7 +139,7 @@ namespace VeridianClimatePulse.Services
                 dto.EvaluationUpdatedAt = result.UpdatedAt;
             }
 
-            var scoreForInterpretation = isCountryUser ? result.AiQuestionScore : result.QuestionScore;
+            var scoreForInterpretation = isProgramUser ? result.AiQuestionScore : result.QuestionScore;
             ApplyInterpretation(dto, interpretations, scoreForInterpretation.GetValueOrDefault());
 
             return dto;
@@ -158,11 +158,11 @@ namespace VeridianClimatePulse.Services
                 (!x.MaxRange.HasValue || score <= x.MaxRange.Value));
         }
 
-        private async Task<bool> ValidateCountryAccess(int countryID, int userId)
+        private async Task<bool> ValidateProgramAccess(int climateProgramID, int userId)
         {
-            return await _context.PublicUserCountryMappings
+            return await _context.ClientProgramMappings
                 .AsNoTracking()
-                .AnyAsync(x => x.UserID == userId && x.CountryID == countryID && x.IsActive);
+                .AnyAsync(x => x.UserID == userId && x.ClimateProgramID == climateProgramID && x.IsActive);
         }
 
         private async Task<List<DashboardModeKPIMapping>> LoadActiveMappings(int dashboardModeId)

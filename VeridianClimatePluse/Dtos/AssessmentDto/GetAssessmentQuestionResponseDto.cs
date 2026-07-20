@@ -1,3 +1,4 @@
+using VeridianClimatePulse.Enums;
 using VeridianClimatePulse.Models;
 
 namespace VeridianClimatePulse.Dtos.AssessmentDto

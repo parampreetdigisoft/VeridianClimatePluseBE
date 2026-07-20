@@ -29,37 +29,37 @@ namespace VeridianClimatePulse.Services
             _docx = docx;
         }
 
-        public Task<byte[]> GenerateCountryDetails(
-            AiCountrySummeryDto country,
-            List<AiCountryPillarResponse> pillars,
+        public Task<byte[]> GenerateProgramDetails(
+            AiProgramSummeryDto program,
+            List<AiProgramPillarResponse> pillars,
             List<KpiChartItem> kpis,
-            List<PeerCountryHistoryReportDto> peercountry,
+            List<PeerProgramHistoryReportDto> peerProgram,
             UserRole userRole,
         VeridianClimatePulse.IServices.DocumentFormat format = VeridianClimatePulse.IServices.DocumentFormat.Pdf)
         {
              var result = format == VeridianClimatePulse.IServices.DocumentFormat.Docx
-                ? _docx.GenerateCountryDetailsDocx(country, pillars, kpis, peercountry, userRole)
-                : _pdf.GenerateCountryDetailsPdf(country, pillars, kpis, peercountry, userRole);
+                ? _docx.GenerateProgramDetailsDocx(program, pillars, kpis, peerProgram, userRole)
+                : _pdf.GenerateProgramDetailsPdf(program, pillars, kpis, peerProgram, userRole);
 
             return result;
         }
 
         public Task<byte[]> GeneratePillarDetails(
-            AiCountryPillarResponse pillarData,
+            AiProgramPillarResponse pillarData,
             UserRole userRole,
             VeridianClimatePulse.IServices.DocumentFormat format = VeridianClimatePulse.IServices.DocumentFormat.Pdf)
             => format == VeridianClimatePulse.IServices.DocumentFormat.Docx
                 ? _docx.GeneratePillarDetailsDocx(pillarData, userRole)
                 : _pdf.GeneratePillarDetailsPdf(pillarData, userRole);
 
-        public Task<byte[]> GenerateAllCountriesDetails(
-            List<AiCountrySummeryDto> countries,
-            Dictionary<int, List<AiCountryPillarResponse>> pillarsDict,
+        public Task<byte[]> GenerateAllProgramsDetails(
+            List<AiProgramSummeryDto> programs,
+            Dictionary<int, List<AiProgramPillarResponse>> pillarsDict,
             List<KpiChartItem> kpis,
             UserRole userRole,
             VeridianClimatePulse.IServices.DocumentFormat format = VeridianClimatePulse.IServices.DocumentFormat.Pdf)
             => format == VeridianClimatePulse.IServices.DocumentFormat.Docx
-                ? _docx.GenerateAllCountriesDetailsDocx(countries, pillarsDict, kpis, userRole)
-                : _pdf.GenerateAllCountriesDetailsPdf(countries, pillarsDict, kpis, userRole);
+                ? _docx.GenerateAllProgramsDetailsDocx(programs, pillarsDict, kpis, userRole)
+                : _pdf.GenerateAllProgramsDetailsPdf(programs, pillarsDict, kpis, userRole);
     }
 }

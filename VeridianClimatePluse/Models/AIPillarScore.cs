@@ -6,7 +6,7 @@ namespace VeridianClimatePulse.Models
     public class AIPillarScore
     {
         public int PillarScoreID { get; set; }
-        public int CountryID { get; set; }
+        public int ClimateProgramID { get; set; }
         public int PillarID { get; set; }
         public int Year { get; set; }
         public decimal? AIScore { get; set; }
@@ -37,7 +37,7 @@ namespace VeridianClimatePulse.Models
 
         [Required]
         public DateTime UpdatedAt { get; set; }
-        public Country? Country { get; set; }
+        public ClimateProgram? Program { get; set; }
         public Pillar? Pillar { get; set; }
         public ICollection<AIDataSourceCitation>? DataSourceCitations { get; set; }
     }

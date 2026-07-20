@@ -6,8 +6,8 @@ namespace VeridianClimatePulse.IServices
 {
     public interface ISignalDashboardService
     {
-        Task<ResultResponseDto<DashboardModeResponseDto>> GetPeaceStressTestDashboard(int countryID, int userId, UserRole userRole);
-        Task<ResultResponseDto<DashboardModeResponseDto>> GetEarlyWarningDashboard(int countryID, int userId, UserRole userRole);
-        Task<ResultResponseDto<DashboardModeResponseDto>> GetResilienceScorecard(int countryID, int userId, UserRole userRole);
+        Task<ResultResponseDto<DashboardModeResponseDto>> GetPeaceStressTestDashboard(int climateProgramID, int userId, UserRole userRole);
+        Task<ResultResponseDto<DashboardModeResponseDto>> GetEarlyWarningDashboard(int climateProgramID, int userId, UserRole userRole);
+        Task<ResultResponseDto<DashboardModeResponseDto>> GetResilienceScorecard(int climateProgramID, int userId, UserRole userRole);
     }
 }

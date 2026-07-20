@@ -5,12 +5,13 @@
         public decimal? Score { get; set; }
         public string? OverallCondition { get; set; }
         public DateTime? UpdatedAt { get; set; }
-        public List<ROSEWPublicCountryDto> Countries { get; set; } = new();
+        public List<ROSEWPublicProgramDto> Programs { get; set; } = new();
         public List<ROSEWPublicQuestionDto> Questions { get; set; } = new();
     }
-    public class ROSEWPublicCountryDto
+    public class ROSEWPublicProgramDto
     {
-        public string Country { get; set; } 
+        public string ProgramName { get; set; } 
+        public string Location { get; set; }
         public DateTime? UpdatedAt { get; set; } 
         public string? Condition { get; set; }
     }

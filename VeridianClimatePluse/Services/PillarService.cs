@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 using QuestPDF.Fluent;
 using VeridianClimatePulse.Common.Interface;
+using VeridianClimatePulse.Enums;
 
 namespace VeridianClimatePulse.Services
 {
@@ -20,6 +21,7 @@ namespace VeridianClimatePulse.Services
         private readonly IAppLogger _appLogger;
         private readonly Download _download;
         private readonly ICommonService _commonService;
+        int ROSEWPillarID = 22;
 
         public PillarService(ApplicationDbContext context, IAppLogger appLogger, Download download, ICommonService commonService)
         {
@@ -29,22 +31,35 @@ namespace VeridianClimatePulse.Services
             _commonService = commonService;
         }
 
-        public async Task<List<Pillar>> GetAllAsync(int userId, UserRole userRole)
+        public async Task<List<GetPillarDTO>> GetAllAsync(int userId, UserRole userRole)
         {
             try
             {
-                if(userRole != UserRole.CountryUser)
+                if(userRole != UserRole.ProgramUser)
                 {
                     return await _commonService.GetPillars();
                 }
                 else
                 {
-                    var userPillar = await _context.CountryUserPillarMappings
+                    var userPillar = await _context.ClientPillarMappings
                         .Where(x => x.IsActive && x.UserID == userId)
                         .Select(x => x.Pillar)
                         .Where(x => x != null)
                         .Select(x => x!)
                         .Where(x => !x.IsDeleted)
+                        .Select(x => new GetPillarDTO
+                        {
+                            PillarID = x.PillarID,
+                            PillarName = x.PillarName,
+                            Description = x.Description,
+                            DisplayOrder = x.DisplayOrder,
+                            ImagePath = x.ImagePath,
+                            Weight = x.Weight,
+                            Reliability = x.Reliability,
+                            PillarCode = x.PillarCode,
+                            IsActive = x.IsActive,
+                            QuestionCount = x.Questions.Where(x => !x.IsDeleted).Count()
+                        })
                         .Distinct()
                         .ToListAsync();
 
@@ -54,7 +69,7 @@ namespace VeridianClimatePulse.Services
             catch (Exception ex)
             {
                 await _appLogger.LogAsync("Error Occure in GetAllAsync", ex);
-                return new List<Pillar>();
+                return new List<GetPillarDTO>();
             }
         }
 
@@ -265,11 +280,14 @@ namespace VeridianClimatePulse.Services
             }
         }
 
-
         public async Task<ResultResponseDto<bool>> DeleteAsync(int id)
         {
             try
             {
+                if (id == ROSEWPillarID)
+                {
+                    return ResultResponseDto<bool>.Failure(new[] { "You cannot delete the ROSEW pillar." });
+                }
                 var pillar = await _context.Pillars.FindAsync(id);
                 if (pillar == null)
                     return ResultResponseDto<bool>.Failure(new[] { "Pillar not found." });
@@ -306,7 +324,7 @@ namespace VeridianClimatePulse.Services
             }
         }
 
-        public async Task<ResultResponseDto<List<PillarWithQuestionsDto>>> GetPillarsWithQuestions(GetCountryPillarHistoryRequestDto request)
+        public async Task<ResultResponseDto<List<PillarWithQuestionsDto>>> GetPillarsWithQuestions(GetProgramPillarHistoryRequestDto request)
         {
             try
             {
@@ -321,29 +339,27 @@ namespace VeridianClimatePulse.Services
                     return ResultResponseDto<List<PillarWithQuestionsDto>>.Failure(new[] { "Invalid user" });
 
                 // 2. Role-based mapping filter
-                Expression<Func<UserCountryMapping, bool>> predicate = user.Role switch
+                Expression<Func<StaffProgramMapping, bool>> predicate = user.Role switch
                 {
-                    UserRole.Analyst => x => !x.IsDeleted && x.CountryID == request.CountryID && x.AssignedByUserId == request.UserID || x.UserID == request.UserID,
-                    UserRole.Evaluator => x => !x.IsDeleted && x.CountryID == request.CountryID && x.UserID == request.UserID,
-                    _ => x => !x.IsDeleted && x.CountryID == request.CountryID
+                    UserRole.Analyst => x => !x.IsDeleted && x.ClimateProgramID == request.ClimateProgramID && (x.AssignedByUserId == request.UserID || x.UserID == request.UserID),
+                    UserRole.Evaluator => x => !x.IsDeleted && x.ClimateProgramID == request.ClimateProgramID && x.UserID == request.UserID,
+                    _ => x => !x.IsDeleted && x.ClimateProgramID == request.ClimateProgramID //default
                 };
 
-                var mappingIds = await _context.UserCountryMappings
+                var mappingIds = await _context.StaffProgramMappings
                     .Where(predicate)
-                    .Select(x => x.UserCountryMappingID)
+                    .Select(x => x.StaffProgramMappingID)
                     .ToListAsync();
 
                 // 3. Load assessments
                 var assessments = await _context.Assessments
-                    .Include(a => a.UserCountryMapping)
+                    .Include(a => a.StaffProgramMapping)
                     .Include(a => a.PillarAssessments)
                         .ThenInclude(pa => pa.Responses)
-                    .Where(a => mappingIds.Contains(a.UserCountryMappingID)
+                    .Where(a => mappingIds.Contains(a.StaffProgramMappingID)
                                 && a.IsActive
                                 && a.UpdatedAt.Year == year
-                                && (a.AssessmentPhase == AssessmentPhase.Completed
-                                    || a.AssessmentPhase == AssessmentPhase.EditRejected
-                                    || a.AssessmentPhase == AssessmentPhase.EditRequested))
+                                )
                     .AsNoTracking()
                     .ToListAsync();
 
@@ -357,7 +373,7 @@ namespace VeridianClimatePulse.Services
                     .ToListAsync();
 
                 // 5. Users dictionary
-                var userIds = assessments.Select(a => a.UserCountryMapping.UserID).Distinct().ToList();
+                var userIds = assessments.Select(a => a.StaffProgramMapping.UserID).Distinct().ToList();
 
                 var usersDict = await _context.Users
                     .Where(u => userIds.Contains(u.UserID))
@@ -372,7 +388,7 @@ namespace VeridianClimatePulse.Services
                     {
                         Response = r,
                         x.pa.PillarID,
-                        UserID = x.a.UserCountryMapping.UserID
+                        UserID = x.a.StaffProgramMapping.UserID
                     }))
                     .GroupBy(x => (x.Response.QuestionID, x.PillarID, x.UserID))
                     .ToDictionary(g => g.Key, g => g.First().Response);
@@ -381,7 +397,7 @@ namespace VeridianClimatePulse.Services
                 // ? AI DATA FIXED
                 // =========================================
                 var aiRaw = await _context.AIEstimatedQuestionScores
-                    .Where(x => x.CountryID == request.CountryID
+                    .Where(x => x.ClimateProgramID == request.ClimateProgramID
                                 && (!request.PillarID.HasValue || x.PillarID == request.PillarID)
                                 && x.Year == year)
                     .ToListAsync();
@@ -395,7 +411,7 @@ namespace VeridianClimatePulse.Services
                             UserID = int.MaxValue,
                             FullName = "AI_Result",
                             QuestionID = x.QuestionID,
-                            Score = (int?)x.AIScore,
+                            Score = x.AIScore.ToString(),
                             Justification = x.EvidenceSummary,
                             OptionText = ""
                         }).FirstOrDefault()
@@ -430,7 +446,7 @@ namespace VeridianClimatePulse.Services
                                     UserID = uid,
                                     FullName = usersDict.TryGetValue(uid, out var name) ? name : "",
                                     QuestionID = q.QuestionID,
-                                    Score = (int?)response?.Score,
+                                    Score = option?.ScoreValue,
                                     Justification = response?.Justification ?? "",
                                     OptionText = option?.OptionText ?? ""
                                 };
@@ -442,7 +458,7 @@ namespace VeridianClimatePulse.Services
                                 if (aiAnswer !=null)
                                 {
                                     var option = q.QuestionOptions
-                                    .FirstOrDefault(o => o.ScoreValue == aiAnswer.Score.ToString());
+                                    .FirstOrDefault(o => o.ScoreValue == aiAnswer.Score);
 
                                     aiAnswer.OptionText = option?.OptionText ?? "";
                                     userAnswers[int.MaxValue] = aiAnswer;
@@ -467,13 +483,13 @@ namespace VeridianClimatePulse.Services
             }
         }
 
-        public async Task<Tuple<string, byte[]>> ExportPillarsHistoryByUserId(GetCountryPillarHistoryRequestDto requestDto)
+        public async Task<Tuple<string, byte[]>> ExportPillarsHistoryByUserId(GetProgramPillarHistoryRequestDto requestDto)
         {
             try
             {
                 var response = await GetPillarsWithQuestions(requestDto);
-                var country = await _context.Countries
-                    .FirstOrDefaultAsync(x => x.CountryID == requestDto.CountryID);
+                var climateProgram = await _context.ClimatePrograms
+                    .FirstOrDefaultAsync(x => x.ClimateProgramID == requestDto.ClimateProgramID);
 
                 if (!response.Succeeded || response.Result == null)
                 {
@@ -486,15 +502,15 @@ namespace VeridianClimatePulse.Services
                 if (requestDto.ExportType == Enums.ExportType.Pdf)
                 {
                     // ? Use structured data directly (NO flattening)
-                    fileBytes = GeneratePdf(response.Result, country, requestDto.UpdatedAt.Year);
+                    fileBytes = GeneratePdf(response.Result, climateProgram, requestDto.UpdatedAt.Year);
 
-                    fileName = $"ExportPillarsHistory_{requestDto.CountryID}_{requestDto.PillarID}.pdf";
+                    fileName = $"ExportPillarsHistory_{requestDto.ClimateProgramID}_{requestDto.PillarID}.pdf";
                 }
                 else
                 {
                     // ? Excel (existing)
-                    fileBytes = MakePillarSheet(response.Result, country);
-                    fileName = $"ExportPillarsHistory_{requestDto.CountryID}_{requestDto.PillarID}.xlsx";
+                    fileBytes = MakePillarSheet(response.Result, climateProgram);
+                    fileName = $"ExportPillarsHistory_{requestDto.ClimateProgramID}_{requestDto.PillarID}.xlsx";
                 }
 
                 return new Tuple<string, byte[]>(fileName, fileBytes);
@@ -505,11 +521,11 @@ namespace VeridianClimatePulse.Services
                 return new Tuple<string, byte[]>("", Array.Empty<byte>());
             }
         }
-        public byte[] GeneratePdf(List<PillarWithQuestionsDto> data, Country country, int year)
+        public byte[] GeneratePdf(List<PillarWithQuestionsDto> data, ClimateProgram climateProgram, int year)
         {
             var logoPath = Path.Combine(
                 Directory.GetCurrentDirectory(),
-                "wwwroot/assets/images/ahi.png");
+                "wwwroot/assets/images/vcp.png");
 
             return Document.Create(container =>
             {
@@ -536,7 +552,7 @@ namespace VeridianClimatePulse.Services
                                             .Bold()
                                             .FontColor("#ffffff");
 
-                                        left.Item().Text($"{country?.CountryName}, {country?.Continent}, USA | Data Year: {year}")
+                                        left.Item().Text($"{climateProgram?.ProgramName}, USA | Data Year: {year}")
                                             .FontSize(10)
                                             .FontColor("#cfe7df");
 
@@ -602,6 +618,12 @@ namespace VeridianClimatePulse.Services
                                                     .Text("Option").SemiBold().FontSize(10);
                                             });
 
+                                            table.ColumnsDefinition(columns =>
+                                            {
+                                                columns.ConstantColumn(120); // NAME (fixed)
+                                                columns.ConstantColumn(80);  // SCORE (smaller & controlled)
+                                                columns.RelativeColumn();    // OPTION (takes remaining space)
+                                            });
                                             // ROWS
                                             foreach (var user in question.Users.Values
                                                          .OrderBy(x => x.UserID == -1 ? 1 : 0))
@@ -611,7 +633,7 @@ namespace VeridianClimatePulse.Services
 
                                                 // NAME
                                                 var nameCell = table.Cell()
-                                                    .Padding(8)
+                                                    .Padding(2)
                                                     .Background(bgColor)
                                                     .Text(isAI ? "AI" : user.FullName)
                                                     .FontColor(isAI ? "#0a7d5e" : "#000");
@@ -621,15 +643,17 @@ namespace VeridianClimatePulse.Services
 
                                                 // SCORE
                                                 table.Cell()
-                                                    .Padding(8)
+                                                    .Padding(2)
                                                     .Background(bgColor)
-                                                    .Text(user.Score?.ToString() ?? "");
+                                                    .Text(user.Score?.ToString() ?? "")
+                                                    .WrapAnywhere();
 
                                                 // OPTION
                                                 table.Cell()
-                                                    .Padding(8)
+                                                    .Padding(2)
                                                     .Background(bgColor)
-                                                    .Text(user.OptionText ?? "");
+                                                    .Text(user.OptionText ?? "")
+                                                    .WrapAnywhere();
                                             }
                                         });
                                     });
@@ -646,11 +670,11 @@ namespace VeridianClimatePulse.Services
             }).GeneratePdf();
         }
 
-        private byte[] MakePillarSheet(List<PillarWithQuestionsDto> pillars, Models.Country? country)
+        private byte[] MakePillarSheet(List<PillarWithQuestionsDto> pillars, Models.ClimateProgram? climateProgram)
         {
             using (var workbook = new XLWorkbook())
             {
-                var name = country == null ? $"{pillars.Count}-Pillars-Result" : country?.CountryName+"-"+country?.Continent+ $"-{pillars.Count}-Pillars-Result";
+                var name = climateProgram == null ? $"{pillars.Count}-Pillars-Result" : climateProgram?.ProgramName+"-"+ $"-{pillars.Count}-Pillars-Result";
                 var shortName = name.Length > 30 ? name.Substring(0, 30) : name;
 
                 var ws = workbook.Worksheets.Add(shortName);
@@ -707,20 +731,20 @@ namespace VeridianClimatePulse.Services
 
                         var count = userData.Count;
 
-                        var filteredData = userData
-                            .Where(x => x.Value.Score!=null)
-                            .Select(x => (decimal)x.Value.Score.Value);
+                        //var filteredData = userData
+                        //    .Where(x => x.Value.Score!=null)
+                        //    .Select(x => (decimal)x.Value.Score.ToString());
 
-                        decimal score = filteredData.Any()
-                          ? filteredData.Average()
-                          :0m;
+                        //decimal score = filteredData.Any()
+                        //  ? filteredData.Average()
+                        //  :0m;
 
                         var richText = ws.Cell(row, c++).GetRichText();
 
                         richText.AddText("Total Score:  ")
                             .SetBold().SetFontColor(XLColor.DarkGray);
 
-                        richText.AddText($"{Math.Round(score,2)}\n")
+                        richText.AddText($"{Math.Round(1.00,2)}\n")
                             .SetFontColor(XLColor.Black);
                     }
 
@@ -800,21 +824,21 @@ namespace VeridianClimatePulse.Services
                 var startDate = new DateTime(year, 1, 1);
                 var endDate = new DateTime(year + 1, 1, 1);
                 // Role based filter
-                IQueryable<UserCountryMapping> userCountryMappings = _context.UserCountryMappings
+                IQueryable<StaffProgramMapping> staffProgramMappings = _context.StaffProgramMappings
                     .AsNoTracking()
-                    .Where(x => !x.IsDeleted && x.CountryID == request.CountryID);
+                    .Where(x => !x.IsDeleted && x.ClimateProgramID == request.ClimateProgramID);
 
-                userCountryMappings = userRole switch
+                staffProgramMappings = userRole switch
                 {
-                    UserRole.Analyst => userCountryMappings.Where(x => x.AssignedByUserId == request.UserId),
-                    UserRole.Evaluator => userCountryMappings.Where(x => x.UserID == request.UserId),
-                    _ => userCountryMappings
+                    UserRole.Analyst => staffProgramMappings.Where(x => x.AssignedByUserId == request.UserId),
+                    UserRole.Evaluator => staffProgramMappings.Where(x => x.UserID == request.UserId),
+                    _ => staffProgramMappings
                 };
 
                 // Main query (single DB round-trip)
                 var rawData = await (
-                    from ucm in userCountryMappings
-                    join a in _context.Assessments on ucm.UserCountryMappingID equals a.UserCountryMappingID
+                    from ucm in staffProgramMappings
+                    join a in _context.Assessments on ucm.StaffProgramMappingID equals a.StaffProgramMappingID
                     where a.IsActive && (a.UpdatedAt >= startDate && a.UpdatedAt <= endDate 
                     && (a.AssessmentPhase == AssessmentPhase.Completed || a.AssessmentPhase == AssessmentPhase.EditRejected || a.AssessmentPhase == AssessmentPhase.EditRequested))
                     from pa in a.PillarAssessments
@@ -845,7 +869,7 @@ namespace VeridianClimatePulse.Services
                 // 2. AI DATA
                 // =========================
                 var aiDataList = await _context.AIPillarScores
-                    .Where(x => x.CountryID == request.CountryID
+                    .Where(x => x.ClimateProgramID == request.ClimateProgramID
                         && (!request.PillarID.HasValue || x.PillarID == request.PillarID)
                         && x.Year == year)
                     .GroupBy(x => x.PillarID)
@@ -854,7 +878,7 @@ namespace VeridianClimatePulse.Services
                         PillarID = g.Key,
                         Score = g.Sum(x => x.AIScore ?? 0),
                         ScoreProgress = g.Average(x => x.AIProgress ?? 0),
-                        Count = g.Count()
+                        Count = _context.AIEstimatedQuestionScores.Where(x => x.PillarID == g.Key && x.ClimateProgramID == request.ClimateProgramID && x.Year == year).Count()
                     })
                     .ToListAsync();
 
@@ -881,7 +905,6 @@ namespace VeridianClimatePulse.Services
                         FullName = "AI_Result",
                         Score = Convert.ToDecimal(Math.Round(x.Score,0)),
                         ScoreProgress = x.ScoreProgress,
-                        TotalQuestion = x.Count,
                         AnsQuestion = x.Count,
                         AnsPillar =1
                     }
@@ -905,7 +928,7 @@ namespace VeridianClimatePulse.Services
                                 var responses = userGroup
                                     .SelectMany(x => x.Responses)
                                     .Where(r => r.Score.HasValue &&
-                                                (int)r.Score.Value <= (int)ScoreValue.Four)
+                                                (int)r.Score.Value <= (int)ScoreValue.Score1)
                                     .ToList();
 
                                 var progress = responses.Any()
@@ -929,6 +952,7 @@ namespace VeridianClimatePulse.Services
                         // ? Insert AI row (always)
                         if (aiData.TryGetValue(p.PillarID, out var aiPillar))
                         {
+                            aiPillar.TotalQuestion = p.TotalQuestion;
                             users.Insert(0, aiPillar);
                         }
                         else

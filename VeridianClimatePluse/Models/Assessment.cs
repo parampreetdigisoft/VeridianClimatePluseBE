@@ -3,14 +3,14 @@ namespace VeridianClimatePulse.Models
     public class Assessment
     {
         public int AssessmentID { get; set; }
-        public int UserCountryMappingID { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
-        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+        public int StaffProgramMappingID { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
         public bool IsActive { get; set; } = true;
         public AssessmentPhase? AssessmentPhase { get; set; } = Models.AssessmentPhase.InProgress;
 
         // Navigation properties
-        public UserCountryMapping UserCountryMapping { get; set; }
+        public StaffProgramMapping StaffProgramMapping { get; set; }
         public ICollection<PillarAssessment> PillarAssessments { get; set; } = new List<PillarAssessment>();
     }
 

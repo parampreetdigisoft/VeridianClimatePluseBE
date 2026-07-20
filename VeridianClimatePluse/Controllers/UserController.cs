@@ -37,8 +37,8 @@ namespace VeridianClimatePulse.Controllers
             return User.FindFirst(ClaimTypes.Role)?.Value;
         }
         [HttpGet]
-        [Route("GetUserByRoleWithAssignedCountry")]
-        public async Task<IActionResult> GetUserByRoleWithAssignedCountry([FromQuery] GetUserByRoleRequestDto request)
+        [Route("GetUserByRoleWithAssignedProgram")]
+        public async Task<IActionResult> GetUserByRoleWithAssignedProgram([FromQuery] GetUserByRoleRequestDto request)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
@@ -53,7 +53,7 @@ namespace VeridianClimatePulse.Controllers
                 return Unauthorized("You Don't have access.");
             }
 
-            return Ok(await _userService.GetUserByRoleWithAssignedCountry(request, userId.GetValueOrDefault(), userRole));
+            return Ok(await _userService.GetUserByRoleWithAssignedProgram(request, userId.GetValueOrDefault(), userRole));
         }
 
         [HttpGet]
@@ -81,8 +81,8 @@ namespace VeridianClimatePulse.Controllers
 
         [HttpGet]
         [Authorize(Policy = "AdminOnly")]
-        [Route("getUsersAssignedToCountry/{countryID}")]
-        public async Task<IActionResult> GetUsersAssignedToCountry(int countryID) => Ok(await _userService.GetUsersAssignedToCountry(countryID));
+        [Route("getUsersAssignedToProgram/{ProgramID}")]
+        public async Task<IActionResult> GetUsersAssignedToProgram(int ProgramID) => Ok(await _userService.GetUsersAssignedToProgram(ProgramID));
     }
 
     public class RegisterRequest

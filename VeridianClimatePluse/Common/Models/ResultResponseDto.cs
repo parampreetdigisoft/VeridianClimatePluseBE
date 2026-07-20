@@ -20,7 +20,7 @@ namespace VeridianClimatePulse.Common.Models
         public int? ReturnId { get; init; }
         public bool? IsExist { get; init; }
 
-        public static ResultResponseDto<T> Success(T result=default,IEnumerable<string>? messages = null,int? returnId = null)
+        public static ResultResponseDto<T> Success(T result= default,IEnumerable<string>? messages = null,int? returnId = null)
         {
             return new ResultResponseDto<T>(
                 succeeded: true,

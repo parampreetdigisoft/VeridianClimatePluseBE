@@ -1,16 +1,10 @@
 using ClosedXML.Excel;
-using ClosedXML.Graphics;
-
-using DocumentFormat.OpenXml.Spreadsheet;
-
 using Microsoft.EntityFrameworkCore;
-
 using VeridianClimatePulse.Common.Implementation;
 using VeridianClimatePulse.Common.Models;
 using VeridianClimatePulse.Data;
-
 using VeridianClimatePulse.Dtos.CommonDto;
-using VeridianClimatePulse.Dtos.CountryUserDto;
+using VeridianClimatePulse.Dtos.ClientDto;
 using VeridianClimatePulse.Dtos.kpiDto;
 using VeridianClimatePulse.Enums;
 using VeridianClimatePulse.IServices;
@@ -45,19 +39,19 @@ namespace VeridianClimatePulse.Services
                     .AsNoTracking()
                     .Include(ar => ar.AnalyticalLayer)
                         .ThenInclude(al => al.FiveLevelInterpretations)
-                    .Include(ar => ar.Country)
+                    .Include(ar => ar.Program)
                     .Where(x => (x.LastUpdated >= startDate && x.LastUpdated < endDate) || (x.AiLastUpdated >= startDate && x.AiLastUpdated < endDate));
 
-                if (role == UserRole.CountryUser )
+                if (role == UserRole.ProgramUser )
                 {
-                    var validCountries = _context.PublicUserCountryMappings
+                    var validPrograms = _context.ClientProgramMappings
                         .Where(x =>
                             x.IsActive &&
                             x.UserID == userId &&
-                            (!request.CountryID.HasValue || x.CountryID == request.CountryID))
-                        .Select(x => x.CountryID);
+                            (!request.ClimateProgramID.HasValue || x.ClimateProgramID == request.ClimateProgramID))
+                        .Select(x => x.ClimateProgramID);
 
-                    var validPillarIds = _context.CountryUserPillarMappings
+                    var validPillarIds = _context.ClientPillarMappings
                         .Where(x => x.IsActive && x.UserID == userId)
                         .Select(x => x.PillarID);
 
@@ -70,25 +64,25 @@ namespace VeridianClimatePulse.Services
 
                     baseQuery = baseQuery
                         .Where(ar =>
-                            validCountries.Contains(ar.CountryID) &&
+                            validPrograms.Contains(ar.ClimateProgramID) &&
                             validLayerIds.Contains(ar.LayerID));
                 }
                 else if (role == UserRole.Analyst || role == UserRole.Evaluator)
                 {
-                    var validCountries = _context.UserCountryMappings
+                    var validPrograms = _context.StaffProgramMappings
                         .Where(x =>
                             !x.IsDeleted &&
                             x.UserID == userId &&
-                            (!request.CountryID.HasValue || x.CountryID == request.CountryID))
-                        .Select(x => x.CountryID);
+                            (!request.ClimateProgramID.HasValue || x.ClimateProgramID == request.ClimateProgramID))
+                        .Select(x => x.ClimateProgramID);
                     baseQuery = baseQuery
-                        .Where(ar => validCountries.Contains(ar.CountryID)&&
+                        .Where(ar => validPrograms.Contains(ar.ClimateProgramID)&&
                         (!request.LayerID.HasValue || ar.LayerID == request.LayerID));
                 }
                 else
                 {
                     baseQuery = baseQuery.Where(ar =>
-                        (!request.CountryID.HasValue || ar.CountryID == request.CountryID) &&
+                        (!request.ClimateProgramID.HasValue || ar.ClimateProgramID == request.ClimateProgramID) &&
                         (!request.LayerID.HasValue || ar.LayerID == request.LayerID));
                 }
                 var response = await baseQuery.Select(Projection).ApplyPaginationAsync(request);
@@ -107,7 +101,7 @@ namespace VeridianClimatePulse.Services
         {
             LayerResultID = ar.LayerResultID,
             LayerID = ar.LayerID,
-            CountryID = ar.CountryID,
+            ClimateProgramID = ar.ClimateProgramID,
             InterpretationID = ar.InterpretationID,           
             CalValue5 = ar.CalValue5,
             LastUpdated = ar.LastUpdated,
@@ -119,7 +113,7 @@ namespace VeridianClimatePulse.Services
             Purpose = ar.AnalyticalLayer.Purpose,            
             CalText5 = ar.AnalyticalLayer.CalText5,
             FiveLevelInterpretations = ar.AnalyticalLayer.FiveLevelInterpretations.OrderByDescending(f => f.MaxRange).ToList(),
-            Country = ar.Country
+            Program = ar.Program
         };
 
         #endregion
@@ -130,13 +124,13 @@ namespace VeridianClimatePulse.Services
                 IQueryable<AnalyticalLayer> query = _context.AnalyticalLayers
                     .Where(x => !x.IsDeleted);
 
-                if (role == UserRole.CountryUser)
+                if (role == UserRole.ProgramUser)
                 {
                     query =
                         from layer in _context.AnalyticalLayers
                         join map in _context.AnalyticalLayerPillarMappings
                             on layer.LayerID equals map.LayerID
-                        join userMap in _context.CountryUserPillarMappings
+                        join userMap in _context.ClientPillarMappings
                             on map.PillarID equals userMap.PillarID
                         where !layer.IsDeleted
                               && userMap.IsActive
@@ -157,7 +151,7 @@ namespace VeridianClimatePulse.Services
                 return ResultResponseDto<List<AnalyticalLayer>>.Failure(new List<string> { "An error occurred" });
             }
         }
-        public async Task<ResultResponseDto<CompareCountryResponseDto>> CompareCountries(CompareCountryRequestDto c, int userId, UserRole role, bool applyPagination = true)
+        public async Task<ResultResponseDto<CompareProgramResponseDto>> ComparePrograms(CompareProgramsRequestDto c, int userId, UserRole role, bool applyPagination = true)
         {
             try
             {
@@ -190,47 +184,47 @@ namespace VeridianClimatePulse.Services
                     validKpiIds = c.Kpis;
                 }
 
-                Expression<Func<Country, bool>> expression = role switch
+                Expression<Func<ClimateProgram, bool>> expression = role switch
                 {
-                    UserRole.Admin => x => !x.IsDeleted && c.Countries.Contains(x.CountryID),
-                    UserRole.Analyst => x => !x.IsDeleted && c.Countries.Contains(x.CountryID),
-                    UserRole.Evaluator => x => !x.IsDeleted && c.Countries.Contains(x.CountryID),
+                    UserRole.Admin => x => !x.IsDeleted && c.Programs.Contains(x.ClimateProgramID),
+                    UserRole.Analyst => x => !x.IsDeleted && c.Programs.Contains(x.ClimateProgramID),
+                    UserRole.Evaluator => x => !x.IsDeleted && c.Programs.Contains(x.ClimateProgramID),
                     _ => x => false
                 };
 
-                // Step 2: Get all selected countries (even if no analytical data)
-                var selectedCountries = await _context.Countries
+                // Step 2: Get all selected programs (even if no analytical data)
+                var selectedPrograms = await _context.ClimatePrograms
                     .Where(expression)
                     .Distinct()
                     .ToListAsync();
 
-                var selectedCountryIds = selectedCountries.Select(x => x.CountryID).ToList();
+                var selectedClimateProgramIDs = selectedPrograms.Select(x => x.ClimateProgramID).ToList();
 
                 if(role == UserRole.Analyst || role == UserRole.Evaluator)
                 {
-                    var validMappedCountryIds = await _context.UserCountryMappings
+                    var validMappedClimateProgramIDs = await _context.StaffProgramMappings
                        .Where(x => x.UserID == userId && !x.IsDeleted)
-                       .Select(x => x.CountryID)
+                       .Select(x => x.ClimateProgramID)
                        .ToListAsync();
 
-                    // ? Check if all selected countries are valid
-                    bool allValid = selectedCountryIds.All(id => validMappedCountryIds.Contains(id));
+                    // ? Check if all selected programs are valid
+                    bool allValid = selectedClimateProgramIDs.All(id => validMappedClimateProgramIDs.Contains(id));
 
                     if (!allValid)
                     {
-                        return ResultResponseDto<CompareCountryResponseDto>.Failure(new List<string> { "No valid countries found." });
+                        return ResultResponseDto<CompareProgramResponseDto>.Failure(new List<string> { "No valid programs found." });
                     }
                 }
 
-                // Step 3: Fetch analytical layer results for selected countries
+                // Step 3: Fetch analytical layer results for selected programs
                 var analyticalResults = await _context.AnalyticalLayerResults
                     .Include(ar => ar.AnalyticalLayer)
-                    .Where(x => selectedCountryIds.Contains(x.CountryID) 
+                    .Where(x => selectedClimateProgramIDs.Contains(x.ClimateProgramID) 
                     && ((x.AiLastUpdated >= startDate && x.AiLastUpdated < endDate || x.LastUpdated >= startDate && x.LastUpdated < endDate))
                     && validKpiIds.Contains(x.LayerID))
                     .Select(ar => new
                     {
-                        ar.CountryID,
+                        ar.ClimateProgramID,
                         ar.LayerID,
                         ar.AnalyticalLayer.LayerCode,
                         ar.AnalyticalLayer.LayerName,
@@ -248,28 +242,28 @@ namespace VeridianClimatePulse.Services
                     .ToList();
 
                 // Step 5: Prepare response DTO
-                var response = new CompareCountryResponseDto
+                var response = new CompareProgramResponseDto
                 {
                     Categories = new List<string>(),
                     Series = new List<ChartSeriesDto>(),
                     TableData = new List<ChartTableRowDto>()
                 };
 
-                // Initialize chart series for each Country
-                foreach (var Country in selectedCountries)
+                // Initialize chart series for each Program
+                foreach (var program in selectedPrograms)
                 {
                     response.Series.Add(new ChartSeriesDto
                     {
-                        Name = Country.CountryName,
+                        Name = program.ProgramName,
                         Data = new List<decimal>(),
                         AiData = new List<decimal>()
                     });
                 }
 
-                // Add Peer Country Score series
+                // Add Peer Program Score series
                 var peerSeries = new ChartSeriesDto
                 {
-                    Name = "Peer Country Score",
+                    Name = "Peer Program Score",
                     Data = new List<decimal>(),
                     AiData = new List<decimal>()
                 };
@@ -279,29 +273,29 @@ namespace VeridianClimatePulse.Services
                 {
                     response.Categories.Add(layer.LayerCode);
 
-                    // Map KPI values for each Country (0 if missing)
+                    // Map KPI values for each Program (0 if missing)
                     var values = new Dictionary<int, List<decimal>>();
 
-                    foreach (var Country in selectedCountries)
+                    foreach (var program in selectedPrograms)
                     {
                         var value = analyticalResults
-                            .FirstOrDefault(r => r.CountryID == Country.CountryID && r.LayerID == layer.LayerID);
+                            .FirstOrDefault(r => r.ClimateProgramID == program.ClimateProgramID && r.LayerID == layer.LayerID);
 
                         var evaluatedValue = Math.Round(value?.CalValue5 ?? 0, 2);
                         var aiValue = Math.Round(value?.AiCalValue5 ?? 0, 2);
-                        values[Country.CountryID] = new List<decimal> { evaluatedValue, aiValue };
+                        values[program.ClimateProgramID] = new List<decimal> { evaluatedValue, aiValue };
 
                         // Add to series
-                        var CountrySeries = response.Series.First(s => s.Name == Country.CountryName);
-                        CountrySeries.Data.Add(evaluatedValue);
+                        var programSeries = response.Series.First(s => s.Name == program.ProgramName);
+                        programSeries.Data.Add(evaluatedValue);
 
-                        CountrySeries.AiData.Add(aiValue);
+                        programSeries.AiData.Add(aiValue);
                     }
-                    // ? Calculate Peer Country Score (average of all countries for this layer)
-                    var peerCountryScore = values.Values.Any() ? Math.Round(values.Values.Select(x => x.First()).Average(), 2) : 0;
-                    peerSeries.Data.Add(peerCountryScore);
-                    var aiPeerCountryScore = values.Values.Any() ? Math.Round(values.Values.Select(x => x.Last()).Average(), 2) : 0;
-                    peerSeries.AiData.Add(aiPeerCountryScore);
+                    // ? Calculate Peer Program Score (average of all programs for this layer)
+                    var peerProgramScore = values.Values.Any() ? Math.Round(values.Values.Select(x => x.First()).Average(), 2) : 0;
+                    peerSeries.Data.Add(peerProgramScore);
+                    var aiPeerProgramScore = values.Values.Any() ? Math.Round(values.Values.Select(x => x.Last()).Average(), 2) : 0;
+                    peerSeries.AiData.Add(aiPeerProgramScore);
 
                     // Add table data
                     response.TableData.Add(new ChartTableRowDto
@@ -310,26 +304,26 @@ namespace VeridianClimatePulse.Services
                         LayerCode = layer.LayerCode,
                         LayerName = layer.LayerName,
                         Purpose = layer.Purpose,
-                        CountryValues = selectedCountries.Select(c => new CountryValueDto
+                        ProgramValues = selectedPrograms.Select(p => new ProgramValueDto
                         {
-                            CountryID = c.CountryID,
-                            CountryName = c.CountryName,
-                            Value = values[c.CountryID].First(),
-                            AiValue = values[c.CountryID].Last()
+                            ClimateProgramID = p.ClimateProgramID,
+                            ProgramName = p.ProgramName,
+                            Value = values[p.ClimateProgramID].First(),
+                            AiValue = values[p.ClimateProgramID].Last()
                         }).ToList(),
-                        PeerCountryScore = peerCountryScore // You can rename property if needed
+                        PeerProgramScore = peerProgramScore // You can rename property if needed
                     });
                 }
 
-                // Append Peer Country Score series
+                // Append Peer Program Score series
                 response.Series.Add(peerSeries);
 
-                return ResultResponseDto<CompareCountryResponseDto>.Success(response);
+                return ResultResponseDto<CompareProgramResponseDto>.Success(response);
             }
             catch (Exception ex)
             {
-                await _appLogger.LogAsync("Error occurred in CompareCountries", ex);
-                return ResultResponseDto<CompareCountryResponseDto>.Failure(new List<string> { "An error occurred while comparing countries." });
+                await _appLogger.LogAsync("Error occurred in ComparePrograms", ex);
+                return ResultResponseDto<CompareProgramResponseDto>.Failure(new List<string> { "An error occurred while comparing programs." });
             }
         }
 
@@ -345,22 +339,22 @@ namespace VeridianClimatePulse.Services
                 var startDate = new DateTime(year, 1, 1);
                 var endDate = startDate.AddYears(1);
 
-                if (role == UserRole.CountryUser)
+                if (role == UserRole.ProgramUser)
                 {
-                    var validCountryIds = await _context.PublicUserCountryMappings
+                    var validClimateProgramIDs = await _context.ClientProgramMappings
                         .Where(x =>
                             x.IsActive &&
                             x.UserID == userId)
-                        .Select(x => x.CountryID)
+                        .Select(x => x.ClimateProgramID)
                         .ToListAsync();
 
-                    bool hasInvalidCountry = request.CountryIDs
-						.Any(CountryId => !validCountryIds.Contains(CountryId));
+                    bool hasInvalidProgram = request.ClimateProgramIDs
+						.Any(ClimateProgramID => !validClimateProgramIDs.Contains(ClimateProgramID));
 
-                    if (hasInvalidCountry)
+                    if (hasInvalidProgram)
                     {
                         return ResultResponseDto<GetMutiplekpiLayerResultsDto>
-                            .Failure(new List<string> { "You are not authorized to access one or more selected countries." });
+                            .Failure(new List<string> { "You are not authorized to access one or more selected programs." });
                     }
                 }
 
@@ -368,7 +362,7 @@ namespace VeridianClimatePulse.Services
                 var query = _context.AnalyticalLayerResults
                     .AsNoTracking()
                     .Where(x =>
-                        request.CountryIDs.Contains(x.CountryID) &&
+                        request.ClimateProgramIDs.Contains(x.ClimateProgramID) &&
                         x.LayerID == request.LayerID &&
                         (
                             (x.LastUpdated >= startDate && x.LastUpdated < endDate) ||
@@ -388,16 +382,16 @@ namespace VeridianClimatePulse.Services
 
                         FiveLevelInterpretations = g.First().AnalyticalLayer.FiveLevelInterpretations,
 
-                        Countries = g.Select(x => new MutipleCountrieskpiLayerResults
+                        Programs = g.Select(x => new MutipleProgramskpiLayerResults
                         {
-                            CountryID = x.CountryID,
+                            ClimateProgramID = x.ClimateProgramID,
                             InterpretationID = x.InterpretationID,                        
                             CalValue5 = x.CalValue5,
                             LastUpdated = x.LastUpdated,
                             AiInterpretationID = x.AiInterpretationID,                         
                             AiCalValue5 = x.AiCalValue5,
                             AiLastUpdated = x.AiLastUpdated,
-                            Country = x.Country
+                            Program = x.Program
                         }).ToList()
                     })
                     .FirstOrDefaultAsync();
@@ -416,27 +410,27 @@ namespace VeridianClimatePulse.Services
 
 
 
-        public async Task<Tuple<string, byte[]>> ExportCompareCountries(CompareCountryRequestDto c, int userId, UserRole role)
+        public async Task<Tuple<string, byte[]>> ExportComparePrograms(CompareProgramsRequestDto c, int userId, UserRole role)
         {
             try
             {
-                var result = await CompareCountries(c, userId, role, false);
+                var result = await ComparePrograms(c, userId, role, false);
                 var data = result.Result;
 
                 if (data == null || data.TableData == null || !data.TableData.Any())
                 {
-                    return new Tuple<string, byte[]>("Country_Comparison.xlsx", Array.Empty<byte>());
+                    return new Tuple<string, byte[]>("Program_Comparison.xlsx", Array.Empty<byte>());
                 }
 
                 using (var workbook = new XLWorkbook())
                 {
-                    var ws = workbook.Worksheets.Add("Country Comparison");
+                    var ws = workbook.Worksheets.Add("Program Comparison");
 
                     // =========================
                     // ?? DYNAMIC HEADER SETUP
                     // =========================
-                    var countries = data.TableData.First().CountryValues;
-                    int totalCols = 2 + (countries.Count * 2);
+                    var programs = data.TableData.First().ProgramValues;
+                    int totalCols = 2 + (programs.Count * 2);
 
                     // =========================
                     // ?? REPORT HEADER (TOP)
@@ -470,13 +464,13 @@ namespace VeridianClimatePulse.Services
                     ws.Range(row, col, row + 1, col).Merge().Value = "Purpose";
                     col++;
 
-                    // Dynamic Cities
-                    foreach (var country in countries)
+                    // Dynamic Programs
+                    foreach (var program in programs)
                     {
                         int startCol = col;
 
-                        // Country Name (merged)
-                        ws.Range(row, startCol, row, startCol + 1).Merge().Value = country.CountryName;
+                        // Program Name (merged)
+                        ws.Range(row, startCol, row, startCol + 1).Merge().Value = program.ProgramName;
 
                         // Sub headers
                         ws.Cell(row + 1, startCol).Value = "Eval";
@@ -516,10 +510,10 @@ namespace VeridianClimatePulse.Services
                             comment.Visible = false;
                         }
 
-                        foreach (var Country in kpi.CountryValues)
+                        foreach (var program in kpi.ProgramValues)
                         {
-                            ws.Cell(row, col++).Value = Country.Value;
-                            ws.Cell(row, col++).Value = Country.AiValue;
+                            ws.Cell(row, col++).Value = program.Value;
+                            ws.Cell(row, col++).Value = program.AiValue;
                         }
 
                         row++;
@@ -607,13 +601,13 @@ namespace VeridianClimatePulse.Services
                     using (var stream = new MemoryStream())
                     {
                         workbook.SaveAs(stream);
-                        return new Tuple<string, byte[]>("Country_Comparison.xlsx", stream.ToArray());
+                        return new Tuple<string, byte[]>("Program_Comparison.xlsx", stream.ToArray());
                     }
                 }
             }
             catch (Exception ex)
             {
-                await _appLogger.LogAsync("Error in ExportCompareCountries", ex);
+                await _appLogger.LogAsync("Error in ExportComparePrograms", ex);
                 return new Tuple<string, byte[]>("", Array.Empty<byte>());
             }
         }

@@ -2,13 +2,14 @@ using VeridianClimatePulse.Common.Interface;
 using VeridianClimatePulse.Common.Models.settings;
 using VeridianClimatePulse.Common.Models.views;
 using VeridianClimatePulse.Data;
-using VeridianClimatePulse.Dtos.CountryDto;
+using VeridianClimatePulse.Dtos.ProgramDto;
 using VeridianClimatePulse.IServices;
 using VeridianClimatePulse.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
+using VeridianClimatePulse.Dtos.PillarDto;
 
 namespace VeridianClimatePulse.Common.Implementation
 {
@@ -37,51 +38,56 @@ namespace VeridianClimatePulse.Common.Implementation
         }
 
         #endregion
+        public static string ProgramScoreSummery(decimal? progress, string? programName = "The program", int pillarCount = 21, int kpiCount = 37)
+        {
+            var evidenceSummaryStaringLine = $"{programName ?? "The program"} records an overall AHI score of {progress ?? 0}, reflecting performance across {pillarCount} pillars and {kpiCount} KPIs.";
 
+            return evidenceSummaryStaringLine;
+        }
         public static string InitailLineOfExecutiveSummery(
             string evidenceSummary,
             string? immediateSituationSummary,
             decimal? progress,
-            string? countryName = "The country", int pillarCount = 23, int kpiCount = 37)
+            string? programName = "The program", int pillarCount = 23, int kpiCount = 37)
         {
             immediateSituationSummary = immediateSituationSummary ?? "";
 
-            var evidenceSummaryStaringLine= $"{countryName ?? "The country"} records an overall AHI score of {progress ?? 0}, reflecting performance across {pillarCount} pillars and {kpiCount} KPIs.";
+            var evidenceSummaryStaringLine= $"{programName ?? "The program"} records an overall VCP score of {progress ?? 0}, reflecting performance across {pillarCount} pillars and {kpiCount} KPIs.";
 
             return immediateSituationSummary + "\n\n " + evidenceSummaryStaringLine + " " + evidenceSummary;
         }
 
 
-        public async Task<List<EvaluationCountryProgressResultDto>> GetCountriesProgressAsync(int userId, int role, int year, int countryID = 0)
+        public async Task<List<EvaluationProgramProgressResultDto>> GetProgramProgressAsync(int userId, int role, int year, int programID = 0)
         {
             try
             {
-                return await _context.CountryProgressResults
+                return await _context.ProgramProgressResults
                  .FromSqlRaw(
-                     "EXEC usp_getCountriesProgressByUserId @userID, @role, @year", "@countryID",
+                     "EXEC usp_getProgramsProgressByUserId @userID, @role, @year, @programID",
                      new SqlParameter("@userID", userId),
                      new SqlParameter("@role", role),
                      new SqlParameter("@year", year),
-                     new SqlParameter("@countryID", countryID)
+                     new SqlParameter("@programID", programID)
                  )
                  .AsNoTracking()
                  .ToListAsync();
             }
             catch (Exception ex)
             {
-                await _appLogger.LogAsync("Error in Executing usp_getCountriesProgressByUserId", ex);
-                return new List<EvaluationCountryProgressResultDto>();
+                await _appLogger.LogAsync("Error in Executing usp_getProgramsProgressByUserId", ex);
+                return new List<EvaluationProgramProgressResultDto>();
             }
         }
 
-        public async Task<List<CountryRankingResultDto>> GetCountriesRankings(int countryId, int year)
+        public async Task<List<ProgramRankingResultDto>> GetProgramRankings(int programID, int year)
         {
             try
             {
-                return await _context.CountryRankingResults
+                return await _context.ProgramRankingResults
                  .FromSqlRaw(
-                     "EXEC usp_getCountryRanking @countryId, @year",
-                     new SqlParameter("@countryId", countryId),
+                     "EXEC usp_getProgramRanking @programID, @year",
+                     new SqlParameter("@programID", programID),
                      new SqlParameter("@year", year)
                  )
                  .AsNoTracking()
@@ -89,18 +95,18 @@ namespace VeridianClimatePulse.Common.Implementation
             }
             catch (Exception ex)
             {
-                await _appLogger.LogAsync("Error in Executing usp_getCountryRanking", ex);
-                return new List<CountryRankingResultDto>();
+                await _appLogger.LogAsync("Error in Executing usp_getProgramRanking", ex);
+                return new List<ProgramRankingResultDto>();
             }
         }
 
-        public async Task<List<EvaluationCountryProgressHistoryResultDto>> GetCountriesProgressHistoryAsync(int userId, int role, int fromYear, int toYear)
+        public async Task<List<EvaluationProgramProgressHistoryResultDto>> GetProgramProgressHistoryAsync(int userId, int role, int fromYear, int toYear)
         {
             try
             {
-                return await _context.CountryProgressHistoryResults
+                return await _context.ProgramProgressHistoryResults
                  .FromSqlRaw(
-                     "EXEC usp_getCountriesProgressByUserIdHistory @userID, @role, @fromYear, @toYear",
+                     "EXEC usp_getProgramProgressByUserIdHistory @userID, @role, @fromYear, @toYear",
                      new SqlParameter("@userID", userId),
                      new SqlParameter("@role", role),
                      new SqlParameter("@fromYear", fromYear),
@@ -111,32 +117,31 @@ namespace VeridianClimatePulse.Common.Implementation
             }
             catch (Exception ex)
             {
-                await _appLogger.LogAsync("Error in Executing usp_getCountriesProgressByUserIdHistory", ex);
-                return new List<EvaluationCountryProgressHistoryResultDto>();
+                await _appLogger.LogAsync("Error in Executing usp_getProgramProgressByUserIdHistory", ex);
+                return new List<EvaluationProgramProgressHistoryResultDto>();
             }
         }
-        public async Task<List<GetCountriesProgressAdminDto>> GetCountriesProgressForAdmin(int userId, int role, int year)
+        public async Task<List<GetProgramsProgressAdminDto>> GetProgramProgressForAdmin(int userId, int role, int year)
         {
             try
             {
-                return await _context.GetCountriesProgressAdminDto
-                 .FromSqlRaw("EXEC usp_getCountriesProgress_Admin @year",new SqlParameter("@year", year))
+                return await _context.GetProgramsProgressAdminDto
+                 .FromSqlRaw("EXEC usp_getProgramProgress_Admin @year", new SqlParameter("@year", year))
                  .AsNoTracking()
                  .ToListAsync();
             }
             catch (Exception ex)
             {
-                await _appLogger.LogAsync("Error in Executing usp_getCountriesProgress_Admin", ex);
-                return new List<GetCountriesProgressAdminDto>();
+                await _appLogger.LogAsync("Error in Executing usp_getProgramsProgress_Admin", ex);
+                return new List<GetProgramsProgressAdminDto>();
             }
         }
 
-
-        public async Task<List<Pillar>> GetPillars()
+        public async Task<List<GetPillarDTO>> GetPillars()
         {
             try
             {
-                if (_memoryCache.TryGetValue(PILLAR_CACHE_KEY, out List<Pillar> pillars))
+                if (_memoryCache.TryGetValue(PILLAR_CACHE_KEY, out List<GetPillarDTO> pillars))
                 {
                     return pillars;
                 }
@@ -144,10 +149,22 @@ namespace VeridianClimatePulse.Common.Implementation
                 pillars = await _context.Pillars
                     .Where(x => x.IsActive && !x.IsDeleted)
                     .OrderBy(x=>x.DisplayOrder)
+                    .Select(x => new GetPillarDTO
+                    {
+                        PillarID = x.PillarID,
+                        PillarName = x.PillarName,
+                        Description = x.Description,
+                        DisplayOrder = x.DisplayOrder,
+                        ImagePath = x.ImagePath,
+                        Weight = x.Weight,
+                        Reliability = x.Reliability,
+                        PillarCode = x.PillarCode,
+                        IsActive = x.IsActive,
+                        QuestionCount = x.Questions.Where(x => !x.IsDeleted).Count()
+                    })
                     .ToListAsync();
 
-                var cacheOptions = new MemoryCacheEntryOptions()
-                    .SetAbsoluteExpiration(TimeSpan.FromHours(1));
+                var cacheOptions = new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromHours(1));
 
                 _memoryCache.Set(PILLAR_CACHE_KEY, pillars, cacheOptions);
 
@@ -156,7 +173,7 @@ namespace VeridianClimatePulse.Common.Implementation
             catch (Exception ex)
             {
                 await _appLogger.LogAsync("Error in GetPillars", ex);
-                return new List<Pillar>();
+                return new List<GetPillarDTO>();
             }
         }
         public void ClearPillarCache()
@@ -164,17 +181,17 @@ namespace VeridianClimatePulse.Common.Implementation
             _memoryCache.Remove(PILLAR_CACHE_KEY);
         }
 
-        public async Task<List<GetDashboardModeResult>> GetDashboardModeResults(int userId, int role, int dashboardModeID, int countryID = 0)
+        public async Task<List<GetDashboardModeResult>> GetDashboardModeResults(int userId, int role, int dashboardModeID, int climateProgramID = 0)
         {
             try
             {
                 var result = await _context.GetDashboardModeResults
                  .FromSqlRaw(
-                     "EXEC usp_getDashboardModeResult @userID, @role, @DashboardModeID, @countryID",
+                     "EXEC usp_getDashboardModeResult @userID, @role, @DashboardModeID, @ClimateProgramID",
                      new SqlParameter("@userID", userId),
                      new SqlParameter("@role", role),
                      new SqlParameter("@DashboardModeID", dashboardModeID),
-                     new SqlParameter("@countryID", countryID)
+                     new SqlParameter("@ClimateProgramID", climateProgramID)
                  )
                  .AsNoTracking()
                  .ToListAsync();

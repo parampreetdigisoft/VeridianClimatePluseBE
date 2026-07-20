@@ -57,7 +57,7 @@ namespace VeridianClimatePulse.Controllers
             if (userRole == UserRole.Admin || userRole == UserRole.Analyst || userRole == UserRole.Evaluator)
                 return true;
 
-            if (userRole != UserRole.CountryUser)
+            if (userRole != UserRole.ProgramUser)
                 return false;
 
             return tierName == TieredAccessPlan.Standard.ToString() ||
@@ -66,35 +66,35 @@ namespace VeridianClimatePulse.Controllers
         }
 
         [HttpGet("getPeaceStressTestDashboard")]
-        public async Task<IActionResult> GetPeaceStressTestDashboard([FromQuery] int countryID)
+        public async Task<IActionResult> GetPeaceStressTestDashboard([FromQuery] int climateProgramID)
         {
             var (userId, userRole, error) = ValidateRequest();
             if (error != null)
                 return error;
 
-            var result = await _signalDashboardService.GetPeaceStressTestDashboard(countryID, userId!.Value, userRole);
+            var result = await _signalDashboardService.GetPeaceStressTestDashboard(climateProgramID, userId!.Value, userRole);
             return Ok(result);
         }
 
         [HttpGet("getEarlyWarningDashboard")]
-        public async Task<IActionResult> GetEarlyWarningDashboard([FromQuery] int countryID)
+        public async Task<IActionResult> GetEarlyWarningDashboard([FromQuery] int climateProgramID)
         {
             var (userId, userRole, error) = ValidateRequest();
             if (error != null)
                 return error;
 
-            var result = await _signalDashboardService.GetEarlyWarningDashboard(countryID, userId!.Value, userRole);
+            var result = await _signalDashboardService.GetEarlyWarningDashboard(climateProgramID, userId!.Value, userRole);
             return Ok(result);
         }
 
         [HttpGet("getResilienceScorecard")]
-        public async Task<IActionResult> GetResilienceScorecard([FromQuery] int countryID)
+        public async Task<IActionResult> GetResilienceScorecard([FromQuery] int climateProgramID)
         {
             var (userId, userRole, error) = ValidateRequest();
             if (error != null)
                 return error;
 
-            var result = await _signalDashboardService.GetResilienceScorecard(countryID, userId!.Value, userRole);
+            var result = await _signalDashboardService.GetResilienceScorecard(climateProgramID, userId!.Value, userRole);
             return Ok(result);
         }        
     }

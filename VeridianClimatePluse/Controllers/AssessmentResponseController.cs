@@ -114,18 +114,30 @@ namespace VeridianClimatePulse.Controllers
             if (file == null || file.Length == 0)
                 return BadRequest("No file uploaded.");
 
-            var content = await _responseService.ImportAssessmentAsync(file, userID);
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+                return Unauthorized("User ID not found in token.");
+
+            var role = GetRoleFromClaims();
+            if (role == null)
+                return Unauthorized("You Don't have access.");
+
+            if (!Enum.TryParse<UserRole>(role, true, out var userRole))
+            {
+                return Unauthorized("You Don't have access.");
+            }
+            var content = await _responseService.ImportAssessmentAsync(file, userId.GetValueOrDefault());
             return Ok(content);
         }
         /// <summary>
-        /// This API is used to get the country question history  gloabal history for admin
+        /// This API is used to get the program question history  global history for admin
         /// </summary>
-        /// <param name="countryID"></param>
+        /// <param name="ClimateProgramID"></param>
         /// <returns></returns>
         [HttpGet]
-        [Route("getCountryQuestionHistory")]
+        [Route("getProgramQuestionHistory")]
         [Authorize]
-        public async Task<IActionResult> GetCountryQuestionHistory([FromQuery] UserCountryRequestDto userCountryRequestDto)
+        public async Task<IActionResult> GetProgramQuestionHistory([FromQuery] UserProgramRequestDto userProgramRequestDto)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
@@ -139,7 +151,7 @@ namespace VeridianClimatePulse.Controllers
             {
                 return Unauthorized("You Don't have access.");
             }
-            var result = await _responseService.GetCountryQuestionHistory(userCountryRequestDto);
+            var result = await _responseService.GetProgramQuestionHistory(userProgramRequestDto);
             return Ok(result);
         }
         [HttpGet]
@@ -183,14 +195,14 @@ namespace VeridianClimatePulse.Controllers
         }
 
         /// <summary>
-        /// This API is used to get the country pillar history  gloabal history for admin
+        /// This API is used to get the program pillar history global history for admin
         /// </summary>
-        /// <param name="countryID"></param>
+        /// <param name="ClimateProgramID"></param>
         /// <returns></returns>
         [HttpGet]
-        [Route("getCountryPillarHistory")]
+        [Route("getProgramPillarHistory")]
         [Authorize]
-        public async Task<IActionResult> GetCountryPillarHistory([FromQuery] UserCountryDashBoardRequestDto userCountryDashBoardRequestDto)
+        public async Task<IActionResult> GetProgramPillarHistory([FromQuery] UserProgramDashBoardRequestDto userProgramDashBoardRequestDto)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
@@ -204,7 +216,7 @@ namespace VeridianClimatePulse.Controllers
             {
                 return Unauthorized("You Don't have access.");
             }
-            var result = await _responseService.GetCountryPillarHistory(userCountryDashBoardRequestDto, userId.GetValueOrDefault(), userRole);
+            var result = await _responseService.GetProgramPillarHistory(userProgramDashBoardRequestDto, userId.GetValueOrDefault(), userRole);
             return Ok(result);
         }
 

@@ -13,20 +13,20 @@ namespace VeridianClimatePulse.Common.Interface
     /// </summary>
     public interface IDocxGeneratorService
     {
-        Task<byte[]> GenerateCountryDetailsDocx(
-            AiCountrySummeryDto country,
-            List<AiCountryPillarResponse> pillars,
+        Task<byte[]> GenerateProgramDetailsDocx(
+            AiProgramSummeryDto program,
+            List<AiProgramPillarResponse> pillars,
             List<KpiChartItem> kpis,
-            List<PeerCountryHistoryReportDto> peerCountries,
+            List<PeerProgramHistoryReportDto> peerPrograms,
             UserRole userRole);
 
         Task<byte[]> GeneratePillarDetailsDocx(
-            AiCountryPillarResponse pillarData,
+            AiProgramPillarResponse pillarData,
             UserRole userRole);
 
-        Task<byte[]> GenerateAllCountriesDetailsDocx(
-            List<AiCountrySummeryDto> countries,
-            Dictionary<int, List<AiCountryPillarResponse>> pillarsDict,
+        Task<byte[]> GenerateAllProgramsDetailsDocx(
+            List<AiProgramSummeryDto> programs,
+            Dictionary<int, List<AiProgramPillarResponse>> pillarsDict,
             List<KpiChartItem> kpis,
             UserRole userRole);
     }

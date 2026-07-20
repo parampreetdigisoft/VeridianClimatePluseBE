@@ -7,15 +7,15 @@ namespace VeridianClimatePulse.Dtos.QuestionDto
         public int DisplayOrder { get; set; }
         public string PillarName { get; set; }
     }
-    public class GetQuestionByCountryResponse : GetQuestionResponse
+    public class GetQuestionByProgramResponse : GetQuestionResponse
     {
         public int AssessmentID { get; set; }
         public int PillarDisplayOrder { get; set; }
     }
-    public class GetPillarQuestionByCountryResponse 
+    public class GetPillarQuestionByProgramResponse 
     {
         public int AssessmentID { get; set; }
-        public int UserCountryMappingID { get; set; }
+        public int StaffProgramMappingID { get; set; }
         public int PillarID { get; set; }
         public string PillarName { get; set; }
         public int DisplayOrder { get; set; }
