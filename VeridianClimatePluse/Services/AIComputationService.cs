@@ -241,13 +241,13 @@ namespace VeridianClimatePulse.Services
                     TemporalScope = score != null ? score.TemporalScope : null,
                     DistortionScreening = score != null ? score.DistortionScreening : null,
 
-                    PoliticalShock = score != null ? score.PoliticalShock : null,
-                    EconomicShock = score != null ? score.EconomicShock : null,
-                    NarrativeShock = score != null ? score.NarrativeShock : null,
+                    GeopoliticalShock = score != null ? score.GeopoliticalShock : null,
+                    FinanceShock = score != null ? score.FinanceShock : null,
+                    LegitimacyShock = score != null ? score.LegitimacyShock : null,
 
                     OverallStressResilience = score != null ? score.OverallStressResilience : null,
                     StressScoreAdjustment = score != null ? score.StressScoreAdjustment : null,
-                    InequalityAdjustment = score != null ? score.InequalityAdjustment : null,
+                    InclusionEquityAdjustment = score != null ? score.InclusionEquityAdjustment : null,
                     OpacityRisk = score != null ? score.OpacityRisk : null,
                     NonCompensationNote = score != null ? score.NonCompensationNote : null,
 
@@ -255,10 +255,10 @@ namespace VeridianClimatePulse.Services
                     RelationalIntegrity = score != null ? score.RelationalIntegrity : null,
                     InstitutionalCapacity = score != null ? score.InstitutionalCapacity : null,
                     EquityAssessment = score != null ? score.EquityAssessment : null,
-                    ConflictRiskOutlook = score != null ? score.ConflictRiskOutlook : null,
+                    GovernanceTrajectory = score != null ? score.GovernanceTrajectory : null,
 
                     StrategicRecommendation = score != null ? score.StrategicRecommendation : null,
-                    DataTransparencyNote = score != null ? score.DataTransparencyNote : null,
+                    AssessmentValueNote = score != null ? score.AssessmentValueNote : null,
                     PrimarySource = score != null ? score.PrimarySource : null,
 
                     UpdatedAt = score != null ? score.UpdatedAt : default(DateTime),
@@ -342,15 +342,15 @@ namespace VeridianClimatePulse.Services
                         r.TemporalScope = x.score.TemporalScope;
                         r.DistortionScreening = x.score.DistortionScreening;
                         r.RelationalIntegrity = x.score.RelationalIntegrity;
-                        r.StressPoliticalShock = x.score.StressPoliticalShock;
-                        r.StressEconomicShock = x.score.StressEconomicShock;
-                        r.StressNarrativeShock = x.score.StressNarrativeShock;
+                        r.StressGeopoliticalShock = x.score.StressGeopoliticalShock;
+                        r.StressFinanceShock = x.score.StressFinanceShock;
+                        r.StressLegitimacyShock = x.score.StressLegitimacyShock;
                         r.StressOverallResilience = x.score.StressOverallResilience;
                         r.StressScoreAdjustment = x.score.StressScoreAdjustment;
-                        r.InequalityAdjustment = x.score.InequalityAdjustment;
+                        r.InclusionEquityAdjustment = x.score.InclusionEquityAdjustment;
                         r.OpacityRisk = x.score.OpacityRisk;
                         r.NonCompensationNote = x.score.NonCompensationNote;
-                        r.GeographicEquityNote = x.score.GeographicEquityNote;
+                        r.InclusionAccessNote = x.score.InclusionAccessNote;
                         r.InstitutionalAssessment = x.score.InstitutionalAssessment;
                         r.DataGapAnalysis = x.score.DataGapAnalysis;
                         r.RedFlag = x.score.RedFlag;
@@ -460,11 +460,11 @@ namespace VeridianClimatePulse.Services
                         DistortionScreening = x == null ? string.Empty : x.DistortionScreening,
                         RelationalDependencies = x == null ? string.Empty : x.RelationalDependencies,
                         // Stress Tests
-                        StressPoliticalShock = x == null ? string.Empty : x.StressPoliticalShock,
-                        StressEconomicShock = x == null ? string.Empty : x.StressEconomicShock,
-                        StressNarrativeShock = x == null ? string.Empty : x.StressNarrativeShock,
+                        StressGeopoliticalShock = x == null ? string.Empty : x.StressGeopoliticalShock,
+                        StressFinanceShock = x == null ? string.Empty : x.StressFinanceShock,
+                        StressLegitimacyShock = x == null ? string.Empty : x.StressLegitimacyShock,
                         StressOverallResilienceShock = x == null ? string.Empty : x.StressOverallResilienceShock,
-                        InequalityAdjustment = x == null ? string.Empty : x.InequalityAdjustment,   // ? renamed
+                        InclusionEquityAdjustment = x == null ? string.Empty : x.InclusionEquityAdjustment,   // ? renamed
                         OpacityRisk = x == null ? string.Empty : x.OpacityRisk,
                         RedFlag = x == null ? string.Empty : x.RedFlag,   // ? renamed
                         // Source Metadata
@@ -1359,15 +1359,15 @@ namespace VeridianClimatePulse.Services
                                 r.TemporalScope = x.score.TemporalScope;
                                 r.DistortionScreening = x.score.DistortionScreening;
                                 r.RelationalIntegrity = x.score.RelationalIntegrity;
-                                r.StressPoliticalShock = x.score.StressPoliticalShock;
-                                r.StressEconomicShock = x.score.StressEconomicShock;
-                                r.StressNarrativeShock = x.score.StressNarrativeShock;
+                                r.StressGeopoliticalShock = x.score.StressGeopoliticalShock;
+                                r.StressFinanceShock = x.score.StressFinanceShock;
+                                r.StressLegitimacyShock = x.score.StressLegitimacyShock;
                                 r.StressOverallResilience = x.score.StressOverallResilience;
                                 r.StressScoreAdjustment = x.score.StressScoreAdjustment;
-                                r.InequalityAdjustment = x.score.InequalityAdjustment;
+                                r.InclusionEquityAdjustment = x.score.InclusionEquityAdjustment;
                                 r.OpacityRisk = x.score.OpacityRisk;
                                 r.NonCompensationNote = x.score.NonCompensationNote;
-                                r.GeographicEquityNote = x.score.GeographicEquityNote;
+                                r.InclusionAccessNote = x.score.InclusionAccessNote;
                                 r.InstitutionalAssessment = x.score.InstitutionalAssessment;
                                 r.DataGapAnalysis = x.score.DataGapAnalysis;
                                 r.RedFlag = x.score.RedFlag;
@@ -1465,7 +1465,7 @@ namespace VeridianClimatePulse.Services
 
                     if (!validCity)
                     {
-                        return ResultResponseDto<string>.Failure(new[] { "This assessment can't be imported because the selected user hasn’t been assigned to this Program yet." });
+                        return ResultResponseDto<string>.Failure(new[] { "This assessment can't be imported because the selected user hasnâ€™t been assigned to this Program yet." });
                     }
                 }
 
@@ -1484,7 +1484,7 @@ namespace VeridianClimatePulse.Services
                 var StaffProgramMapping = await _context.StaffProgramMappings.FirstOrDefaultAsync(x => !x.IsDeleted && x.ClimateProgramID == r.ClimateProgramID && x.UserID == r.TransferToUserID);
 
                 if (StaffProgramMapping == null)
-                    return ResultResponseDto<string>.Failure(new[] { "This assessment can't be imported because the selected user hasn’t been assigned to this Program yet." });
+                    return ResultResponseDto<string>.Failure(new[] { "This assessment can't be imported because the selected user hasnâ€™t been assigned to this Program yet." });
 
 
                 // Load existing assessment for that user/Program/year (with pillars/responses)
@@ -1994,7 +1994,7 @@ namespace VeridianClimatePulse.Services
                 var entity = await _context.AIProgramScores
                     .FirstOrDefaultAsync(x => x.ClimateProgramID == dto.ClimateProgramID && x.Year == dto.Year);
 
-                if (entity == null)
+                if (entity == null || dto == null)
                     return ResultResponseDto<bool>.Failure(new[] { "Program score record not found." });
 
                 entity.ConfidenceLevel = dto.ConfidenceLevel ?? entity.ConfidenceLevel;
@@ -2009,11 +2009,11 @@ namespace VeridianClimatePulse.Services
                 entity.PerceptionEvidence = dto.PerceptionEvidence;
                 entity.TemporalScope = dto.TemporalScope;
                 entity.DistortionScreening = dto.DistortionScreening;
-                entity.PoliticalShock = dto.PoliticalShock;
-                entity.EconomicShock = dto.EconomicShock;
-                entity.NarrativeShock = dto.NarrativeShock;
+                entity.GeopoliticalShock = dto.GeopoliticalShock;
+                entity.FinanceShock = dto.FinanceShock;
+                entity.LegitimacyShock = dto.LegitimacyShock;
                 entity.StressScoreAdjustment = dto.StressScoreAdjustment;
-                entity.InequalityAdjustment = dto.InequalityAdjustment;
+                entity.InclusionEquityAdjustment = dto.InclusionEquityAdjustment;
                 entity.OpacityRisk = dto.OpacityRisk;
                 entity.NonCompensationNote = dto.NonCompensationNote;
                 entity.RelationalIntegrity = dto.RelationalIntegrity;
@@ -2021,9 +2021,8 @@ namespace VeridianClimatePulse.Services
                 entity.PrimarySource = dto.PrimarySource;
                 entity.CrossPillarPatterns = dto.CrossPillarPatterns;
                 entity.EquityAssessment = dto.EquityAssessment;
-                entity.ConflictRiskOutlook = dto.ConflictRiskOutlook;
                 entity.StrategicRecommendation = dto.StrategicRecommendation;
-                entity.DataTransparencyNote = dto.DataTransparencyNote;
+                entity.AssessmentValueNote = dto.AssessmentValueNote;
                 entity.UpdatedAt = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
@@ -2059,14 +2058,14 @@ namespace VeridianClimatePulse.Services
                 entity.TemporalScope = dto.TemporalScope;
                 entity.DistortionScreening = dto.DistortionScreening;
                 entity.RelationalIntegrity = dto.RelationalIntegrity;
-                entity.StressPoliticalShock = dto.StressPoliticalShock;
-                entity.StressEconomicShock = dto.StressEconomicShock;
-                entity.StressNarrativeShock = dto.StressNarrativeShock;
+                entity.StressGeopoliticalShock = dto.StressGeopoliticalShock;
+                entity.InclusionEquityAdjustment = dto.InclusionEquityAdjustment;
+                entity.StressLegitimacyShock = dto.StressLegitimacyShock;
                 entity.StressScoreAdjustment = dto.StressScoreAdjustment;
-                entity.InequalityAdjustment = dto.InequalityAdjustment;
+                entity.InclusionAccessNote = dto.InclusionAccessNote;
                 entity.OpacityRisk = dto.OpacityRisk;
                 entity.NonCompensationNote = dto.NonCompensationNote;
-                entity.GeographicEquityNote = dto.GeographicEquityNote;
+                entity.StressFinanceShock = dto.StressFinanceShock;
                 entity.InstitutionalAssessment = dto.InstitutionalAssessment;
                 entity.DataGapAnalysis = dto.DataGapAnalysis;
                 entity.RedFlag = dto.RedFlag;
@@ -2159,11 +2158,11 @@ namespace VeridianClimatePulse.Services
                 entity.TemporalScope = dto.TemporalScope;
                 entity.DistortionScreening = dto.DistortionScreening;
                 entity.RelationalDependencies = dto.RelationalDependencies;
-                entity.StressPoliticalShock = dto.StressPoliticalShock;
-                entity.StressEconomicShock = dto.StressEconomicShock;
-                entity.StressNarrativeShock = dto.StressNarrativeShock;
+                entity.StressGeopoliticalShock = dto.StressGeopoliticalShock;
+                entity.StressFinanceShock = dto.StressFinanceShock;
+                entity.StressLegitimacyShock = dto.StressLegitimacyShock;
                 entity.StressOverallResilienceShock = dto.StressOverallResilienceShock;
-                entity.InequalityAdjustment = dto.InequalityAdjustment;
+                entity.InclusionEquityAdjustment = dto.InclusionEquityAdjustment;
                 entity.OpacityRisk = dto.OpacityRisk;
                 entity.RedFlag = dto.RedFlag;
                 entity.SourceType = dto.SourceType;

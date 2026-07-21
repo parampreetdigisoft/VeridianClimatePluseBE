@@ -739,9 +739,9 @@ namespace VeridianClimatePulse.Common.Implementation
             // =====================================================
             //body.AppendChild(PageBreak());
 
-            AppendContentSection(body, "Political Shock", data.PoliticalShock, "ffd9cc");
-            AppendContentSection(body, "Economic Shock", data.EconomicShock, "fff2cc");
-            AppendContentSection(body, "Narrative Shock", data.NarrativeShock, "e6f2ff");
+            AppendContentSection(body, "Geopolitical Shock", data.GeopoliticalShock, "ffd9cc");
+            AppendContentSection(body, "Finance Shock", data.FinanceShock, "fff2cc");
+            AppendContentSection(body, "Legitimacy Shock", data.LegitimacyShock, "e6f2ff");
 
             //body.AppendChild(PageBreak());
 
@@ -753,7 +753,7 @@ namespace VeridianClimatePulse.Common.Implementation
             // =====================================================
             //body.AppendChild(PageBreak());
 
-            AppendContentSection(body, "Inequality Adjustment", data.InequalityAdjustment, "f9e6ff");
+            AppendContentSection(body, "Inclusion & Equity Adjustment", data.InclusionEquityAdjustment, "f9e6ff");
             AppendContentSection(body, "Opacity Risk", data.OpacityRisk, "fff0e6");
             AppendContentSection(body, "Non Compensation Note", data.NonCompensationNote, "e6fff9");
 
@@ -768,7 +768,7 @@ namespace VeridianClimatePulse.Common.Implementation
             //body.AppendChild(PageBreak());
 
             AppendContentSection(body, "Equity Assessment", data.EquityAssessment, "e8f5e9");
-            AppendContentSection(body, "Conflict Risk Outlook", data.ConflictRiskOutlook, "fce4ec");
+            AppendContentSection(body, "Governance Trajectory", data.GovernanceTrajectory, "fce4ec");
 
             // =====================================================
             // STRATEGIC OUTPUT
@@ -776,7 +776,7 @@ namespace VeridianClimatePulse.Common.Implementation
             //body.AppendChild(PageBreak());
 
             AppendContentSection(body, "Strategic Policy Priorities", data.StrategicRecommendation, "2e9975");
-            AppendContentSection(body, "Why This Assessment Matters", data.DataTransparencyNote, "63a68f");
+            AppendContentSection(body, "Why This Assessment Matters", data.AssessmentValueNote, "63a68f");
         }
 
         private static Paragraph CreateRankingHeader(string text)
@@ -893,9 +893,9 @@ namespace VeridianClimatePulse.Common.Implementation
             // =====================================================
             //body.AppendChild(PageBreak());
 
-            AppendContentSection(body, "Stress Political Shock", data.StressPoliticalShock, "7f6000");
-            AppendContentSection(body, "Stress Economic Shock", data.StressEconomicShock, "bf9000");
-            AppendContentSection(body, "Stress Narrative Shock", data.StressNarrativeShock, "ffd966");
+            AppendContentSection(body, "Geopolitical Shock", data.StressGeopoliticalShock, "7f6000");
+            AppendContentSection(body, "Finance Shock", data.StressFinanceShock, "bf9000");
+            AppendContentSection(body, "Legitimacy Shock", data.StressLegitimacyShock, "ffd966");
 
             //body.AppendChild(PageBreak());
 
@@ -907,7 +907,7 @@ namespace VeridianClimatePulse.Common.Implementation
             // =====================================================
             //body.AppendChild(PageBreak());
 
-            AppendContentSection(body, "Inequality Adjustment", data.InequalityAdjustment, "274e13");
+            AppendContentSection(body, "Inclusion & Equity Adjustment", data.InclusionEquityAdjustment, "274e13");
             AppendContentSection(body, "Opacity Risk", data.OpacityRisk, "38761d");
             AppendContentSection(body, "Non-Compensation Note", data.NonCompensationNote, "6aa84f");
 
@@ -917,7 +917,7 @@ namespace VeridianClimatePulse.Common.Implementation
             //body.AppendChild(PageBreak());
 
             AppendContentSection(body, "Red Flags", data.RedFlag, "ED561A", "eb4634");
-            AppendContentSection(body, "Geographic Equity Note", data.GeographicEquityNote, "0d8057");
+            AppendContentSection(body, "Inclusion & Access Note", data.InclusionAccessNote, "0d8057");
 
             // =====================================================
             // INSTITUTIONAL ANALYSIS

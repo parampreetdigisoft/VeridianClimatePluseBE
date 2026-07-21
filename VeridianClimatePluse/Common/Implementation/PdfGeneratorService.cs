@@ -1781,13 +1781,13 @@ namespace VeridianClimatePulse.Common.Implementation
                 //    .FontSize(16).Bold();
 
                 column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Political Shock", SanitizeText(data.PoliticalShock), ReportThemeColors.AccentPoliticalShock));
+                    PillarContentSection(c, "Geopolitical Shock", SanitizeText(data.GeopoliticalShock), ReportThemeColors.AccentGeopoliticalShock));
 
                 column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Economic Shock", SanitizeText(data.EconomicShock), ReportThemeColors.AccentEconomicShock));
+                    PillarContentSection(c, "Finance Shock", SanitizeText(data.FinanceShock), ReportThemeColors.AccentFinanceShock));
 
                 column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Narrative Shock", SanitizeText(data.NarrativeShock), ReportThemeColors.AccentNarrativeShock));
+                    PillarContentSection(c, "Legitimacy Shock", SanitizeText(data.LegitimacyShock), ReportThemeColors.AccentLegitimacyShock));
                 //column.Item().PageBreak();
 
                 //column.Item().PaddingTop(8).Element(c =>
@@ -1805,7 +1805,7 @@ namespace VeridianClimatePulse.Common.Implementation
                 //    .FontSize(16).Bold();
 
                 column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Inequality Adjustment", SanitizeText(data.InequalityAdjustment), ReportThemeColors.AccentInequalityAdj));
+                    PillarContentSection(c, "Inclusion & Equity Adjustment", SanitizeText(data.InclusionEquityAdjustment), ReportThemeColors.AccentInclusionEquityAdj));
 
                 column.Item().PaddingTop(8).Element(c =>
                     PillarContentSection(c, "Opacity Risk", SanitizeText(data.OpacityRisk), ReportThemeColors.AccentOpacityRisk));
@@ -1832,7 +1832,7 @@ namespace VeridianClimatePulse.Common.Implementation
 
                 //column.Item().PageBreak();
                 column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Conflict Risk Outlook", SanitizeText(data.ConflictRiskOutlook), ReportThemeColors.AccentConflictRisk));
+                    PillarContentSection(c, "Governance Trajectory", SanitizeText(data.GovernanceTrajectory), ReportThemeColors.AccentGovernanceTrajectory));
 
                 // =====================================================
                 // STRATEGIC OUTPUT
@@ -1843,7 +1843,7 @@ namespace VeridianClimatePulse.Common.Implementation
                     PillarContentSection(c, "Strategic Policy Priorities", SanitizeText(data.StrategicRecommendation), ReportThemeColors.AccentStrategicPolicy));
 
                 column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Why This Assessment Matters", SanitizeText(data.DataTransparencyNote), ReportThemeColors.AccentDataTransparency));
+                    PillarContentSection(c, "Why This Assessment Matters", SanitizeText(data.AssessmentValueNote), ReportThemeColors.AccentAssessmentValue));
             });
         }
 
@@ -1900,13 +1900,13 @@ namespace VeridianClimatePulse.Common.Implementation
                 //column.Item().PageBreak();
 
                 column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Political Shock", SanitizeText(data.StressPoliticalShock), ReportThemeColors.AccentPoliticalShockAlt));
+                    PillarContentSection(c, "Geopolitical Shock", SanitizeText(data.StressGeopoliticalShock), ReportThemeColors.AccentGeopoliticalShockAlt));
 
                 column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Economic Shock", SanitizeText(data.StressEconomicShock), ReportThemeColors.AccentEconomicShockAlt));
+                    PillarContentSection(c, "Finance Shock", SanitizeText(data.StressFinanceShock), ReportThemeColors.AccentFinanceShockAlt));
 
                 column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Narrative Shock", SanitizeText(data.StressNarrativeShock), ReportThemeColors.AccentNarrativeShockAlt));
+                    PillarContentSection(c, "Legitimacy Shock", SanitizeText(data.StressLegitimacyShock), ReportThemeColors.AccentLegitimacyShockAlt));
 
                 //column.Item().PageBreak();
 
@@ -1922,7 +1922,7 @@ namespace VeridianClimatePulse.Common.Implementation
                 //column.Item().PageBreak();
 
                 column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Inequality Adjustment", SanitizeText(data.InequalityAdjustment), ReportThemeColors.AccentInequalityAdjAlt));
+                    PillarContentSection(c, "Inclusion & Equity Adjustment", SanitizeText(data.InclusionEquityAdjustment), ReportThemeColors.AccentInclusionEquityAdjAlt));
 
                 column.Item().PaddingTop(8).Element(c =>
                     PillarContentSection(c, "Opacity Risk", SanitizeText(data.OpacityRisk), ReportThemeColors.AccentOpacityRiskAlt));
@@ -1939,7 +1939,7 @@ namespace VeridianClimatePulse.Common.Implementation
                     PillarContentSection(c, "Red Flags", SanitizeText(data.RedFlag), ReportThemeColors.DangerRedFlag, ReportThemeColors.DangerRedFlagAlt));
 
                 column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Geographic Equity Note", SanitizeText(data.GeographicEquityNote), ReportThemeColors.DeepTeal));
+                    PillarContentSection(c, "Inclusion & Access Note", SanitizeText(data.InclusionAccessNote), ReportThemeColors.DeepTeal));
 
                 // =====================================================
                 // SYSTEM / INSTITUTIONAL ANALYSIS

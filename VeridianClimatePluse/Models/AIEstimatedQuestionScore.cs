@@ -27,12 +27,12 @@ namespace VeridianClimatePulse.Models
         public string? RelationalDependencies { get; set; }
 
         // Stress Tests
-        public string? StressPoliticalShock { get; set; }
-        public string? StressEconomicShock { get; set; }
-        public string? StressNarrativeShock { get; set; }
+        public string? StressGeopoliticalShock { get; set; }
+        public string? StressFinanceShock { get; set; }
+        public string? StressLegitimacyShock { get; set; }
         public string? StressOverallResilienceShock { get; set; }
 
-        public string? InequalityAdjustment { get; set; }
+        public string? InclusionEquityAdjustment { get; set; }
         public string? OpacityRisk { get; set; }
 
         public string? RedFlag { get; set; }   // ? renamed

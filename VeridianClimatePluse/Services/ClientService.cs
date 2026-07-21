@@ -1067,7 +1067,7 @@ namespace VeridianClimatePulse.Services
                         r.AIProgress = x.score.AIProgress;
                         r.EvidenceSummary = x.score.EvidenceSummary;
                         r.RedFlag = x.score.RedFlag;
-                        r.GeographicEquityNote = x.score.GeographicEquityNote;
+                        r.InclusionAccessNote = x.score.InclusionAccessNote;
                         r.InstitutionalAssessment = x.score.InstitutionalAssessment;
                         r.DataGapAnalysis = x.score.DataGapAnalysis;
                         r.DataSourceCitations = x.score.DataSourceCitations;
