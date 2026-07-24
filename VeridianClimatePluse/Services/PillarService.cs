@@ -21,7 +21,6 @@ namespace VeridianClimatePulse.Services
         private readonly IAppLogger _appLogger;
         private readonly Download _download;
         private readonly ICommonService _commonService;
-        int ROSEWPillarID = 22;
 
         public PillarService(ApplicationDbContext context, IAppLogger appLogger, Download download, ICommonService commonService)
         {
@@ -284,10 +283,6 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                if (id == ROSEWPillarID)
-                {
-                    return ResultResponseDto<bool>.Failure(new[] { "You cannot delete the ROSEW pillar." });
-                }
                 var pillar = await _context.Pillars.FindAsync(id);
                 if (pillar == null)
                     return ResultResponseDto<bool>.Failure(new[] { "Pillar not found." });
@@ -502,7 +497,7 @@ namespace VeridianClimatePulse.Services
                 if (requestDto.ExportType == Enums.ExportType.Pdf)
                 {
                     // ? Use structured data directly (NO flattening)
-                    fileBytes = GeneratePdf(response.Result, climateProgram, requestDto.UpdatedAt.Year);
+                    fileBytes = GeneratePdf(response.Result, climateProgram);
 
                     fileName = $"ExportPillarsHistory_{requestDto.ClimateProgramID}_{requestDto.PillarID}.pdf";
                 }
@@ -521,7 +516,7 @@ namespace VeridianClimatePulse.Services
                 return new Tuple<string, byte[]>("", Array.Empty<byte>());
             }
         }
-        public byte[] GeneratePdf(List<PillarWithQuestionsDto> data, ClimateProgram climateProgram, int year)
+        public byte[] GeneratePdf(List<PillarWithQuestionsDto> data, ClimateProgram climateProgram)
         {
             var logoPath = Path.Combine(
                 Directory.GetCurrentDirectory(),
@@ -552,7 +547,7 @@ namespace VeridianClimatePulse.Services
                                             .Bold()
                                             .FontColor("#ffffff");
 
-                                        left.Item().Text($"{climateProgram?.ProgramName}, USA | Data Year: {year}")
+                                        left.Item().Text($"{climateProgram?.ProgramName}, {climateProgram.Location} | Program Year: {climateProgram.Year}")
                                             .FontSize(10)
                                             .FontColor("#cfe7df");
 

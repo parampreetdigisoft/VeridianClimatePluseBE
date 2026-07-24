@@ -111,6 +111,7 @@ namespace VeridianClimatePulse.Services
             }
 
         }
+
         public async Task<ResultResponseDto<string>> SaveAssessment(AddAssessmentDto request)
         {
             try
@@ -248,7 +249,7 @@ namespace VeridianClimatePulse.Services
                     _download.InsertAnalyticalLayerResults(assessment.StaffProgramMapping.ClimateProgramID);
                 }
 
-                return ResultResponseDto<string>.Success("", new[] { "Pillar saved successfully" }, 1);
+                return ResultResponseDto<string>.Success("", new[] { "Pillar saved successfully" }, assessment.AssessmentID);
             }
             catch (Exception ex)
             {
@@ -442,7 +443,7 @@ namespace VeridianClimatePulse.Services
                 };
             }
         }
-        public async Task<PaginationResponse<GetAssessmentQuestionResponseDto>> GetAssessmentQuestion(GetAssessmentQuestoinRequestDto request)
+        public async Task<PaginationResponse<GetAssessmentQuestionResponseDto>> GetAssessmentQuestion(GetAssessmentQuestionRequestDto request)
         {
             try
             {
@@ -450,7 +451,7 @@ namespace VeridianClimatePulse.Services
                 if (user == null) return null;
 
                 var userIDs = new List<int>();
-                var query = _context.Assessments
+                var query = _context.Assessments    
                     .Include(a => a.PillarAssessments)
                     .ThenInclude(pa => pa.Responses)
                         .ThenInclude(r => r.Question)
@@ -754,7 +755,7 @@ namespace VeridianClimatePulse.Services
             }
         }
 
-        public async Task<ResultResponseDto<GetAssessmentHistoryDto>> GetAssessmentProgressHistory(int assessmentID)
+        public async Task<ResultResponseDto<GetAssessmentHistoryDto>> GetAssessmentProgressHistory(GetProgramProgressHistoryRequestDto progressHistoryRequest)
         {
             try
             {
@@ -762,15 +763,28 @@ namespace VeridianClimatePulse.Services
                 var assessment = await _context.Assessments
                     .Include(a => a.PillarAssessments)
                         .ThenInclude(pa => pa.Responses)
-                    .FirstOrDefaultAsync(a => a.AssessmentID == assessmentID);
+                    .FirstOrDefaultAsync(a => a.AssessmentID == progressHistoryRequest.AssessmentID || a.StaffProgramMappingID == progressHistoryRequest.StaffProgramMappingID);
+                
+                // Get total questions directly (avoid Include if not needed)
+                var totalQuestions = await _context.Questions.Where(x=>!x.IsDeleted).CountAsync();
+                var totalPillars = (await _commonService.GetPillars()).Count;
 
                 if (assessment == null)
                 {
-                    return ResultResponseDto<GetAssessmentHistoryDto>.Failure(new[] { "Failed to get assessment history" });
+                    var emptyResult = new GetAssessmentHistoryDto
+                    {
+                        AssessmentID = progressHistoryRequest.AssessmentID,
+                        Score = 0,
+                        TotalPillar = totalPillars,
+                        TotalAnsPillar = 0,
+                        TotalAnsQuestion = 0,
+                        TotalQuestion = totalQuestions,
+                        CurrentProgress = 0
+                    };
+
+                    return ResultResponseDto<GetAssessmentHistoryDto>.Success(emptyResult, new[] { "No assessment found. Returning default progress." });
                 }
 
-                // Get total questions directly (avoid Include if not needed)
-                var totalQuestions = await _context.Questions.Where(x=>!x.IsDeleted).CountAsync();
 
                 // Calculate answered questions
                 var totalAnsweredQuestions = assessment.PillarAssessments
@@ -783,12 +797,11 @@ namespace VeridianClimatePulse.Services
                     .Where(r => r.Score.HasValue && r.Score.Value <= (int)ScoreValue.Score1)
                     .Sum(r => r.Score.Value);
 
-                var totalPillars = (await _commonService.GetPillars()).Count;
 
                 // Build response
                 var result = new GetAssessmentHistoryDto
                 {
-                    AssessmentID = assessmentID,
+                    AssessmentID = progressHistoryRequest.AssessmentID,
                     Score = score,
                     TotalPillar = totalPillars,
                     TotalAnsPillar = assessment.PillarAssessments.Count,

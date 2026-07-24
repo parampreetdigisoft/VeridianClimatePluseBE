@@ -20,7 +20,6 @@ namespace VeridianClimatePulse.Services
         private readonly ApplicationDbContext _context;
         private readonly IAppLogger _appLogger;
         private readonly ICommonService _commonService;
-        int ROSEWPillarID = 22;
 
         public QuestionService(ApplicationDbContext context, IAppLogger appLogger, ICommonService commonService)
         {
@@ -115,7 +114,7 @@ namespace VeridianClimatePulse.Services
             {
                 var existing = await _context.Questions.FindAsync(id);
                 if (existing == null) return null;
-                existing.QuestionText = q.QuestionText;
+                existing.QuestionText = q.QuestionText;     
                 existing.PillarID = q.PillarID;
                 existing.DisplayOrder = q.DisplayOrder;
                 await _context.SaveChangesAsync();
@@ -326,23 +325,20 @@ namespace VeridianClimatePulse.Services
                         .FirstOrDefaultAsync();
                     if (assessment != null)
                     {
-                        answeredPillarIds = assessment.PillarAssessments
-                       .OrderByDescending(r => r.Responses
-                       .Select(resp => (DateTime?)resp.UpdatedAt).Max())
-                       .Select(r => r.PillarID)
-                       .ToList();
+                      answeredPillarIds = assessment?.PillarAssessments
+                     .Where(x => x.Responses != null && x.Responses.Any())
+                     .OrderByDescending(r => r.Responses
+                     .Select(resp => (DateTime?)resp.UpdatedAt).Max())
+                     .Select(r => r.PillarID)
+                     .ToList() ?? new List<int>();
                     }
                     int pillarCount = (await _commonService.GetPillars()).Count;
                     if (assessment != null && answeredPillarIds.Count == pillarCount && !request.PillarID.HasValue)
                     {
                         request.PillarID = assessment.PillarAssessments.First().PillarID;
                     }
-
-                    if (assessment?.AssessmentPhase == AssessmentPhase.Completed)
-                    {
-                        request.PillarID = ROSEWPillarID;
-                    }
-                    else if (!request.PillarID.HasValue)
+                    
+                    if (!request.PillarID.HasValue)
                     {
                         if (answeredPillarIds.Any())
                         {
@@ -352,6 +348,15 @@ namespace VeridianClimatePulse.Services
                         {
                             request.PillarID = (await _commonService.GetPillars()).FirstOrDefault()?.PillarID;
                         }
+                    }
+                    // Calculate the submitted pillar display order from the max pillar ID in answeredPillarIds
+                    int submittedPillarDisplayOrder = 0;
+                    if (answeredPillarIds.Any())
+                    {
+                        var maxAnsweredPillarId = answeredPillarIds.Max();
+                        var cachedPillars = await _commonService.GetPillars();
+                        submittedPillarDisplayOrder = cachedPillars
+                            .FirstOrDefault(p => p.PillarID == maxAnsweredPillarId)?.DisplayOrder ?? 0;
                     }
 
                     // Get next unanswered pillar
@@ -404,7 +409,7 @@ namespace VeridianClimatePulse.Services
                                 ScoreValue = x.ScoreValue,
                                 Justification = submittedQuestion.Justification,
                                 Source = submittedQuestion.Source
-                            }).ToList(),
+                            }).OrderBy(x=>x.DisplayOrder).ToList(),
                         };
                     }).ToList();
 
@@ -416,7 +421,7 @@ namespace VeridianClimatePulse.Services
                         PillarID = selectPillar.PillarID,
                         Description = selectPillar.Description,
                         DisplayOrder = selectPillar.DisplayOrder,
-                        SubmittedPillarDisplayOrder = answeredPillarIds.Count == pillarCount ? pillarCount : summitedPillar?.DisplayOrder ?? selectPillar.DisplayOrder,
+                        SubmittedPillarDisplayOrder = submittedPillarDisplayOrder,
                         Questions = questions
                     };
                     return ResultResponseDto<GetPillarQuestionByProgramResponse>.Success(result, new[] { "get questions successfully" });
@@ -442,29 +447,23 @@ namespace VeridianClimatePulse.Services
                                 select new
                                 {
                                     ProgramName = p.ProgramName,
-                                    FullName = u.FullName
+                                    FullName = u.FullName,
+                                    Year = p.Year
                                 }).FirstOrDefault();
 
                 var sheetName = fileName?.ProgramName + "_" + fileName?.FullName;
                 var year = DateTime.Now.Year;
-
-                var assessment = await _context.Assessments
+                var pillarAssessments = _context.Assessments
                     .Include(x => x.PillarAssessments)
                     .ThenInclude(x => x.Responses)
-                    .Where(a => a.StaffProgramMappingID == staffProgramMappingID && a.IsActive && a.UpdatedAt.Year == year).FirstOrDefaultAsync();
-
-                var isAssessmentCompeleted = AssessmentPhase.Completed == assessment?.AssessmentPhase;
-
-                var pillarAssessments = (isAssessmentCompeleted ?
-                    assessment?.PillarAssessments?.Where(x => x.PillarID == ROSEWPillarID).ToList()
-                    : assessment?.PillarAssessments?.ToList()) ?? new List<PillarAssessment>();
-
+                    .Where(a => a.StaffProgramMappingID == staffProgramMappingID && a.IsActive && a.UpdatedAt.Year == year)
+                    .SelectMany(x => x.PillarAssessments).ToList();
 
                 // Get next unanswered pillar
                 var nextPillars = await _context.Pillars
                     .Include(p => p.Questions.Where(x => !x.IsDeleted))
                     .ThenInclude(q => q.QuestionOptions)
-                    .Where(x => x.IsActive && !x.IsDeleted && (!isAssessmentCompeleted || x.PillarID == ROSEWPillarID))
+                    .Where(x => x.IsActive && !x.IsDeleted)
                     .OrderBy(p => p.DisplayOrder)
                     .ToListAsync();
                
@@ -497,7 +496,7 @@ namespace VeridianClimatePulse.Services
              List<Pillar> pillars,
              List<PillarAssessment> pillarAssessments,
              int StaffProgramMappingID,
-             dynamic? ProgramUser)
+             dynamic? file)
         {
             using var workbook = new XLWorkbook();
 
@@ -543,11 +542,12 @@ namespace VeridianClimatePulse.Services
 
                 // -- Rows 3-4 : Meta -----------------------------------
                 ws.Cell(3, 1).Value = "Program:";
-                ws.Cell(3, 2).Value = ProgramUser?.ProgramName?.ToString() ?? "";
-                ws.Cell(3, 3).Value = "Year:";
-                ws.Cell(3, 4).Value = DateTime.Now.Year;
+                ws.Cell(3, 2).Value = file?.ProgramName?.ToString() ?? "";
+                ws.Cell(3, 3).Value = "Program Year:";
+                ws.Cell(3, 4).Value = file?.Year;
+                ws.Cell(3, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
                 ws.Cell(4, 1).Value = "Evaluator:";
-                ws.Cell(4, 2).Value = ProgramUser?.FullName?.ToString() ?? "";
+                ws.Cell(4, 2).Value = file?.FullName?.ToString() ?? "";
 
                 foreach (int r in new[] { 3, 4 })
                 {
@@ -571,7 +571,7 @@ namespace VeridianClimatePulse.Services
                 desc.Style.Alignment.Vertical = XLAlignmentVerticalValues.Top;
                 desc.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                 desc.Style.Border.OutsideBorderColor = ColDescBorder;
-                ws.Row(6).Height = 120;
+                ws.Row(6).Height = 50;
 
                 // -- Row 7 : thin gap ----------------------------------
                 ws.Row(7).Height = 4;
@@ -681,6 +681,8 @@ namespace VeridianClimatePulse.Services
 
                     // -- Col D : Dropdown answer cell ------------------
                     var ansCell = ws.Cell(ansRow, 4);
+                    ws.Column(4).Width = 89;
+                    ws.Row(ansRow).AdjustToContents();
                     ansCell.Value = currentAnswer;
                     ansCell.Style.Fill.BackgroundColor = ColEditableYellow;
                     ansCell.Style.Alignment.WrapText = true;
@@ -825,8 +827,8 @@ namespace VeridianClimatePulse.Services
                 ws.Row(row).Height = 22;
                 row++;
 
-                // Answered / Total count row
-                ws.Cell(row, 3).Value = "Answered";
+                // ValidAnswered / Total count row
+                ws.Cell(row, 3).Value = "Valid Answers";
                 ws.Cell(row, 3).Style.Font.Bold = true;
                 ws.Cell(row, 3).Style.Font.FontColor = ColGrayText;
                 ws.Cell(row, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
@@ -1092,12 +1094,8 @@ namespace VeridianClimatePulse.Services
 
 
                 int pillarCount = (await _commonService.GetPillars()).Count;
-
-                if (assessment?.AssessmentPhase == AssessmentPhase.Completed)
-                {
-                    request.PillarID = ROSEWPillarID;
-                }
-                else if (assessment != null && answeredPillarIds.Count == pillarCount && !request.PillarID.HasValue)
+                
+                if (assessment != null && answeredPillarIds.Count == pillarCount && !request.PillarID.HasValue)
                     request.PillarID = assessment.PillarAssessments.First().PillarID;
 
                 if (!request.PillarID.HasValue)
@@ -1167,7 +1165,7 @@ namespace VeridianClimatePulse.Services
                                 ScoreValue = x.ScoreValue,
                                 Justification = submitted.QuestionOptionID == x.OptionID ? submitted.Justification : string.Empty,
                                 Source = submitted.QuestionOptionID == x.OptionID ? submitted.Source : string.Empty
-                            }).ToList()
+                            }).OrderBy(x=>x.DisplayOrder).ToList()
                         };
                     }).ToList();
 

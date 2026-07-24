@@ -487,6 +487,7 @@ namespace VeridianClimatePulse.Services
                     query = query.Where(x => x.ClimateProgramID == request.ClimateProgramID);
                 }
 
+                query = query.OrderBy(x => x.ClimateProgramID);
                 // ?? Pagination (DB level)
                 var response = await query.ApplyPaginationAsync(request);
 
@@ -545,9 +546,8 @@ namespace VeridianClimatePulse.Services
                     on cm.AssignedByUserId equals u.UserID
                 join ai in _context.AIProgramScores
                 .Where(x => x.IsVerified && x.Year == year)
-            on c.ClimateProgramID equals ai.ClimateProgramID into aiJoin
+                on c.ClimateProgramID equals ai.ClimateProgramID into aiJoin
                 from ai in aiJoin.DefaultIfEmpty()
-
                 where !c.IsDeleted
                 select new StaffProgramMappingResponseDto
                 {
@@ -753,13 +753,13 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-
                 var user = await _context.Users.FirstOrDefaultAsync(x => x.UserID == userId);
 
                 if (user == null)
                 {
                     return ResultResponseDto<List<StaffProgramMappingResponseDto>>.Failure(new string[] { "Invalid user" });
                 }
+
                 var year = DateTime.Now.Year;
                 Expression<Func<Assessment, bool>>  predicate = a => 
                 !a.StaffProgramMapping.IsDeleted 
@@ -791,10 +791,11 @@ namespace VeridianClimatePulse.Services
                          UpdatedAt = c.UpdatedAt,
                          IsDeleted = c.IsDeleted,
                          AssignedBy = u.FullName,
-                         StaffProgramMappingID = cm.StaffProgramMappingID
+                         StaffProgramMappingID = cm.StaffProgramMappingID,
+                         Year = c.Year
                      };
 
-                var result = await ProgramQuery.ToListAsync();
+                var result = await ProgramQuery.OrderByDescending(x => x.EndAt).ThenBy(x => x.UpdatedAt).ToListAsync();
 
                 if (!result.Any())
                 {
@@ -966,94 +967,6 @@ namespace VeridianClimatePulse.Services
             }
         }
 
-        public async Task<ResultResponseDto<List<StaffProgramMappingResponseDto>>> GetAllProgramsByLocation(GetNearestProgramRequestDto r)
-        {
-            try
-            {
-                //var user = await _context.Users.FirstOrDefaultAsync(x => x.UserID == r.UserID);
-                //if (user == null)
-                //    return ResultResponseDto<List<StaffProgramMappingResponseDto>>.Failure(new[] { "Invalid user" });
-
-                var year = DateTime.Now.Year;
-
-                //Expression<Func<Assessment, bool>> predicate = a =>
-                //    !a.StaffProgramMapping.IsDeleted &&
-                //    a.StaffProgramMapping.UserID == r.UserID &&
-                //    a.UpdatedAt.Year == year &&
-                //    (a.AssessmentPhase == AssessmentPhase.Completed ||
-                //     a.AssessmentPhase == AssessmentPhase.EditRejected ||
-                //     a.AssessmentPhase == AssessmentPhase.EditRequested);
-
-                //var staffProgramMappingIds = await _context.Assessments
-                //    .Where(predicate)
-                //    .Select(a => a.StaffProgramMappingID)
-                //    .Distinct()
-                //    .ToListAsync();
-
-                //// First get data from DB (no static method call inside query)
-                var programList = await (
-                    from c in _context.ClimatePrograms
-                    join cm in _context.StaffProgramMappings
-                        .Where(x => !x.IsDeleted && x.UserID == r.UserID)
-                        on c.ClimateProgramID equals cm.ClimateProgramID
-                    join u in _context.Users on cm.AssignedByUserId equals u.UserID
-                    join a in _context.Assessments
-                           .Where(x => x.IsActive && x.UpdatedAt.Year == year)
-                       on cm.StaffProgramMappingID equals a.StaffProgramMappingID into assessmentGroup
-                    from a in assessmentGroup.DefaultIfEmpty()
-                    select new StaffProgramMappingResponseDto
-                    {
-                        ClimateProgramID = c.ClimateProgramID,
-                        Location = c.Location,
-                        ProgramName = c.ProgramName,
-                        IsActive = c.IsActive,
-                        StartAt = c.StartAt,
-                        EndAt = c.EndAt,
-                        UpdatedAt = c.UpdatedAt,
-                        IsDeleted = c.IsDeleted,
-                        AssignedBy = u.FullName,
-                        StaffProgramMappingID = cm.StaffProgramMappingID,
-                        AssessmentPhase = a != null ? a.AssessmentPhase : null
-                    }).ToListAsync();
-
-                //// Then calculate distance in memory using static method
-                //foreach (var program in programList)
-                //{
-                //    if (Program.Latitude.HasValue && Program.Longitude.HasValue)
-                //        Program.Distance = HaversineDistance(r.Latitude, r.Longitude, Program.Latitude.Value, Program.Longitude.Value);
-                //    else
-                //        Program.Distance = double.MaxValue;
-                //}
-
-                var result = programList.OrderBy(x => x.Distance).ToList();
-
-                if (!result.Any())
-                    return ResultResponseDto<List<StaffProgramMappingResponseDto>>.Failure(new[] { "No Program is found for assessment" });
-
-                return ResultResponseDto<List<StaffProgramMappingResponseDto>>.Success(result, new[] { "Retrieved successfully" });
-            }
-            catch (Exception ex)
-            {
-                await _appLogger.LogAsync("Error occurred in GetAllProgramByLocation", ex);
-                return ResultResponseDto<List<StaffProgramMappingResponseDto>>.Failure(new[] { "An error occurred, please try later" });
-            }
-        }
-
-        private double HaversineDistance(double lat1, double lon1, double lat2, double lon2)
-        {
-            double R = 6371; // Radius of Earth in km
-            var dLat = (lat2 - lat1) * Math.PI / 180.0;
-            var dLon = (lon2 - lon1) * Math.PI / 180.0;
-
-            lat1 = lat1 * Math.PI / 180.0;
-            lat2 = lat2 * Math.PI / 180.0;
-
-            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
-                    Math.Sin(dLon / 2) * Math.Sin(dLon / 2) * Math.Cos(lat1) * Math.Cos(lat2);
-            var c = 2 * Math.Asin(Math.Sqrt(a));
-            return R * c;
-        }
-        
         public async Task<ResultResponseDto<List<StaffProgramMappingResponseDto>>> GetAiAccessProgram(int userId, UserRole userRole)
         {
             try

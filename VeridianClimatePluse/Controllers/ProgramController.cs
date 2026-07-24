@@ -205,24 +205,6 @@ namespace VeridianClimatePulse.Controllers
             return Ok(result);
         }
 
-        [HttpGet("getAllProgramsByLocation")]
-        public async Task<IActionResult> GetAllProgramsByLocation([FromQuery] GetNearestProgramRequestDto r)
-        {
-            var claimUserId = GetUserIdFromClaims();
-            if (claimUserId == null)
-                return Unauthorized("User ID not found.");
-
-            var role = GetRoleFromClaims();
-            if (role == null)
-                return Unauthorized("You Don't have access.");
-
-            if (!Enum.TryParse<UserRole>(role, true, out var userRole))
-            {
-                return Unauthorized("You Don't have access.");
-            }
-            r.UserID = claimUserId.GetValueOrDefault();
-            return Ok(await _programService.GetAllProgramsByLocation(r));
-        }
          
         [HttpGet("getAiAccessProgram")]
         public async Task<IActionResult> GetAiAccessProgram()

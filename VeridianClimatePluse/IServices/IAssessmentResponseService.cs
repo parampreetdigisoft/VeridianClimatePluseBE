@@ -15,10 +15,10 @@ namespace VeridianClimatePulse.IServices
         Task<bool> DeleteAsync(int id);
         Task<ResultResponseDto<string>> SaveAssessment(AddAssessmentDto request);
         Task<PaginationResponse<GetProgramAssessmentResponseDto>> GetAssessmentResult(GetAssessmentRequestDto request, UserRole role);
-        Task<PaginationResponse<GetAssessmentQuestionResponseDto>> GetAssessmentQuestion(GetAssessmentQuestoinRequestDto request);
+        Task<PaginationResponse<GetAssessmentQuestionResponseDto>> GetAssessmentQuestion(GetAssessmentQuestionRequestDto request);
         Task<ResultResponseDto<string>> ImportAssessmentAsync(IFormFile file,int userID);
         Task<GetProgramQuestionHistoryResponseDto> GetProgramQuestionHistory(UserProgramRequestDto userProgramRequestDto);
-        Task<ResultResponseDto<GetAssessmentHistoryDto>> GetAssessmentProgressHistory(int assessmentID);
+        Task<ResultResponseDto<GetAssessmentHistoryDto>> GetAssessmentProgressHistory(GetProgramProgressHistoryRequestDto progressHistoryRequest);
         Task<ResultResponseDto<string>> ChangeAssessmentStatus(ChangeAssessmentStatusRequestDto r);
         Task<ResultResponseDto<string>> TransferAssessment(TransferAssessmentRequestDto r, int userID, UserRole userRole);
         Task<ResultResponseDto<AiProgramPillarDashboardResponseDto>> GetProgramPillarHistory(UserProgramDashBoardRequestDto userProgramRequestDto,int userID, UserRole userRole);

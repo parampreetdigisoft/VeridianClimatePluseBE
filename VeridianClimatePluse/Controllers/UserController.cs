@@ -82,7 +82,7 @@ namespace VeridianClimatePulse.Controllers
         [HttpGet]
         [Authorize(Policy = "AdminOnly")]
         [Route("getUsersAssignedToProgram/{ProgramID}")]
-        public async Task<IActionResult> GetUsersAssignedToProgram(int ProgramID) => Ok(await _userService.GetUsersAssignedToProgram(ProgramID));
+        public async Task<IActionResult> GetUsersAssignedToProgram(int climateProgramID) => Ok(await _userService.GetUsersAssignedToProgram(climateProgramID));
     }
 
     public class RegisterRequest

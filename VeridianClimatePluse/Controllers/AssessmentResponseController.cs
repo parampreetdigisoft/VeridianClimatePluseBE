@@ -100,9 +100,9 @@ namespace VeridianClimatePulse.Controllers
             return Ok(result);
         }
         [HttpGet]
-        [Route("getAssessmentQuestoins")]
+        [Route("getAssessmentQuestions")]
         [Authorize]
-        public async Task<IActionResult> GetAssessmentQuestoins([FromQuery] GetAssessmentQuestoinRequestDto response)
+        public async Task<IActionResult> GetAssessmentQuestions([FromQuery] GetAssessmentQuestionRequestDto response)
         {
             var result = await _responseService.GetAssessmentQuestion(response);
             return Ok(result);
@@ -155,11 +155,11 @@ namespace VeridianClimatePulse.Controllers
             return Ok(result);
         }
         [HttpGet]
-        [Route("getAssessmentProgressHistory/{assessmentID}")]
+        [Route("getAssessmentProgressHistory")]
         [Authorize]
-        public async Task<IActionResult> getAssessmentProgressHistory(int assessmentID)
+        public async Task<IActionResult> getAssessmentProgressHistory([FromQuery]GetProgramProgressHistoryRequestDto progressHistoryRequest)
         {
-            var result = await _responseService.GetAssessmentProgressHistory(assessmentID);
+            var result = await _responseService.GetAssessmentProgressHistory(progressHistoryRequest);
             return Ok(result);
         }
 
