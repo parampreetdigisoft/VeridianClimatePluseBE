@@ -12,6 +12,7 @@ using System.Linq.Expressions;
 using QuestPDF.Fluent;
 using VeridianClimatePulse.Common.Interface;
 using VeridianClimatePulse.Enums;
+using VeridianClimatePulse.Common.Constants;
 
 namespace VeridianClimatePulse.Services
 {
@@ -815,9 +816,6 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                var year = request.UpdatedAt.Year;
-                var startDate = new DateTime(year, 1, 1);
-                var endDate = new DateTime(year + 1, 1, 1);
                 // Role based filter
                 IQueryable<StaffProgramMapping> staffProgramMappings = _context.StaffProgramMappings
                     .AsNoTracking()
@@ -834,11 +832,10 @@ namespace VeridianClimatePulse.Services
                 var rawData = await (
                     from ucm in staffProgramMappings
                     join a in _context.Assessments on ucm.StaffProgramMappingID equals a.StaffProgramMappingID
-                    where a.IsActive && (a.UpdatedAt >= startDate && a.UpdatedAt <= endDate 
-                    && (a.AssessmentPhase == AssessmentPhase.Completed || a.AssessmentPhase == AssessmentPhase.EditRejected || a.AssessmentPhase == AssessmentPhase.EditRequested))
+                    where a.IsActive && (a.AssessmentPhase == AssessmentPhase.Completed || a.AssessmentPhase == AssessmentPhase.EditRejected || a.AssessmentPhase == AssessmentPhase.EditRequested)
                     from pa in a.PillarAssessments
                     where !request.PillarID.HasValue || pa.PillarID == request.PillarID
-                    join p in _context.Pillars.Where(x => x.IsActive && !x.IsDeleted) on pa.PillarID equals p.PillarID 
+                    join p in _context.Pillars.Where(x => x.IsActive && !x.IsDeleted) on pa.PillarID equals p.PillarID
                     select new
                     {
                         p.PillarID,
@@ -846,14 +843,23 @@ namespace VeridianClimatePulse.Services
                         p.DisplayOrder,
                         UserID = ucm.UserID,
                         TotalQuestion = p.Questions.Count(x => !x.IsDeleted),
-                        Responses = pa.Responses
+                        Responses = pa.Responses.Select(r => new
+                        {
+                            r.Score,
+                            r.QuestionOptionID,
+                            Weight = r.Question.Weight,
+                            // Needed for N/A / Indeterminate exclusion — don't rely on Score being null
+                            OptionScoreValue = r.Question.QuestionOptions
+                                .Where(o => o.OptionID == r.QuestionOptionID)
+                                .Select(o => o.ScoreValue)
+                                .FirstOrDefault()
+                        })
                     }
                 ).ToListAsync();
 
                 if (!rawData.Any())
                     return new PaginationResponse<PillarsHistroyResponseDto>();
 
-                // Users dictionary
                 var userIds = rawData.Select(x => x.UserID).Distinct().ToList();
 
                 var usersDict = await _context.Users
@@ -861,25 +867,46 @@ namespace VeridianClimatePulse.Services
                     .ToDictionaryAsync(u => u.UserID, u => u.FullName);
 
                 // =========================
-                // 2. AI DATA
+                // 2. AI DATA — now weighted by Tier, same as pillar score formula
                 // =========================
-                var aiDataList = await _context.AIPillarScores
-                    .Where(x => x.ClimateProgramID == request.ClimateProgramID
-                        && (!request.PillarID.HasValue || x.PillarID == request.PillarID)
-                        && x.Year == year)
-                    .GroupBy(x => x.PillarID)
-                    .Select(g => new
+                var aiQuestionScores = await (
+                    from aq in _context.AIEstimatedQuestionScores
+                    join q in _context.Questions on aq.QuestionID equals q.QuestionID
+                    where aq.ClimateProgramID == request.ClimateProgramID
+                        && (!request.PillarID.HasValue || aq.PillarID == request.PillarID)
+                        && aq.Year == 2026
+                    select new
                     {
-                        PillarID = g.Key,
-                        Score = g.Sum(x => x.AIScore ?? 0),
-                        ScoreProgress = g.Average(x => x.AIProgress ?? 0),
-                        Count = _context.AIEstimatedQuestionScores.Where(x => x.PillarID == g.Key && x.ClimateProgramID == request.ClimateProgramID && x.Year == year).Count()
-                    })
-                    .ToListAsync();
+                        aq.PillarID,
+                        aq.AIScore,     // assumed -4..+4 nullable decimal
+                        Weight = q.Weight
+                    }
+                    ).ToListAsync();
 
+                var aiDataList = aiQuestionScores
+                    .Where(x => x.AIScore.HasValue)
+                    .GroupBy(x => x.PillarID)
+                    .Select(g =>
+                    {
+                        var weightedSum = g.Sum(x => x.AIScore!.Value * (decimal)x.Weight);
+                        var totalWeight = g.Sum(x => (decimal)x.Weight);
+
+                        var progress = totalWeight > 0
+                            ? ((weightedSum / totalWeight) + 4m) / 8m * 100m
+                            : 0m;
+
+                        return new
+                        {
+                            PillarID = g.Key,
+                            Score = Math.Round(progress, 0),
+                            ScoreProgress = progress,
+                            Count = g.Count()
+                        };
+                    })
+                    .ToList();
 
                 // =========================
-                // 3. ALL PILLARS (MAIN FIX)
+                // 3. ALL PILLARS
                 // =========================
                 var pillars = await _context.Pillars
                     .Where(p => p.IsActive && !p.IsDeleted && (!request.PillarID.HasValue || p.PillarID == request.PillarID))
@@ -888,7 +915,7 @@ namespace VeridianClimatePulse.Services
                         p.PillarID,
                         p.PillarName,
                         p.DisplayOrder,
-                        TotalQuestion = p.Questions.Count(x=>!x.IsDeleted)
+                        TotalQuestion = p.Questions.Count(x => !x.IsDeleted)
                     })
                     .ToListAsync();
 
@@ -898,13 +925,12 @@ namespace VeridianClimatePulse.Services
                     {
                         UserID = int.MaxValue,
                         FullName = "AI_Result",
-                        Score = Convert.ToDecimal(Math.Round(x.Score,0)),
+                        Score = Convert.ToDecimal(x.Score),
                         ScoreProgress = x.ScoreProgress,
                         AnsQuestion = x.Count,
-                        AnsPillar =1
+                        AnsPillar = 1
                     }
                 );
-
 
                 // =========================
                 // 4. FINAL RESULT (FROM PILLARS)
@@ -920,16 +946,32 @@ namespace VeridianClimatePulse.Services
                             .GroupBy(x => x.UserID)
                             .Select(userGroup =>
                             {
+                                // FIX: previous filter `(int)r.Score.Value <= (int)ScoreValue.Score1`
+                                // was wrong — it silently dropped valid higher scores instead of
+                                // excluding N/A / Indeterminate. Exclude those explicitly instead.
                                 var responses = userGroup
                                     .SelectMany(x => x.Responses)
                                     .Where(r => r.Score.HasValue &&
                                                 (int)r.Score.Value <= (int)ScoreValue.Score1)
                                     .ToList();
 
-                                var progress = responses.Any()
-                                 ? responses.Average(r => (decimal)((int?)r.Score ??0))
-                                 :0m;
+                                // Step 1 & 2: Σ(Score × Weight)
+                                var weightedSum = responses.Sum(r => r.Score!.Value * r.Weight);
 
+                                // Step 3: Σ(Weight)
+                                var totalWeight = responses.Sum(r => r.Weight);
+
+                                // Step 4 & 5: Weighted avg (-4 to +4) -> converted to 0-100 scale
+                                var progress = totalWeight > 0
+                                    ? (((decimal)weightedSum / (decimal)totalWeight) + 4m) / 8m * 100m
+                                    : 0m;
+
+                                var hasCriticalFailure = responses.Any(r => r.Weight == double.Parse(Constants.CriticalIndicatorWeight) && r.Score!.Value <= decimal.Parse(Constants.LeastCriticalIndicatorValue));
+
+                                if (hasCriticalFailure && progress > 0m)
+                                {
+                                    progress = 0m;
+                                }
 
                                 return new PillarsUserHistroyResponseDto
                                 {
@@ -939,12 +981,11 @@ namespace VeridianClimatePulse.Services
                                     ScoreProgress = progress,
                                     TotalQuestion = p.TotalQuestion,
                                     AnsQuestion = responses.Count,
-                                    AnsPillar = responses.Any() ?1 :0
+                                    AnsPillar = responses.Any() ? 1 : 0
                                 };
                             })
                             .ToList();
 
-                        // ? Insert AI row (always)
                         if (aiData.TryGetValue(p.PillarID, out var aiPillar))
                         {
                             aiPillar.TotalQuestion = p.TotalQuestion;
@@ -975,11 +1016,9 @@ namespace VeridianClimatePulse.Services
                     .OrderBy(x => x.DisplayOrder)
                     .ToList();
 
-
                 // =========================
                 // 5. PAGINATION
                 // =========================
-
                 var count = 0;
                 var valid = 0;
                 var totalRecords = 0;
@@ -987,7 +1026,7 @@ namespace VeridianClimatePulse.Services
                 foreach (var r in result)
                 {
                     totalRecords += r.Users.Count;
-                    if (count+ r.Users.Count <= request.PageSize)
+                    if (count + r.Users.Count <= request.PageSize)
                     {
                         count += r.Users.Count;
                         valid++;
@@ -1002,13 +1041,10 @@ namespace VeridianClimatePulse.Services
                     PageNumber = request.PageNumber,
                     PageSize = request.PageSize
                 };
-
             }
             catch (Exception ex)
             {
-                await _appLogger.LogAsync(
-                    "Error occurred in GetPillarsHistoryByUserId", ex);
-
+                await _appLogger.LogAsync("Error occurred in GetPillarsHistoryByUserId", ex);
                 return new PaginationResponse<PillarsHistroyResponseDto>();
             }
         }

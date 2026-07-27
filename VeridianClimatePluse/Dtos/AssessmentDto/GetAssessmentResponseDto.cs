@@ -12,6 +12,7 @@ namespace VeridianClimatePulse.Dtos.AssessmentDto
         public bool IsActive { get; set; } = true;
         public int UserID { get; set; }
         public string UserName { get; set; }
+        public string UserRole { get; set; }
         public decimal Score { get; set; }
         public string AssignedByUser { get; set; }
         public int AssignedByUserId { get; set; }

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Linq.Expressions;
 using VeridianClimatePulse.Backgroundjob;
+using VeridianClimatePulse.Common.Constants;
 using VeridianClimatePulse.Common.Implementation;
 using VeridianClimatePulse.Common.Interface;
 using VeridianClimatePulse.Common.Models;
@@ -262,11 +263,6 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                var year = request.UpdatedAt.Year;
-                var startDate = new DateTime(year, 1, 1);
-                var endDate = startDate.AddYears(1);
-
-                // Fetch allowed StaffProgramMapping IDs for non-admin users
                 List<int> allowedMappingIds = new();
 
                 if (role != UserRole.Admin)
@@ -296,8 +292,6 @@ namespace VeridianClimatePulse.Services
                 var baseRecords = await (
                         from a in _context.Assessments
                         where a.IsActive
-                              && a.UpdatedAt >= startDate
-                              && a.UpdatedAt < endDate
                               && (!request.ClimateProgramID.HasValue || a.StaffProgramMapping.ClimateProgramID == request.ClimateProgramID.Value)
                               && (role == UserRole.Admin || allowedMappingIds.Contains(a.StaffProgramMappingID))
 
@@ -321,6 +315,8 @@ namespace VeridianClimatePulse.Services
                             c.ClimateProgramID,
                             c.ProgramName,
                             u.UserID,
+                            a.UpdatedAt,
+                            Role = (UserRole)u.Role,
                             u.FullName,
                             AssignedByUser = createdBy.FullName,
                             AssignedByUserId = createdBy.UserID
@@ -339,8 +335,6 @@ namespace VeridianClimatePulse.Services
                 }
 
                 var assessmentIds = baseRecords.Select(x => x.AssessmentID).ToList();
-
-                // ? Fetch responses grouped by PillarAssessmentID
                 var responsesByPillar = await (
                         from r in _context.AssessmentResponses
                         where assessmentIds.Contains(r.PillarAssessment.AssessmentID)
@@ -349,10 +343,16 @@ namespace VeridianClimatePulse.Services
                             r.PillarAssessment.AssessmentID,
                             r.PillarAssessment.PillarAssessmentID,
                             r.Score,
-                            OptionText = r.Question.QuestionOptions
-                                .Where(o => o.OptionID == r.QuestionOptionID)
-                                .Select(o => o.OptionText)
-                                .FirstOrDefault()
+                            r.QuestionOptionID,
+                            r.QuestionID,
+                            Weight = r.Question.Weight,
+                            Option = r.Question.QuestionOptions
+                            .Where(o => o.OptionID == r.QuestionOptionID)
+                            .Select(o => new
+                            {
+                                o.OptionText,
+                                o.ScoreValue 
+                            }).FirstOrDefault()
                         })
                     .ToListAsync();
 
@@ -362,39 +362,55 @@ namespace VeridianClimatePulse.Services
                         .Where(r => r.AssessmentID == b.AssessmentID)
                         .ToList();
 
-                    // ? Only scored responses (0, 25, 50, 75, 100)
                     var scoredResponses = responses
-                        .Where(r => r.Score.HasValue)
-                        .ToList();
+                    .Where(r => r.Score.HasValue)
+                    .Select(r => new
+                    {
+                        r.PillarAssessmentID,
+                        Score = r.Score!.Value,
+                        Weight = r.Weight
+                    })
+                    .ToList();
 
-                    // ? NA and Unknown counts
+
+                    // ? NA and Indeterminate counts
                     var totalNA = responses.Count(r =>
-                        !r.Score.HasValue &&
-                        (r.OptionText == "N/A" || r.OptionText == "NA"));
+                        !string.IsNullOrEmpty(r.Option?.ScoreValue) &&
+                        (r.Option?.ScoreValue == "N/A" || r.Option?.ScoreValue == "NA"));
 
                     var totalIndeterminate = responses.Count(r =>
-                        !r.Score.HasValue &&
-                        r.OptionText == "Unknown");
+                        !string.IsNullOrEmpty(r.Option?.ScoreValue) &&
+                        r.Option?.ScoreValue == "Indeterminate");
 
-                    // ? Step 1: Calculate per-pillar score
-                    // PillarScore = SUM(Score) / (TotalAnswered � 100) � 100
-                    var pillarScores = scoredResponses
-                        .GroupBy(r => r.PillarAssessmentID)
-                        .Select(g =>
-                        {
-                            var totalScore = g.Sum(r => (decimal)r.Score!.Value);
-                            var totalAns = g.Count();
-                            return totalAns > 0
-                                ? totalScore / (totalAns * 100m) * 100m
-                                : 0m;
-                        })
-                        .ToList();
+                    var pillarScores = scoredResponses.GroupBy(r => r.PillarAssessmentID).Select(g =>
+                    {
+                        // Step 1 & 2: Σ(Score × Weight)
+                        var weightedScoreSum = g.Sum(r => r.Score * r.Weight);
+                        
+                        // Step 3: Σ(Weight)
+                        var totalWeight = g.Sum(r => r.Weight);
+                        if (totalWeight <= 0) return 0m;
+                        
+                        // Step 4: Average on -4 to +4 scale
+                        var pillarAvg = weightedScoreSum / totalWeight;
+                        
+                        // Step 5: Convert to 0-100 scale
+                        var pillarScore = (((decimal)pillarAvg + 4m) / 8m) * 100m;
+                        
+                        return pillarScore;
+                    }).ToList();
 
-                    // ? Step 2: Overall Score = SUM(PillarScores) / TotalPillars(22)
-                    // Unanswered pillars = 0, correctly drag the overall score down
+                    // Overall Score = SUM(PillarScores) / TotalPillars
                     var overallScore = pillarCount > 0
                         ? Math.Round(pillarScores.Sum() / pillarCount, 2)
                         : 0m;
+
+                    var hasCriticalFailure = scoredResponses.Any(r => r.Weight == double.Parse(Constants.CriticalIndicatorWeight) && r.Score <= decimal.Parse(Constants.LeastCriticalIndicatorValue));
+
+                    if (hasCriticalFailure && overallScore > 0m)
+                    {
+                        overallScore = 0m;
+                    }
 
                     return new GetProgramAssessmentResponseDto
                     {
@@ -405,10 +421,11 @@ namespace VeridianClimatePulse.Services
                         ProgramName = b.ProgramName ?? "",
                         UserID = b.UserID,
                         UserName = b.FullName ?? "",
+                        UserRole = b.Role.ToString(),
                         AssignedByUser = b.AssignedByUser ?? "",
                         AssignedByUserId = b.AssignedByUserId,
                         AssessmentPhase = b.AssessmentPhase,
-                        AssessmentYear = year,
+                        AssessmentYear = b.UpdatedAt.Year,
                         Score = overallScore,
                         TotalNA = totalNA,
                         TotalIndeterminate = totalIndeterminate
