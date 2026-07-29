@@ -467,11 +467,9 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                int year = DateTime.UtcNow.Year;
-
                 IQueryable<StaffProgramMappingResponseDto> query = role == UserRole.Admin
-                    ? GetAdminProgramQuery(year)
-                    : GetUserProgramQuery(request.UserId, year);
+                    ? GetAdminProgramQuery()
+                    : GetUserProgramQuery(request.UserId);
 
                 // ?? Search
                 if (!string.IsNullOrWhiteSpace(request.SearchText))
@@ -494,7 +492,7 @@ namespace VeridianClimatePulse.Services
                 // ?? Manual Score Calculation (Non-Program User)
                 if (role != UserRole.ProgramUser && response.Data.Any())
                 {
-                    await ApplyManualScoresAsync(response, request, role, year);
+                    await ApplyManualScoresAsync(response, request, role);
                 }
 
                 return response;
@@ -506,19 +504,18 @@ namespace VeridianClimatePulse.Services
             }
         }
 
-        private IQueryable<StaffProgramMappingResponseDto> GetAdminProgramQuery(int year)
+        private IQueryable<StaffProgramMappingResponseDto> GetAdminProgramQuery()
         {
-            return
+            var query = ( 
                 from c in _context.ClimatePrograms.AsNoTracking()
                 where !c.IsDeleted
-                join ai in _context.AIProgramScores
-                        .Where(x => x.IsVerified && x.Year == year)
-                    on c.ClimateProgramID equals ai.ClimateProgramID into aiJoin
+                join ai in _context.AIProgramScores.Where(x => x.IsVerified)
+                on c.ClimateProgramID equals ai.ClimateProgramID into aiJoin
                 from ai in aiJoin.DefaultIfEmpty()
                 select new StaffProgramMappingResponseDto
                 {
                     ClimateProgramID = c.ClimateProgramID,
-                    ProgramName = c.ProgramName,     
+                    ProgramName = c.ProgramName,
                     Year = c.Year,
                     Image = c.Image,
                     Location = c.Location,
@@ -531,13 +528,13 @@ namespace VeridianClimatePulse.Services
                     Status = c.Status,
                     Description = c.Description,
                     ProgramPeers = c.ProgramPeers,
-                };
+                });
+            var sql = query.ToQueryString();
+            return query;
         }
 
-        private IQueryable<StaffProgramMappingResponseDto> GetUserProgramQuery(long? userId, int? year)
+        private IQueryable<StaffProgramMappingResponseDto> GetUserProgramQuery(long? userId)
         {
-            year = year ?? DateTime.Now.Year;
-
             return
                 from c in _context.ClimatePrograms.AsNoTracking()
                 join cm in _context.StaffProgramMappings
@@ -546,14 +543,14 @@ namespace VeridianClimatePulse.Services
                 join u in _context.Users
                     on cm.AssignedByUserId equals u.UserID
                 join ai in _context.AIProgramScores
-                .Where(x => x.IsVerified && x.Year == year)
+                .Where(x => x.IsVerified)
                 on c.ClimateProgramID equals ai.ClimateProgramID into aiJoin
                 from ai in aiJoin.DefaultIfEmpty()
                 where !c.IsDeleted
                 select new StaffProgramMappingResponseDto
                 {
                     ClimateProgramID = c.ClimateProgramID,
-                    ProgramName = c.ProgramName,           
+                    ProgramName = c.ProgramName,
                     Location = c.Location,
                     IsActive = c.IsActive,
                     StartAt = c.StartAt,
@@ -564,12 +561,13 @@ namespace VeridianClimatePulse.Services
                     StaffProgramMappingID = cm.StaffProgramMappingID,
                     Score = 0,
                     AiScore = ai.AIProgress,
-                    ProgramPeers = c.ProgramPeers
+                    ProgramPeers = c.ProgramPeers,
+                    Year = c.Year
                 };
         }
-        private async Task ApplyManualScoresAsync(PaginationResponse<StaffProgramMappingResponseDto> response,PaginationRequest request, UserRole role, int year)
+        private async Task ApplyManualScoresAsync(PaginationResponse<StaffProgramMappingResponseDto> response,PaginationRequest request, UserRole role)
         {
-            var scores = await _commonService.GetProgramProgressAsync(request.UserId.GetValueOrDefault(),(int)role, year);
+            var scores = await _commonService.GetProgramProgressAsync(request.UserId.GetValueOrDefault(),(int)role);
             int pillarCount = (await _commonService.GetPillars()).Count;
 
             var scoreMap = scores
@@ -578,12 +576,12 @@ namespace VeridianClimatePulse.Services
                     g => g.Key,
                     g => Math.Round((g.Sum(x => (decimal?)x.ScoreProgress) ?? 0) / (decimal)pillarCount, 2));
 
-            foreach (var Program in response.Data)
+            foreach (var program in response.Data)
             {
-                Program.PeerProgramIDs = Program.ProgramPeers?.Where(x => x.IsActive && !x.IsDeleted).Select(x => x.PeerProgramID).ToList() ?? new List<int>();
-                if (scoreMap.TryGetValue(Program.ClimateProgramID, out var score))
+                program.PeerProgramIDs = program.ProgramPeers?.Where(x => x.IsActive && !x.IsDeleted).Select(x => x.PeerProgramID).ToList() ?? new List<int>();
+                if (scoreMap.TryGetValue(program.ClimateProgramID, out var score))
                 {
-                    Program.Score = score;
+                    program.Score = score;
                 }
             }
 
@@ -598,27 +596,22 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-
-                IQueryable<StaffProgramMappingResponseDto> ProgramQuery;
-
-                int year = DateTime.UtcNow.Year;
-                var startDate = new DateTime(year, 1, 1);
-                var endDate = new DateTime(year + 1, 1, 1);
+                IQueryable<StaffProgramMappingResponseDto> programQuery;
                 int pillarCount = (await _commonService.GetPillars()).Count;
                 if (userRole == UserRole.Admin)
                 {
-                    ProgramQuery = GetAdminProgramQuery(year);
-                    var sql = ProgramQuery.ToQueryString();
+                    programQuery = GetAdminProgramQuery();
+                    var sql = programQuery.ToQueryString();
                 }
                 else
                 {
-                    ProgramQuery = GetUserProgramQuery(userId, year);
+                    programQuery = GetUserProgramQuery(userId);
                 }
-                var result = await ProgramQuery.ToListAsync();
+                var result = await programQuery.ToListAsync();
 
                 if (userRole != UserRole.ProgramUser)
                 {
-                    var scores = await _commonService.GetProgramProgressAsync(userId, (int)userRole, year);
+                    var scores = await _commonService.GetProgramProgressAsync(userId, (int)userRole);
 
                     var scoreMap = scores
                   .GroupBy(x => x.ClimateProgramID)
@@ -626,11 +619,11 @@ namespace VeridianClimatePulse.Services
                       g => g.Key,
                       g => Math.Round((g.Sum(x => (decimal?)x.ScoreProgress) ?? 0) / (decimal)pillarCount, 2));
 
-                        foreach (var Program in result)
+                        foreach (var program in result)
                         {
-                            if (scoreMap.TryGetValue(Program.ClimateProgramID, out var score))
+                            if (scoreMap.TryGetValue(program.ClimateProgramID, out var score))
                             {
-                                Program.Score = score;
+                                program.Score = score;
                             }
                         }
 
@@ -660,11 +653,11 @@ namespace VeridianClimatePulse.Services
             }
         }
 
-        public async Task<ResultResponseDto<object>> AssignProgramToUser(int userId, int ClimateProgramID, int assignedByUserId)
+        public async Task<ResultResponseDto<object>> AssignProgramToUser(int userId, int climateProgramID, int assignedByUserId)
         {
             try
             {
-                if (_context.StaffProgramMappings.Any(x => x.UserID == userId && x.ClimateProgramID == ClimateProgramID && x.AssignedByUserId == assignedByUserId && !x.IsDeleted))
+                if (_context.StaffProgramMappings.Any(x => x.UserID == userId && x.ClimateProgramID == climateProgramID && x.AssignedByUserId == assignedByUserId && !x.IsDeleted))
                 {
                     return await Task.FromResult(ResultResponseDto<object>.Failure(new string[] { "Program already assigned to user" }));
                 }
@@ -677,7 +670,7 @@ namespace VeridianClimatePulse.Services
                 var mapping = new StaffProgramMapping
                 {
                     UserID = userId,
-                    ClimateProgramID = ClimateProgramID,
+                    ClimateProgramID = climateProgramID,
                     AssignedByUserId = assignedByUserId,
                     Role = user.Role
                 };
@@ -689,17 +682,17 @@ namespace VeridianClimatePulse.Services
             }
             catch (Exception ex)
             {
-                await _appLogger.LogAsync("Error Occure in AssingProgramToUser", ex);
+                await _appLogger.LogAsync("Error Occure in AssignProgramToUser", ex);
                 return ResultResponseDto<object>.Failure(new string[] { "There is an error please try later" });
             }
         }
 
-        public async Task<ResultResponseDto<object>> EditAssignProgram(int id, int userId, int ClimateProgramID, int assignedByUserId)
+        public async Task<ResultResponseDto<object>> EditAssignProgram(int id, int userId, int climateProgramID, int assignedByUserId)
         {
             try
             {
 
-                if (_context.StaffProgramMappings.Any(x => x.UserID == userId && x.ClimateProgramID == ClimateProgramID && x.AssignedByUserId == assignedByUserId))
+                if (_context.StaffProgramMappings.Any(x => x.UserID == userId && x.ClimateProgramID == climateProgramID && x.AssignedByUserId == assignedByUserId))
                 {
                     return ResultResponseDto<object>.Failure(new string[] { "Program already assigned to user" });
                 }
@@ -711,7 +704,7 @@ namespace VeridianClimatePulse.Services
                 }
 
                 userMapping.UserID = userId;
-                userMapping.ClimateProgramID = ClimateProgramID;
+                userMapping.ClimateProgramID = climateProgramID;
                 userMapping.AssignedByUserId = assignedByUserId;
                 _context.StaffProgramMappings.Update(userMapping);
                 await _context.SaveChangesAsync();
@@ -811,35 +804,28 @@ namespace VeridianClimatePulse.Services
                 return ResultResponseDto<List<StaffProgramMappingResponseDto>>.Failure(new string[] { "There is an error please try later" });
             }
         }
-        public async Task<ResultResponseDto<ProgramHistoryDto>> GetProgramHistory(int userID, DateTime updatedAt, UserRole userRole)
+        public async Task<ResultResponseDto<ProgramHistoryDto>> GetProgramHistory(int userID, UserRole userRole)
         {
             try
             {
-                var year = updatedAt.Year;
-                var startDate = new DateTime(year, 1, 1);
-                var endDate = new DateTime(year + 1, 1, 1);
-
                 var programHistory = new ProgramHistoryDto();
 
                 Expression<Func<StaffProgramMapping, bool>> predicate;
 
-                if (userRole == UserRole.Analyst)
-                    predicate = x => !x.IsDeleted && (x.AssignedByUserId == userID || x.UserID == userID);
-                else if(userRole == UserRole.Evaluator)
+                if (userRole == UserRole.Analyst || userRole == UserRole.Evaluator)
                     predicate = x => !x.IsDeleted && x.UserID == userID;
                 else
                     predicate = x => !x.IsDeleted;
-
-                // 1?? Get Program-related counts in a single round trip
+            
                 var programQuery = await (
                     from c in _context.ClimatePrograms
                     where !c.IsDeleted && c.IsActive
                     join uc in _context.StaffProgramMappings.Where(predicate)
                         on c.ClimateProgramID equals uc.ClimateProgramID into ucGroup
                     from uc in ucGroup.DefaultIfEmpty()
-                    join a in _context.Assessments.Where(x => x.IsActive && x.UpdatedAt >= startDate && x.UpdatedAt <= endDate)
-                        on uc.StaffProgramMappingID equals a.StaffProgramMappingID into ProgramAssessments 
-                    from a in ProgramAssessments.DefaultIfEmpty()
+                    join a in _context.Assessments.Where(x => x.IsActive)
+                        on uc.StaffProgramMappingID equals a.StaffProgramMappingID into programAssessments
+                    from a in programAssessments.DefaultIfEmpty()
                     select new
                     {
                         c.ClimateProgramID,
@@ -852,8 +838,8 @@ namespace VeridianClimatePulse.Services
                 var climateProgramIDs = programQuery.Select(c => c.ClimateProgramID).Distinct().ToList();
 
                 // Then, get all AIProgramScores for those programs
-                var aIProgram = await _context.AIProgramScores
-                    .Where(x => climateProgramIDs.Contains(x.ClimateProgramID) && x.Year == year)
+                var aiProgram = await _context.AIProgramScores
+                    .Where(x => climateProgramIDs.Contains(x.ClimateProgramID))
                     .ToListAsync();
 
                 if (userRole == UserRole.Admin)
@@ -874,8 +860,8 @@ namespace VeridianClimatePulse.Services
                 programHistory.ActiveProgram = programQuery.Where(x => x.HasMapping).Select(x => x.ClimateProgramID).Distinct().Count();
                 programHistory.CompeleteProgram = programQuery.Where(x => x.IsCompleted).Select(x => x.ClimateProgramID).Distinct().Count();
                 programHistory.InprocessProgram = programHistory.ActiveProgram - programHistory.CompeleteProgram;
-                programHistory.FinalizeProgram = aIProgram.Where(x=>x.IsVerified).Count();
-                programHistory.UnFinalizeProgram = aIProgram.Where(x => !x.IsVerified).Count();
+                programHistory.FinalizeProgram = aiProgram.Where(x=>x.IsVerified).Count();
+                programHistory.UnFinalizeProgram = aiProgram.Where(x => !x.IsVerified).Count();
 
                 // 2?? Get evaluators & analysts in a single query
                 var userCounts = await _context.Users
@@ -897,14 +883,10 @@ namespace VeridianClimatePulse.Services
                 return ResultResponseDto<ProgramHistoryDto>.Failure(new string[] { "There is an error please try later" });
             }
         }
-        public async Task<ResultResponseDto<List<GetProgramsSubmissionHistoryResponseDto>>> GetProgramsProgressByUserId(int userID, DateTime updatedAt, UserRole userRole)
+        public async Task<ResultResponseDto<List<GetProgramsSubmissionHistoryResponseDto>>> GetProgramsProgressByUserId(int userID, UserRole userRole)
         {
             try
             {
-                int year = updatedAt.Year;
-                var startDate = new DateTime(year, 1, 1);
-                var endDate = new DateTime(year + 1, 1, 1);
-
                 // Get total pillars and questions (independent query)
                 var pillarStats = await _context.Pillars.Where(x => x.IsActive && !x.IsDeleted)
                     .Select(p => new { QuestionsCount = p.Questions.Count(x=>!x.IsDeleted) })
@@ -921,11 +903,11 @@ namespace VeridianClimatePulse.Services
                     predicate = x => !x.IsDeleted && x.UserID == userID;
 
 
-                var ProgramRaw = await (
+                var programRaw = await (
                     from uc in _context.StaffProgramMappings.Where(predicate)
                     join c in _context.ClimatePrograms.Where(c => !c.IsDeleted && c.IsActive)
                         on uc.ClimateProgramID equals c.ClimateProgramID
-                    join a in _context.AIProgramScores.Where(x => x.Year == year)
+                    join a in _context.AIProgramScores
                         on c.ClimateProgramID equals a.ClimateProgramID into AIProgramScores
                     from a in AIProgramScores.DefaultIfEmpty()
                     select new
@@ -936,11 +918,10 @@ namespace VeridianClimatePulse.Services
                     }
                 ).AsNoTracking().Distinct().ToListAsync();  // ?? force materialization first
 
-
-                var manualAssessmentList = await _commonService.GetProgramProgressAsync(userID, (int)userRole, year);
+                var manualAssessmentList = await _commonService.GetProgramProgressAsync(userID, (int)userRole);
 
                 // Now do grouping/aggregation in memory (LINQ to Objects)
-                var ProgramSubmission = ProgramRaw
+                var programSubmission = programRaw
                     .Select(g =>
                     {
                         var allPillars = manualAssessmentList.Where(x => x.ClimateProgramID == g.ClimateProgramID);
@@ -958,7 +939,7 @@ namespace VeridianClimatePulse.Services
                         };
                     }).ToList();
 
-                return ResultResponseDto<List<GetProgramsSubmissionHistoryResponseDto>>.Success(ProgramSubmission ?? new(), new List<string> { "Get Programs history successfully" });
+                return ResultResponseDto<List<GetProgramsSubmissionHistoryResponseDto>>.Success(programSubmission ?? new(), new List<string> { "Get Programs history successfully" });
 
             }
             catch (Exception ex)

@@ -290,36 +290,36 @@ namespace VeridianClimatePulse.Services
                 var pillarCount = (await _commonService.GetPillars()).Count;
 
                 var baseRecords = await (
-                        from a in _context.Assessments
-                        where a.IsActive
-                              && (!request.ClimateProgramID.HasValue || a.StaffProgramMapping.ClimateProgramID == request.ClimateProgramID.Value)
-                              && (role == UserRole.Admin || allowedMappingIds.Contains(a.StaffProgramMappingID))
+      from a in _context.Assessments
+      where a.IsActive
+            && (!request.ClimateProgramID.HasValue || a.StaffProgramMapping.ClimateProgramID == request.ClimateProgramID.Value)
+            && (role == UserRole.Admin || allowedMappingIds.Contains(a.StaffProgramMappingID))
 
-                        join c in _context.ClimatePrograms.Where(x => !x.IsDeleted)
-                            on a.StaffProgramMapping.ClimateProgramID equals c.ClimateProgramID
+      join c in _context.ClimatePrograms.Where(x => !x.IsDeleted)
+          on a.StaffProgramMapping.ClimateProgramID equals c.ClimateProgramID
 
-                        join u in _context.Users.Where(x =>
-                                !x.IsDeleted &&
-                                (!request.Role.HasValue || x.Role == request.Role.Value))
-                            on a.StaffProgramMapping.UserID equals u.UserID
+      join u in _context.Users.Where(x =>
+              !x.IsDeleted &&
+              (!request.Role.HasValue || x.Role == request.Role.Value))
+          on a.StaffProgramMapping.UserID equals u.UserID
 
-                        join createdBy in _context.Users.Where(x => !x.IsDeleted)
-                            on a.StaffProgramMapping.AssignedByUserId equals createdBy.UserID
+      join createdBy in _context.Users.Where(x => !x.IsDeleted)
+          on a.StaffProgramMapping.AssignedByUserId equals createdBy.UserID
 
-                        select new
-                        {
-                            a.AssessmentID,
-                            a.StaffProgramMappingID,
-                            a.CreatedAt,
-                            a.AssessmentPhase,
-                            c.ClimateProgramID,
-                            c.ProgramName,
-                            u.UserID,
-                            a.UpdatedAt,
-                            Role = (UserRole)u.Role,
-                            u.FullName,
-                            AssignedByUser = createdBy.FullName,
-                            AssignedByUserId = createdBy.UserID
+      select new
+      {
+          a.AssessmentID,
+          a.StaffProgramMappingID,
+          a.CreatedAt,
+          a.AssessmentPhase,
+          c.ClimateProgramID,
+          c.ProgramName,
+          u.UserID,
+          a.UpdatedAt,
+          Role = (UserRole)u.Role,
+          u.FullName,
+          AssignedByUser = createdBy.FullName,
+          AssignedByUserId = createdBy.UserID
                         })
                     .ToListAsync();
 
@@ -341,8 +341,9 @@ namespace VeridianClimatePulse.Services
                         select new
                         {
                             r.PillarAssessment.AssessmentID,
-                            r.PillarAssessment.PillarAssessmentID,
+                            r.PillarAssessment.PillarID,
                             r.Score,
+                            ClimateProgramID = r.PillarAssessment.Assessment.StaffProgramMapping.ClimateProgramID,
                             r.QuestionOptionID,
                             r.QuestionID,
                             Weight = r.Question.Weight,
@@ -366,7 +367,8 @@ namespace VeridianClimatePulse.Services
                     .Where(r => r.Score.HasValue)
                     .Select(r => new
                     {
-                        r.PillarAssessmentID,
+                        r.PillarID,
+                        r.ClimateProgramID,
                         Score = r.Score!.Value,
                         Weight = r.Weight
                     })
@@ -382,21 +384,22 @@ namespace VeridianClimatePulse.Services
                         !string.IsNullOrEmpty(r.Option?.ScoreValue) &&
                         r.Option?.ScoreValue == "Indeterminate");
 
-                    var pillarScores = scoredResponses.GroupBy(r => r.PillarAssessmentID).Select(g =>
+                    var pillarScores = scoredResponses
+                    .GroupBy(r => new { r.PillarID, r.ClimateProgramID }).Select(g =>
                     {
                         // Step 1 & 2: Σ(Score × Weight)
-                        var weightedScoreSum = g.Sum(r => r.Score * r.Weight);
+                        var weightedScoreSum = g.Sum(r => (r.Score * r.Weight));
                         
                         // Step 3: Σ(Weight)
                         var totalWeight = g.Sum(r => r.Weight);
                         if (totalWeight <= 0) return 0m;
-                        
+
                         // Step 4: Average on -4 to +4 scale
                         var pillarAvg = weightedScoreSum / totalWeight;
                         
                         // Step 5: Convert to 0-100 scale
                         var pillarScore = (((decimal)pillarAvg + 4m) / 8m) * 100m;
-                        
+                       
                         return pillarScore;
                     }).ToList();
 
@@ -678,7 +681,7 @@ namespace VeridianClimatePulse.Services
                     .ToListAsync();
 
                 var pillarAssessments = _context.Assessments
-                    .Where(a => ucmIds.Contains(a.StaffProgramMappingID) && a.IsActive && a.UpdatedAt.Year == userProgramRequestDto.UpdatedAt.Year)
+                    .Where(a => ucmIds.Contains(a.StaffProgramMappingID) && a.IsActive)
                     .SelectMany(x => x.PillarAssessments);
 
                 // 2. Fetch program-wise pillar/question details in one go
@@ -999,7 +1002,6 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                var year = request.UpdatedAt.Year;
                 int pillarCount = (await _commonService.GetPillars()).Count;
                 // 1. Validate program access
                 var hasAccess = await _context.StaffProgramMappings
@@ -1016,12 +1018,12 @@ namespace VeridianClimatePulse.Services
 
                 // 2. Fetch required data in parallel
                 var pillarEvaluationsList = await _commonService
-                    .GetProgramProgressAsync(userId, (int)userRole, year, request.ClimateProgramID);
+                    .GetProgramProgressAsync(userId, (int)userRole, request.ClimateProgramID);
 
                 var pillars = await _commonService.GetPillars();
 
                 var aiProgramProgress = await _context.AIProgramScores
-                    .Where(x => x.ClimateProgramID == request.ClimateProgramID && x.Year == year)
+                    .Where(x => x.ClimateProgramID == request.ClimateProgramID)
                     .MaxAsync(x => x.AIProgress);
 
                 var program = await _context.ClimatePrograms

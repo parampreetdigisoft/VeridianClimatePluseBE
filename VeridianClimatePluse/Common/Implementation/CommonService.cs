@@ -57,17 +57,15 @@ namespace VeridianClimatePulse.Common.Implementation
             return immediateSituationSummary + "\n\n " + evidenceSummaryStaringLine + " " + evidenceSummary;
         }
 
-
-        public async Task<List<EvaluationProgramProgressResultDto>> GetProgramProgressAsync(int userId, int role, int year, int climateProgramID = 0)
+        public async Task<List<EvaluationProgramProgressResultDto>> GetProgramProgressAsync(int userId, int role, int climateProgramID = 0)
         {
             try
             {
                 return await _context.ProgramProgressResults
                  .FromSqlRaw(
-                     "EXEC usp_getProgramsProgressByUserId @userID, @role, @year, @climateProgramID",
+                     "EXEC usp_getProgramsProgressByUserId @userID, @role, @climateProgramID",
                      new SqlParameter("@userID", userId),
                      new SqlParameter("@role", role),
-                     new SqlParameter("@year", year),
                      new SqlParameter("@climateProgramID", climateProgramID)
                  )
                  .AsNoTracking()

@@ -42,8 +42,8 @@ namespace VeridianClimatePulse.Controllers
         }
 
         [HttpGet]
-        [Route("GetAnalyticalLayerResults")]
-        public async Task<IActionResult> GetAnalyticalLayerResults([FromQuery] GetAnalyticalLayerRequestDto response)
+        [Route("getAnalyticalLayerResults")]
+        public async Task<IActionResult> GetAnalyticalLayerResults([FromQuery] GetAnalyticalLayerRequestDto request)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
@@ -67,7 +67,7 @@ namespace VeridianClimatePulse.Controllers
                 return Unauthorized("You Don't have access.");
             }
 
-            var result = await _kpiService.GetAnalyticalLayerResults(response, userId.GetValueOrDefault(), userRole, userPlan);
+            var result = await _kpiService.GetAnalyticalLayerResults(request, userId.GetValueOrDefault(), userRole, userPlan);
             if (result == null)
             {
                 return Unauthorized("You Don't have access.");
@@ -75,6 +75,7 @@ namespace VeridianClimatePulse.Controllers
 
             return Ok(result);
         }
+
         [HttpGet]
         [Route("GetAllKpi")]
         public async Task<IActionResult> GetAllKpi()

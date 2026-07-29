@@ -164,8 +164,8 @@ namespace VeridianClimatePulse.Controllers
 
         [HttpGet]
         [Authorize]
-        [Route("getProgramHistory/{updatedAt}")]
-        public async Task<IActionResult> GetProgramHistory(DateTime updatedAt)
+        [Route("getProgramHistory")]
+        public async Task<IActionResult> GetProgramHistory()
         {
             var claimUserId = GetUserIdFromClaims();                                    
             if (claimUserId == null)
@@ -180,14 +180,14 @@ namespace VeridianClimatePulse.Controllers
                 return Unauthorized("You Don't have access.");
             }
 
-            var result = await _programService.GetProgramHistory(claimUserId.GetValueOrDefault(), updatedAt, userRole);
+            var result = await _programService.GetProgramHistory(claimUserId.GetValueOrDefault(), userRole);
             return Ok(result);
         }
 
         [HttpGet]
         [Authorize]
-        [Route("getProgramsProgressByUserId/{updatedAt}")]
-        public async Task<IActionResult> getProgramsProgressByUserId(DateTime updatedAt)
+        [Route("getProgramsProgressByUserId")]
+        public async Task<IActionResult> getProgramsProgressByUserId()
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
@@ -201,7 +201,7 @@ namespace VeridianClimatePulse.Controllers
                 return Unauthorized("You Don't have access.");
             }
 
-            var result = await _programService.GetProgramsProgressByUserId(userId.GetValueOrDefault(), updatedAt, userRole);
+            var result = await _programService.GetProgramsProgressByUserId(userId.GetValueOrDefault(), userRole);
             return Ok(result);
         }
 

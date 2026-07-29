@@ -14,7 +14,7 @@ namespace VeridianClimatePulse.IServices
         Task<PaginationResponse<AiProgramSummeryDto>> GetAIPrograms(AiProgramSummaryRequestDto request, int userID, UserRole userRole);
         Task<ResultResponseDto<AiProgramPillarResponseDto>> GetAIProgramPillars(int climateProgramID, int userID, UserRole userRole,int year = 0);
         Task<PaginationResponse<AIEstimatedQuestionScoreDto>> GetAIPillarsQuestion(AiProgramPillarSummeryRequestDto r, int userID, UserRole userRole);
-        Task<IQueryable<AiProgramSummeryDto>> GetProgramAiSummeryDetails(int userID, UserRole userRole, int? climateProgramID, int year = 0);
+        Task<IQueryable<AiProgramSummeryDto>> GetProgramAiSummeryDetails(int userID, UserRole userRole, int? climateProgramID);
         Task<byte[]> GenerateProgramDetailsReport(AiProgramSummeryDto programDetails, UserRole userRole, int userID, DocumentFormat format = DocumentFormat.Pdf, string reportType = "AI");
         Task<byte[]> GeneratePillarDetailsReport(AiProgramPillarResponse programDetails, UserRole userRole,DocumentFormat format = DocumentFormat.Pdf);
         Task<ResultResponseDto<AiCrossProgramsResponseDto>> GetAICrossProgramPillars(AiClimateProgramIDsDto ids, int userID, UserRole userRole);

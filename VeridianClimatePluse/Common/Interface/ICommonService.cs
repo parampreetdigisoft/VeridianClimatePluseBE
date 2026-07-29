@@ -7,7 +7,7 @@ namespace VeridianClimatePulse.Common.Interface
 {
     public interface ICommonService
     {
-        Task<List<EvaluationProgramProgressResultDto>> GetProgramProgressAsync(int userId,int role, int year, int climateProgramID = 0);
+        Task<List<EvaluationProgramProgressResultDto>> GetProgramProgressAsync(int userId,int role, int climateProgramID = 0);
         Task<List<EvaluationProgramProgressHistoryResultDto>> GetProgramProgressHistoryAsync(int userId, int role, int fromYear, int toYear);
         Task<List<GetProgramsProgressAdminDto>> GetProgramProgressForAdmin(int userId, int role, int year);
         Task<List<ProgramRankingResultDto>> GetProgramRankings(int climateProgramID, int year);

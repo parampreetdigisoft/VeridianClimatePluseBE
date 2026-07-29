@@ -28,7 +28,6 @@ namespace VeridianClimatePulse.Dtos.AssessmentDto
     public class UserProgramDashBoardRequestDto
     {
         public int ClimateProgramID { get; set; }
-        public DateTime UpdatedAt { get; set; } = new DateTime(DateTime.Now.Year, 1, 1);
     }
 
     public class PillarWithQuestionsDto

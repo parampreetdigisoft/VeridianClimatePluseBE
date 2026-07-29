@@ -62,9 +62,9 @@ namespace VeridianClimatePulse.Services
             {
                 int pillarCount = (await _commonService.GetPillars()).Count;
 
-                IQueryable<AiProgramSummeryDto> query = await GetProgramAiSummeryDetails(userID, userRole, request.ClimateProgramID, request.Year);
+                IQueryable<AiProgramSummeryDto> query = await GetProgramAiSummeryDetails(userID, userRole, request.ClimateProgramID);
 
-                var progress = await _commonService.GetProgramProgressAsync(userID, (int)userRole, DateTime.Now.Year);
+                var progress = await _commonService.GetProgramProgressAsync(userID, (int)userRole, (int)request.ClimateProgramID);
                 var programRanks = CalculateProgramRanks(progress, pillarCount);
 
                 var result = await query.ApplyPaginationAsync(request);
@@ -138,12 +138,10 @@ namespace VeridianClimatePulse.Services
                 return new PaginationResponse<AiProgramSummeryDto>();
             }
         }
-        public async Task<IQueryable<AiProgramSummeryDto>> GetProgramAiSummeryDetails(int userID, UserRole userRole, int? climateProgramID, int currentYear = 0)
+        public async Task<IQueryable<AiProgramSummeryDto>> GetProgramAiSummeryDetails(int userID, UserRole userRole, int? climateProgramID)
         {
-            currentYear = currentYear == 0 ? DateTime.Now.Year : currentYear;
-            var firstDate = new DateTime(currentYear, 1, 1); 
-            var endDate = new DateTime(currentYear + 1, 1, 1); 
-            IQueryable<AIProgramScore> baseQuery = _context.AIProgramScores.Where(x=> x.UpdatedAt >= firstDate && x.UpdatedAt < endDate && x.Year== currentYear);
+            var currentYear = DateTime.Now.Year;
+            IQueryable<AIProgramScore> baseQuery = _context.AIProgramScores.Where(x=> x.ClimateProgramID == climateProgramID);
 
             List<int> allowedClimateProgramIDs = new();
             if (userRole == UserRole.Analyst)
@@ -200,7 +198,7 @@ namespace VeridianClimatePulse.Services
                 {
                     ClimateProgramID = g.Key,
                     Comment = g
-                        .OrderByDescending(x => x.UpdatedAt >= firstDate && x.UpdatedAt < endDate)
+                        .OrderByDescending(x => x.UpdatedAt)
                         .Select(x => x.Comment)
                         .FirstOrDefault()
                 });
@@ -364,7 +362,7 @@ namespace VeridianClimatePulse.Services
                 .ToList();
 
 
-                var progress = await _commonService.GetProgramProgressAsync(userID, (int)userRole, currentYear);
+                var progress = await _commonService.GetProgramProgressAsync(userID, (int)userRole, climateProgramID);
 
                 var programs = progress.Where(x => x.ClimateProgramID== climateProgramID);
 
@@ -975,12 +973,12 @@ namespace VeridianClimatePulse.Services
             }
         }
 
-        public async Task<AiProgramSummeryDto> GetProgramAiSummeryDetail(int userID, UserRole userRole, int? ClimateProgramID, int year, string reportType = "AI")
+        public async Task<AiProgramSummeryDto> GetProgramAiSummeryDetail(int userID, UserRole userRole, int? climateProgramID, int year, string reportType = "AI")
         {
             reportType = reportType.ToUpper();
-            var query = await GetProgramAiSummeryDetails(userID, userRole, null, year);
+            var query = await GetProgramAiSummeryDetails(userID, userRole, null);
             var programsDetails = await query.ToListAsync();
-            var progress = await _commonService.GetProgramProgressAsync(userID, (int)userRole, year);
+            var progress = await _commonService.GetProgramProgressAsync(userID, (int)userRole, (int)climateProgramID);
 
             var analyticalLayers = _context.AnalyticalLayers.AsQueryable();
 
@@ -1011,9 +1009,9 @@ namespace VeridianClimatePulse.Services
 
             ApplyProgramRanking(programsDetails, programRanks , reportType , totalProgramCount);
 
-            var programs = progress.Where(x => x.ClimateProgramID == ClimateProgramID);
+            var programs = progress.Where(x => x.ClimateProgramID == climateProgramID);
 
-            var programDetails = programsDetails.FirstOrDefault(x => x.ClimateProgramID == ClimateProgramID);
+            var programDetails = programsDetails.FirstOrDefault(x => x.ClimateProgramID == climateProgramID);
 
             if (programDetails != null)
             {
@@ -1196,7 +1194,7 @@ namespace VeridianClimatePulse.Services
         }
         public async Task<List<AiProgramSummeryDto>> GetAllProgramAiSummeryDetail(int userID, UserRole userRole, int year)
         {
-            var query = await GetProgramAiSummeryDetails(userID, userRole, null, year);
+            var query = await GetProgramAiSummeryDetails(userID, userRole, null);
             var programsDetails = await query.ToListAsync();
             int pillarCount = (await _commonService.GetPillars()).Count;
 

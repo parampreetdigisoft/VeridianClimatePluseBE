@@ -18,8 +18,8 @@ namespace VeridianClimatePulse.IServices
         Task<ResultResponseDto<object>> EditAssignProgram(int id,int userId, int ClimateProgramID, int assignedByUserId);
         Task<ResultResponseDto<object>> UnAssignProgram(StaffProgramUnMappingRequestDto requestDto);
         Task<ResultResponseDto<List<StaffProgramMappingResponseDto>>> GetProgramByUserIdForAssessment(int userId);
-        Task<ResultResponseDto<ProgramHistoryDto>> GetProgramHistory(int userID, DateTime updatedA, UserRole userRole);
-        Task<ResultResponseDto<List<GetProgramsSubmissionHistoryResponseDto>>> GetProgramsProgressByUserId(int userID, DateTime updateAt, UserRole userRole);
+        Task<ResultResponseDto<ProgramHistoryDto>> GetProgramHistory(int userID, UserRole userRole);
+        Task<ResultResponseDto<List<GetProgramsSubmissionHistoryResponseDto>>> GetProgramsProgressByUserId(int userID, UserRole userRole);
         Task<ResultResponseDto<string>> AddUpdateProgram(AddUpdateProgramDto q);
         Task<ResultResponseDto<List<StaffProgramMappingResponseDto>>> GetAiAccessProgram(int userId, UserRole userRole);        
         Task<ResultResponseDto<byte[]>> ExportPrograms(ExportProgramsWithOptionDto request, int userId, UserRole userRole);

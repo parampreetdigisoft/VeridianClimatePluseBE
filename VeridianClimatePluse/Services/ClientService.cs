@@ -115,7 +115,6 @@ namespace VeridianClimatePulse.Services
             {
                 int userId = request.UserID;
                 int ClimateProgramID = request.ClimateProgramID;
-                int year = request.UpdatedAt.Year;
 
                 int allowedPillars = request.Tiered switch
                 {
@@ -139,7 +138,7 @@ namespace VeridianClimatePulse.Services
                 // ?? Fetch program score once
                 var programScore = await _context.AIProgramScores
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(x => x.ClimateProgramID == ClimateProgramID && x.Year == year && x.IsVerified);
+                    .FirstOrDefaultAsync(x => x.ClimateProgramID == ClimateProgramID && x.IsVerified);
 
                 if (programScore == null)
                 {
@@ -151,7 +150,7 @@ namespace VeridianClimatePulse.Services
                 // ?? Fetch pillar scores and map for O(1) lookup
                 var pillarScoreMap = await _context.AIPillarScores
                     .AsNoTracking()
-                    .Where(x => x.ClimateProgramID == ClimateProgramID && x.Year == year)
+                    .Where(x => x.ClimateProgramID == ClimateProgramID)
                     .ToDictionaryAsync(x => x.PillarID);
 
                 // ?? Build DTOs
@@ -353,9 +352,6 @@ namespace VeridianClimatePulse.Services
             {
                 var climateProgramID = userProgramRequestDto.ClimateProgramID;
                 var userId = userProgramRequestDto.UserID;
-                var year = userProgramRequestDto.UpdatedAt.Year;
-                var startDate = new DateTime(year, 1, 1);
-                var endDate = new DateTime(year + 1, 1, 1);
 
                 // Validate Program
                 var program = await _context.ClimatePrograms
@@ -396,8 +392,6 @@ namespace VeridianClimatePulse.Services
                     join uc in _context.StaffProgramMappings on a.StaffProgramMappingID equals uc.StaffProgramMappingID
                     where uc.ClimateProgramID == climateProgramID &&
                           a.IsActive &&
-                          a.UpdatedAt >= startDate &&
-                          a.UpdatedAt < endDate &&
                           !uc.IsDeleted
                     select new
                     {
