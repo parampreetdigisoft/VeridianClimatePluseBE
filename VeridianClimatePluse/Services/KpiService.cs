@@ -150,7 +150,49 @@ namespace VeridianClimatePulse.Services
                 return ResultResponseDto<List<AnalyticalLayer>>.Failure(new List<string> { "An error occurred" });
             }
         }
-        
+
+        public async Task<ResultResponseDto<List<AnalyticalLayer>>> GetAllKpiPillarMapping(int userId, UserRole role)
+        {
+            try
+            {
+                // Get LayerIDs that exist in AnalyticalLayerPillarMappings
+                var layerIdsWithMappings = await _context.AnalyticalLayerPillarMappings
+                    .Select(m => m.LayerID)
+                    .Distinct()
+                    .ToListAsync();
+
+                IQueryable<AnalyticalLayer> query = _context.AnalyticalLayers
+                    .Where(x => !x.IsDeleted && layerIdsWithMappings.Contains(x.LayerID));
+
+                if (role == UserRole.ProgramUser)
+                {
+                    query =
+                        from layer in _context.AnalyticalLayers
+                        join map in _context.AnalyticalLayerPillarMappings
+                            on layer.LayerID equals map.LayerID
+                        join userMap in _context.ClientPillarMappings
+                            on map.PillarID equals userMap.PillarID
+                        where !layer.IsDeleted
+                              && userMap.IsActive
+                              && userMap.UserID == userId
+                              && layerIdsWithMappings.Contains(layer.LayerID)
+                        select layer;
+                }
+
+                var result = await query
+                    .AsNoTracking()
+                    .Distinct()
+                    .ToListAsync();
+
+                return ResultResponseDto<List<AnalyticalLayer>>.Success(result);
+            }
+            catch (Exception ex)
+            {
+                await _appLogger.LogAsync("Error occurred in GetAllKpiWithMappingStatus", ex);
+                return ResultResponseDto<List<AnalyticalLayer>>.Failure(new List<string> { "An error occurred while fetching KPIs with mapping status" });
+            }
+        }
+
         public async Task<ResultResponseDto<CompareProgramResponseDto>> ComparePrograms(CompareProgramsRequestDto c, int userId, UserRole role, bool applyPagination = true)
         {
             try
