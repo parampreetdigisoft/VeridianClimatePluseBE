@@ -309,11 +309,6 @@ namespace VeridianClimatePulse.Common.Implementation
                 ? $"Location Rank: {Program.Rank} / {Program.TotalProgram}"
                 : "Location Rank: N/A";
 
-            // Regional rank label
-            var regionRankLabel = Program.RegionRank.HasValue && Program.RegionTotalProgram.HasValue && Program.RegionTotalProgram >= 1
-                ? $"{Program.Location} Region: {Program.RegionRank} / {Program.RegionTotalProgram}"
-                : $"{Program.Location} Region: N/A";
-
 
             container
                 .Background(ReportThemeColors.White)
@@ -431,36 +426,19 @@ namespace VeridianClimatePulse.Common.Implementation
                     }
 
                     // ---------------------------------------------
-                    // Worst Pillar + Region Rank
+                    // Worst Pillar
                     // ---------------------------------------------
                     if (worst != null)
                     {
                         col.Item()
                             .PaddingTop(3)
-                            .Row(row =>
-                            {
-                                // Worst pillar
-                                row.RelativeItem()
-                                    .Background(ReportThemeColors.DangerRedBg)
-                                    .PaddingVertical(3)
-                                    .PaddingHorizontal(5)
-                                    .Text(
-                                        $"▼ {Shorten(worst.Name, 16)} ({worst.Value:F0})")
-                                    .FontSize(7)
-                                    .FontColor(ReportThemeColors.DangerRedDark);
-
-                                row.ConstantItem(4);
-
-                                // Region rank
-                                row.AutoItem()
-                                    .Background(ReportThemeColors.WarningOrangeBg)
-                                    .PaddingVertical(3)
-                                    .PaddingHorizontal(5)
-                                    .Text(regionRankLabel)
-                                    .FontSize(7)
-                                    .Bold()
-                                    .FontColor(ReportThemeColors.WarningOrangeText);
-                            });
+                            .Background(ReportThemeColors.DangerRedBg)
+                            .PaddingVertical(3)
+                            .PaddingHorizontal(5)
+                            .Text(
+                                $"▼ {Shorten(worst.Name, 16)} ({worst.Value:F0})")
+                            .FontSize(7)
+                            .FontColor(ReportThemeColors.DangerRedDark);
                     }
                 });
         }
@@ -1721,6 +1699,18 @@ namespace VeridianClimatePulse.Common.Implementation
                 column.Item().PaddingTop(10).Element(c =>
                     PillarContentSection(c, "Executive Summary", SanitizeText(data.EvidenceSummary), ReportThemeColors.AccentExecutiveSummary));
 
+                if (!string.IsNullOrWhiteSpace(data.KeyFindings))
+                {
+                    column.Item().PaddingTop(8).Element(c =>
+                        PillarContentSection(c, "Key Findings", SanitizeText(data.KeyFindings), ReportThemeColors.AccentKeyDevelopments));
+                }
+
+                if (!string.IsNullOrWhiteSpace(data.Recommendations))
+                {
+                    column.Item().PaddingTop(8).Element(c =>
+                        PillarContentSection(c, "Recommendations", SanitizeText(data.Recommendations), ReportThemeColors.AccentStrategicPolicy));
+                }
+
 
                 // =====================================================
                 // EVIDENCE SECTION
@@ -1984,10 +1974,6 @@ namespace VeridianClimatePulse.Common.Implementation
                         col.Item().PaddingTop(8);
 
                         RankRowModern(col, "Location Rank", data.Rank, data.TotalProgram, ReportThemeColors.RankGreen);
-
-                        col.Item().PaddingTop(2);
-
-                        RankRowModern(col, $"{data.Location} Region Rank", data.RegionRank, data.RegionTotalProgram, ReportThemeColors.RankBlue);
                     });
                 });
         }

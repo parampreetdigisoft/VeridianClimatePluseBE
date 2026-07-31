@@ -64,7 +64,7 @@ namespace VeridianClimatePulse.Services
 
                 IQueryable<AiProgramSummeryDto> query = await GetProgramAiSummeryDetails(userID, userRole, request.ClimateProgramID);
 
-                var progress = await _commonService.GetProgramProgressAsync(userID, (int)userRole, (int)request.ClimateProgramID);
+                var progress = await _commonService.GetProgramProgressAsync(userID, (int)userRole, request.ClimateProgramID ?? 0);
                 var programRanks = CalculateProgramRanks(progress, pillarCount);
 
                 var result = await query.ApplyPaginationAsync(request);
@@ -257,6 +257,9 @@ namespace VeridianClimatePulse.Services
                     StrategicRecommendation = score != null ? score.StrategicRecommendation : null,
                     AssessmentValueNote = score != null ? score.AssessmentValueNote : null,
                     PrimarySource = score != null ? score.PrimarySource : null,
+
+                    KeyFindings = score != null ? score.KeyFindings : null,
+                    Recommendations = score != null ? score.Recommendations : null,
 
                     UpdatedAt = score != null ? score.UpdatedAt : default(DateTime),
 
@@ -1986,10 +1989,8 @@ namespace VeridianClimatePulse.Services
 
                 entity.ConfidenceLevel = dto.ConfidenceLevel ?? entity.ConfidenceLevel;
                 entity.EvidenceSummary = dto.EvidenceSummary ?? entity.EvidenceSummary;
-                entity.ImmediateSituationSummary = dto.ImmediateSituationSummary ?? entity.ImmediateSituationSummary;
-                entity.KeyDevelopments = dto.KeyDevelopments;
-                entity.CriticalRisks = dto.CriticalRisks;
-                entity.Gaps = dto.Gaps;
+                entity.KeyFindings = dto.KeyFindings;
+                entity.Recommendations = dto.Recommendations;
                 entity.StructuralEvidence = dto.StructuralEvidence;
                 entity.OperationalEvidence = dto.OperationalEvidence;
                 entity.OutcomeEvidence = dto.OutcomeEvidence;

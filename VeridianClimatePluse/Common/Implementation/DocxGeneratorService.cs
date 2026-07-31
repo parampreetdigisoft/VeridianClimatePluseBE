@@ -408,12 +408,6 @@ namespace VeridianClimatePulse.Common.Implementation
                 ? $"Location Rank: {program.Rank} / {program.TotalProgram}"
                 : "Location Rank: N/A";
 
-            var regionName = string.IsNullOrEmpty(program.Location) ? "Region" : program.Location;
-
-            var regionRankLabel = program.RegionRank.HasValue && program.RegionTotalProgram.HasValue && program.RegionTotalProgram >= 1
-                ? $"{regionName}: {program.RegionRank} / {program.RegionTotalProgram}"
-                : $"{regionName}: N/A";
-
            
             // ── Donut image ──
             cell.Append(EmbedImage(mainPart, donutPng, imgEmuW, imgEmuH));
@@ -438,19 +432,15 @@ namespace VeridianClimatePulse.Common.Implementation
             }
 
             // ─────────────────────────────────────────────
-            // Worst Pillar + Region Rank
+            // Worst Pillar
             // ─────────────────────────────────────────────
             if (worst != null)
             {
                 cell.Append(
-                    BuildDualBadgeRow(
+                    BuildBadgeRow(
                         $"▼ {Shorten(worst.Name, 16)} ({worst.Value:F0})",
                         "FDECEA",
-                        "B71C1C",
-
-                        regionRankLabel,
-                        "FFF3E0",
-                        "5D3B00"
+                        "B71C1C"
                     ));
             }
             return cell;
@@ -561,6 +551,62 @@ namespace VeridianClimatePulse.Common.Implementation
             return table;
         }
 
+        private Table BuildBadgeRow(string text, string bg, string color)
+        {
+            var table = new Table(
+                new TableProperties(
+                    new TableWidth
+                    {
+                        Width = "5000",
+                        Type = TableWidthUnitValues.Pct
+                    },
+                    new TableBorders(
+                        new TopBorder { Val = BorderValues.None },
+                        new BottomBorder { Val = BorderValues.None },
+                        new LeftBorder { Val = BorderValues.None },
+                        new RightBorder { Val = BorderValues.None },
+                        new InsideHorizontalBorder { Val = BorderValues.None },
+                        new InsideVerticalBorder { Val = BorderValues.None }
+                    )
+                )
+            );
+
+            table.Append(new TableRow(
+                new TableCell(
+                    new TableCellProperties(
+                        new TableCellWidth
+                        {
+                            Width = "5000",
+                            Type = TableWidthUnitValues.Pct
+                        },
+                        new Shading
+                        {
+                            Val = ShadingPatternValues.Clear,
+                            Fill = bg
+                        },
+                        CellNoBorder()
+                    ),
+                    new Paragraph(
+                        new ParagraphProperties(
+                            new SpacingBetweenLines
+                            {
+                                Before = "40",
+                                After = "40"
+                            }),
+                        new Run(
+                            new RunProperties(
+                                new Color { Val = color },
+                                new FontSize { Val = "14" }
+                            ),
+                            new Text(text)
+                        )
+                    )
+                )
+            ));
+
+            return table;
+        }
+
         // ── RIGHT: Radar card (60 % width) ───────────────────────────────────────────
         private TableCell BuildRadarCell(
             MainDocumentPart mainPart,
@@ -644,30 +690,6 @@ namespace VeridianClimatePulse.Common.Implementation
                     new Text(text)));
 
 
-        /// Colored badge paragraph (best / worst pillars)
-        private static Paragraph BadgePara(
-            string text, string bgHex, string arrowHex, string textHex)
-        {
-            var shading = new Shading
-            {
-                Val = ShadingPatternValues.Clear,
-                Color = "auto",
-                Fill = bgHex
-            };
-            return new Paragraph(
-                new ParagraphProperties(
-                    new SpacingBetweenLines { Before = "40", After = "0" },
-                    new Indentation { Left = "80", Right = "80" },
-                    shading),
-                new Run(new RunProperties(
-                        new Color { Val = arrowHex },
-                        new FontSize { Val = "16" }),
-                    new Text(text.Substring(0, 2))),
-                new Run(new RunProperties(
-                        new Color { Val = textHex },
-                        new FontSize { Val = "16" }),
-                    new Text(text.Substring(2)) { Space = SpaceProcessingModeValues.Preserve }));
-        }
 
         /// TableCellBorders — all None
         private static TableCellBorders CellNoBorder()
@@ -697,15 +719,15 @@ namespace VeridianClimatePulse.Common.Implementation
             body.AppendChild(CreateRankRow("Location Rank",
                 data.Rank, data.TotalProgram, "16A34A"));
 
-            body.AppendChild(CreateRankRow("Region Rank",
-                data.RegionRank, data.RegionTotalProgram, "006D77"));
-
             body.AppendChild(Gap(160));
 
             // =========================
             // EXECUTIVE SUMMARY
             // =========================
             AppendContentSection(body, "Executive Summary", data.EvidenceSummary, "163329");
+
+            AppendContentSection(body, "Key Findings", data.KeyFindings, "1f4e79");
+            AppendContentSection(body, "Recommendations", data.Recommendations, "2e9975");
 
             // =====================================================
             // EVIDENCE SECTION

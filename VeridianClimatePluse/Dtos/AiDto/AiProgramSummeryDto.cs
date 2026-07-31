@@ -38,6 +38,10 @@ namespace VeridianClimatePulse.Dtos.AiDto
         public string StrategicRecommendation { get; set; }
         public string AssessmentValueNote { get; set; }
         public string PrimarySource { get; set; }
+        /// <summary>Point-wise key findings (stored in KeyDevelopments column).</summary>
+        public string? KeyFindings { get; set; }
+        /// <summary>Point-wise recommendations (stored in CriticalRisks column).</summary>
+        public string? Recommendations { get; set; }
         public DateTime UpdatedAt { get; set; }
         public bool IsVerified { get; set; }
         public decimal? AICompletionRate { get; set; }

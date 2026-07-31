@@ -5,11 +5,11 @@ namespace HealthIntelligence.Dtos.AiDto
         public int ClimateProgramID { get; set; }
         public int Year { get; set; }
         public string? ConfidenceLevel { get; set; }
-        public string? ImmediateSituationSummary { get; set; }
         public string? EvidenceSummary { get; set; }
-        public string? KeyDevelopments { get; set; }
-        public string? CriticalRisks { get; set; }
-        public string? Gaps { get; set; }
+        /// <summary>Point-wise key findings (persisted to KeyDevelopments).</summary>
+        public string? KeyFindings { get; set; }
+        /// <summary>Point-wise recommendations (persisted to CriticalRisks).</summary>
+        public string? Recommendations { get; set; }
         public string? StructuralEvidence { get; set; }
         public string? OperationalEvidence { get; set; }
         public string? OutcomeEvidence { get; set; }
