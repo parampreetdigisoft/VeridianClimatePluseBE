@@ -1721,22 +1721,6 @@ namespace VeridianClimatePulse.Common.Implementation
                 column.Item().PaddingTop(10).Element(c =>
                     PillarContentSection(c, "Executive Summary", SanitizeText(data.EvidenceSummary), ReportThemeColors.AccentExecutiveSummary));
 
-                // =====================================================
-                // Current situation
-                // =====================================================
-                if(!string.IsNullOrEmpty(data.KeyDevelopments))
-                column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Key Developments", SanitizeText(data.KeyDevelopments), ReportThemeColors.AccentKeyDevelopments));
-                if (!string.IsNullOrEmpty(data.CriticalRisks))
-                    column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Critical Risks", SanitizeText(data.CriticalRisks), ReportThemeColors.AccentCriticalRisks));
-                if (!string.IsNullOrEmpty(data.Gaps))
-                    column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Gaps", SanitizeText(data.Gaps), ReportThemeColors.AccentGaps));
-
-
-
-
 
                 // =====================================================
                 // EVIDENCE SECTION

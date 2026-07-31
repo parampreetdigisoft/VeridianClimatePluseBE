@@ -80,7 +80,7 @@ namespace VeridianClimatePulse.Controllers
                 return Unauthorized("You Don't have access.");
             }
 
-            return Ok(await _aIComputationService.GetAIProgramPillars(request.ClimateProgramID, userId.Value, userRole, request.Year));
+            return Ok(await _aIComputationService.GetAIProgramPillars(request.ClimateProgramID, userId.Value, userRole));
         }
 
         [HttpGet("getAIPillarQuestions")]
@@ -177,7 +177,7 @@ namespace VeridianClimatePulse.Controllers
                     return Unauthorized("You Don't have access.");
 
 
-                var pillars = await _aIComputationService.GetAIProgramPillars(request.ClimateProgramID, userId.Value, userRole, request.Year);
+                var pillars = await _aIComputationService.GetAIProgramPillars(request.ClimateProgramID, userId.Value, userRole);
 
                 var pillarDetails = pillars.Result.Pillars.FirstOrDefault(x => x.PillarID == request.PillarID);
                 if (pillarDetails != null)

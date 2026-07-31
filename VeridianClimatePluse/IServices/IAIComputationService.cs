@@ -12,7 +12,7 @@ namespace VeridianClimatePulse.IServices
     {
         Task<ResultResponseDto<List<AITrustLevel>>> GetAITrustLevels();
         Task<PaginationResponse<AiProgramSummeryDto>> GetAIPrograms(AiProgramSummaryRequestDto request, int userID, UserRole userRole);
-        Task<ResultResponseDto<AiProgramPillarResponseDto>> GetAIProgramPillars(int climateProgramID, int userID, UserRole userRole,int year = 0);
+        Task<ResultResponseDto<AiProgramPillarResponseDto>> GetAIProgramPillars(int climateProgramID, int userID, UserRole userRole);
         Task<PaginationResponse<AIEstimatedQuestionScoreDto>> GetAIPillarsQuestion(AiProgramPillarSummeryRequestDto r, int userID, UserRole userRole);
         Task<IQueryable<AiProgramSummeryDto>> GetProgramAiSummeryDetails(int userID, UserRole userRole, int? climateProgramID);
         Task<byte[]> GenerateProgramDetailsReport(AiProgramSummeryDto programDetails, UserRole userRole, int userID, DocumentFormat format = DocumentFormat.Pdf, string reportType = "AI");

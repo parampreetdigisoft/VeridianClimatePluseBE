@@ -13,7 +13,6 @@ namespace VeridianClimatePulse.Dtos.AiDto
         public decimal? Discrepancy { get; set; }
 
         public string ConfidenceLevel { get; set; }
-        public string? ImmediateSituationSummary { get; set; }
         public string ProgramScoreSummery { get; set; }
         public string EvidenceSummary { get; set; }
 
@@ -42,9 +41,6 @@ namespace VeridianClimatePulse.Dtos.AiDto
         public DateTime UpdatedAt { get; set; }
         public bool IsVerified { get; set; }
         public decimal? AICompletionRate { get; set; }
-        public string? KeyDevelopments { get; set; }
-        public string? CriticalRisks { get; set; }
-        public string? Gaps { get; set; }
 
         public int? Rank { get; set; }
         public int? TotalProgram { get; set; }

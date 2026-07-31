@@ -5,7 +5,6 @@ namespace VeridianClimatePulse.Dtos.AiDto
     public class AiProgramSummaryRequestDto : PaginationRequest
     {
         public int? ClimateProgramID { get; set; }
-        public int Year { get; set; } = DateTime.UtcNow.Year;
     }
 
     public class AiProgramPillarSummeryRequestDto : AiProgramSummaryRequestDto

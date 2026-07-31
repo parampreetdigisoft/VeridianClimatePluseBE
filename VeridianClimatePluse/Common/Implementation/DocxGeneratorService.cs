@@ -708,13 +708,6 @@ namespace VeridianClimatePulse.Common.Implementation
             AppendContentSection(body, "Executive Summary", data.EvidenceSummary, "163329");
 
             // =====================================================
-            // current situation
-            // =====================================================
-            AppendContentSection(body, "Key Developments", data.KeyDevelopments, "e6ccff");
-            AppendContentSection(body, "Critical Risks", data.CriticalRisks, "c2f0f0");
-            AppendContentSection(body, "Gaps", data.Gaps, "ffe6cc");
-
-            // =====================================================
             // EVIDENCE SECTION
             // =====================================================
             AppendContentSection(body, "Structural Evidence", data.StructuralEvidence, "e6ccff");

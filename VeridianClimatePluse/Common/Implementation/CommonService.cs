@@ -40,21 +40,17 @@ namespace VeridianClimatePulse.Common.Implementation
         #endregion
         public static string ProgramScoreSummery(decimal? progress, string? programName = "The program", int pillarCount = 21, int kpiCount = 37)
         {
-            var evidenceSummaryStaringLine = $"{programName ?? "The program"} records an overall AHI score of {progress ?? 0}, reflecting performance across {pillarCount} pillars and {kpiCount} KPIs.";
+            var evidenceSummaryStaringLine = $"{programName ?? "The program"} records an overall VCP score of {progress ?? 0}, reflecting performance across {pillarCount} pillars and {kpiCount} KPIs.";
 
             return evidenceSummaryStaringLine;
         }
         public static string InitailLineOfExecutiveSummery(
             string evidenceSummary,
-            string? immediateSituationSummary,
             decimal? progress,
             string? programName = "The program", int pillarCount = 23, int kpiCount = 37)
         {
-            immediateSituationSummary = immediateSituationSummary ?? "";
-
-            var evidenceSummaryStaringLine= $"{programName ?? "The program"} records an overall VCP score of {progress ?? 0}, reflecting performance across {pillarCount} pillars and {kpiCount} KPIs.";
-
-            return immediateSituationSummary + "\n\n " + evidenceSummaryStaringLine + " " + evidenceSummary;
+            var initialSummery = ProgramScoreSummery(progress, programName, pillarCount, kpiCount); 
+            return initialSummery + " " + evidenceSummary;
         }
 
         public async Task<List<EvaluationProgramProgressResultDto>> GetProgramProgressAsync(int userId, int role, int climateProgramID = 0)

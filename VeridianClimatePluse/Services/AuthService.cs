@@ -317,7 +317,7 @@ namespace VeridianClimatePulse.Services
                 {
                     UserRole.Analyst => "~/Views/EmailTemplates/AnalystSendInvitation.cshtml",
                     UserRole.Evaluator => "~/Views/EmailTemplates/EvaluatorSendInvitation.cshtml",
-                    UserRole.ProgramUser => "~/Views/EmailTemplates/ProgramUserSendInvitation.cshtml",
+                    UserRole.ProgramUser => "~/Views/EmailTemplates/ClientSendInvitation.cshtml",
                     _ => ""
                 };
 
@@ -563,7 +563,7 @@ namespace VeridianClimatePulse.Services
                     {
                         UserRole.Analyst => "~/Views/EmailTemplates/AnalystSendInvitation.cshtml",
                         UserRole.Evaluator => "~/Views/EmailTemplates/EvaluatorSendInvitation.cshtml",
-                        UserRole.ProgramUser => "~/Views/EmailTemplates/ProgramUserSendInvitation.cshtml",
+                        UserRole.ProgramUser => "~/Views/EmailTemplates/ClientSendInvitation.cshtml",
                         _ => ""
                     };
 

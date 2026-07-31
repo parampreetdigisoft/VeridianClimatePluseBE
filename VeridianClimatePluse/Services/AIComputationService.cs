@@ -109,7 +109,7 @@ namespace VeridianClimatePulse.Services
                     var totalQuestions = counts.Sum();
 
                     var answeredQuestions = await _context.AIEstimatedQuestionScores
-                        .Where(x => x.Year == request.Year && ids.Contains(x.ClimateProgramID))
+                        .Where(x => ids.Contains(x.ClimateProgramID))
                         .GroupBy(x => x.ClimateProgramID)
                         .Select(g => new
                         {
@@ -140,8 +140,7 @@ namespace VeridianClimatePulse.Services
         }
         public async Task<IQueryable<AiProgramSummeryDto>> GetProgramAiSummeryDetails(int userID, UserRole userRole, int? climateProgramID)
         {
-            var currentYear = DateTime.Now.Year;
-            IQueryable<AIProgramScore> baseQuery = _context.AIProgramScores.Where(x=> x.ClimateProgramID == climateProgramID);
+            IQueryable<AIProgramScore> baseQuery = _context.AIProgramScores;
 
             List<int> allowedClimateProgramIDs = new();
             if (userRole == UserRole.Analyst)
@@ -223,7 +222,7 @@ namespace VeridianClimatePulse.Services
                     //Program = c.Program ?? string.Empty,
                     Location = c.Location ?? string.Empty,
                     Image = c.Image ?? string.Empty,
-                    Year = score != null ? score.Year : currentYear,
+                    Year = score != null ? score.Year : 0,
                     AIProgress = score != null ? score.AIProgress : null,
                     EvaluatorScore = score != null ? score.EvaluatorScore : null,
                     Discrepancy = score != null ? score.Discrepancy : null,
@@ -261,24 +260,18 @@ namespace VeridianClimatePulse.Services
 
                     UpdatedAt = score != null ? score.UpdatedAt : default(DateTime),
 
-                    IsVerified = score != null && score.IsVerified,
-                    ImmediateSituationSummary = score != null ? score.ImmediateSituationSummary : null,
-                    KeyDevelopments = score != null ? score.KeyDevelopments : null,
-                    CriticalRisks = score != null ? score.CriticalRisks : null,
-                    Gaps = score != null ? score.Gaps : null
+                    IsVerified = score != null && score.IsVerified
                 };
             return query;
         }
     
-        public async Task<ResultResponseDto<AiProgramPillarResponseDto>> GetAIProgramPillars(int climateProgramID, int userID, UserRole userRole, int currentYear = 0)
+        public async Task<ResultResponseDto<AiProgramPillarResponseDto>> GetAIProgramPillars(int climateProgramID, int userID, UserRole userRole)
         {
             try
-            {
-                currentYear = currentYear == 0 ? DateTime.Now.Year : currentYear;
-                var firstDate = new DateTime(currentYear, 1, 1);
+            {               
                 int pillarCount = (await _commonService.GetPillars()).Count;
                 var res = await _context.AIPillarScores
-                    .Where(x => x.ClimateProgramID == climateProgramID && x.UpdatedAt >= firstDate && x.Year == currentYear)
+                    .Where(x => x.ClimateProgramID == climateProgramID)
                     .Include(x=>x.Program)
                     .Include(x => x.DataSourceCitations)
                     .ToListAsync();
@@ -367,7 +360,7 @@ namespace VeridianClimatePulse.Services
                 var programs = progress.Where(x => x.ClimateProgramID== climateProgramID);
 
                 var answeredQuestions = await _context.AIEstimatedQuestionScores
-               .Where(x => x.Year == currentYear && x.ClimateProgramID == climateProgramID)
+               .Where(x => x.ClimateProgramID == climateProgramID)
                .GroupBy(x => x.PillarID)
                .Select(g => new
                {
@@ -424,16 +417,13 @@ namespace VeridianClimatePulse.Services
                         return new PaginationResponse<AIEstimatedQuestionScoreDto>();
                     }
                 }
-                var currentYear = request.Year;
-                var firstDate = new DateTime(currentYear, 1, 1);
 
                 var res =
                     from q in _context.Questions.Where(x=>x.PillarID== request.PillarID)
                     join s in _context.AIEstimatedQuestionScores
                         .Where(x =>
                             x.ClimateProgramID == request.ClimateProgramID &&
-                            x.PillarID == request.PillarID &&
-                            x.UpdatedAt >= firstDate && x.Year == currentYear)
+                            x.PillarID == request.PillarID)
                     on q.QuestionID equals s.QuestionID into qs
                     from x in qs.DefaultIfEmpty() // LEFT JOIN
                     select new AIEstimatedQuestionScoreDto
@@ -441,7 +431,7 @@ namespace VeridianClimatePulse.Services
                         ClimateProgramID = x == null ? request.ClimateProgramID ?? 0 : x.ClimateProgramID,
                         PillarID = x == null ? request.PillarID ?? 0 : x.PillarID,
                         QuestionID = q.QuestionID,
-                        Year = x == null ? currentYear : x.Year,
+                        Year = x == null ? 0 : x.Year,
                         AIScore = x == null ? null : x.AIScore,
                         AIProgress = x == null ? null : x.AIProgress,
                         EvaluatorScore = x == null ? null : x.EvaluatorScore,
@@ -623,7 +613,7 @@ namespace VeridianClimatePulse.Services
             {
                 var isManual = reportType != "ai" && userRole == UserRole.Admin ? true : false;
 
-                var pillars = await GetAIProgramPillars(programDetails.ClimateProgramID, userID, userRole, programDetails.Year);
+                var pillars = await GetAIProgramPillars(programDetails.ClimateProgramID, userID, userRole);
 
                 var kpis = await GetAccessKpis(userID, userRole, programDetails.ClimateProgramID, programDetails.Year, !isManual);
 
@@ -1033,7 +1023,7 @@ namespace VeridianClimatePulse.Services
                         score = programDetails.EvaluatorScore;
                     }
                 }
-                programDetails.EvidenceSummary = CommonService.InitailLineOfExecutiveSummery(programDetails.EvidenceSummary, programDetails.ImmediateSituationSummary, score, programDetails    .ProgramName, pillarCount, totalValidKpis);
+                programDetails.EvidenceSummary = CommonService.InitailLineOfExecutiveSummery(programDetails.EvidenceSummary, score, programDetails.ProgramName, pillarCount, totalValidKpis);
 
             }
             return programDetails ?? new AiProgramSummeryDto();
@@ -1226,8 +1216,7 @@ namespace VeridianClimatePulse.Services
 
             foreach (var programDetail in programsDetails)
             {
-                programDetail.EvidenceSummary = CommonService.InitailLineOfExecutiveSummery(programDetail.EvidenceSummary, 
-                    programDetail.ImmediateSituationSummary, programDetail.AIProgress, programDetail.ProgramName, pillarCount,totalValidKpis);
+                programDetail.EvidenceSummary = CommonService.InitailLineOfExecutiveSummery(programDetail.EvidenceSummary, programDetail.AIProgress, programDetail.ProgramName, pillarCount,totalValidKpis);
 
                 if (userRole != UserRole.ProgramUser)
                 {
