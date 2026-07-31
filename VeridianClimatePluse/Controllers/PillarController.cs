@@ -100,9 +100,8 @@ namespace VeridianClimatePulse.Controllers
         [HttpPost("edit/{id}")]
         [Consumes("multipart/form-data")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Update( int id, [FromForm] UpdatePillarDto pillar)
+        public async Task<IActionResult> UpdatePillar( int id, [FromForm] UpdatePillarDto pillar)
         {          
-
             var result = await _pillarService.UpdateAsync(id, pillar);
             if (result == null) return NotFound();
             return Ok(result);

@@ -3,6 +3,7 @@ using VeridianClimatePulse.Common.Models;
 using VeridianClimatePulse.Data;
 using VeridianClimatePulse.Dtos.AssessmentDto;
 using VeridianClimatePulse.Dtos.CommonDto;
+using VeridianClimatePulse.Dtos.kpiDto;
 using VeridianClimatePulse.Dtos.PillarDto;
 using VeridianClimatePulse.IServices;
 using VeridianClimatePulse.Models;
@@ -10,6 +11,7 @@ using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 using QuestPDF.Fluent;
+using System.Text.Json;
 using VeridianClimatePulse.Common.Interface;
 using VeridianClimatePulse.Enums;
 using VeridianClimatePulse.Common.Constants;
@@ -142,7 +144,7 @@ namespace VeridianClimatePulse.Services
                 _commonService.ClearPillarCache();
                 _context.Pillars.Add(newPillar);
                 await _context.SaveChangesAsync();
-                await SyncPillarKpiMappingsAsync(newPillar.PillarID, pillar.KpiLayerIds);
+                await SyncPillarKpiMappingsAsync(newPillar.PillarID, pillar.KpiUpdates);
                 await _context.SaveChangesAsync();
 
                 return ResultResponseDto<Pillar>.Success(newPillar, new[] { "Pillar created successfully." });
@@ -196,7 +198,7 @@ namespace VeridianClimatePulse.Services
                     _download.InsertAnalyticalLayerResults();
                 }
                  _commonService.ClearPillarCache();
-                await SyncPillarKpiMappingsAsync(id, pillar.KpiLayerIds);
+                await SyncPillarKpiMappingsAsync(id, pillar.KpiUpdates);
                 await _context.SaveChangesAsync();
                 return existing;
             }
@@ -206,7 +208,6 @@ namespace VeridianClimatePulse.Services
                 return new Pillar();
             }
         }
-
 
         public async Task<ResultResponseDto<List<PillarKpiMappingDto>>> GetPillarKpiMappingsAsync(int pillarId)
         {
@@ -237,46 +238,52 @@ namespace VeridianClimatePulse.Services
             }
         }
 
-        private async Task SyncPillarKpiMappingsAsync(int pillarId, string? kpiLayerIds)
+        private async Task SyncPillarKpiMappingsAsync(int pillarId, string? kpiUpdatesJson = null)
         {
-            if (kpiLayerIds == null)
+            if (string.IsNullOrWhiteSpace(kpiUpdatesJson))
                 return;
 
-            var requestedLayerIds = kpiLayerIds
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(id => int.TryParse(id, out var layerId) ? layerId : 0)
-                .Where(id => id > 0)
-                .Distinct()
-                .ToList();
-
-            var validLayerIds = requestedLayerIds.Count == 0
-                ? new List<int>()
-                : await _context.AnalyticalLayers
-                    .Where(x => !x.IsDeleted && requestedLayerIds.Contains(x.LayerID))
-                    .Select(x => x.LayerID)
-                    .ToListAsync();
-
-            var existingMappings = await _context.AnalyticalLayerPillarMappings
-                .Where(x => x.PillarID == pillarId)
-                .ToListAsync();
-
-            var mappingsToRemove = existingMappings
-                .Where(x => !validLayerIds.Contains(x.LayerID))
-                .ToList();
-
-            if (mappingsToRemove.Count > 0)
-                _context.AnalyticalLayerPillarMappings.RemoveRange(mappingsToRemove);
-
-            var existingLayerIds = existingMappings.Select(x => x.LayerID).ToHashSet();
-            foreach (var layerId in validLayerIds.Where(id => !existingLayerIds.Contains(id)))
+            List<KpiPillarReplacementDto> kpiUpdates;
+            try
             {
-                _context.AnalyticalLayerPillarMappings.Add(new AnalyticalLayerPillarMapping
+                kpiUpdates = JsonSerializer.Deserialize<List<KpiPillarReplacementDto>>(
+                    kpiUpdatesJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                ) ?? new List<KpiPillarReplacementDto>();
+            }
+            catch (JsonException)
+            {
+                kpiUpdates = new List<KpiPillarReplacementDto>();
+            }
+
+            if (kpiUpdates.Count == 0)
+                return;
+
+            foreach (var update in kpiUpdates.Where(u => u.LayerID > 0 && pillarId > 0))
+            {
+                // Remove the mapping row from the OLD pillar, if one exists and it's actually different
+                if (update.ReplacedPillarID > 0 && update.ReplacedPillarID != update.NewPillarID)
                 {
-                    LayerID = layerId,
-                    PillarID = pillarId,
-                    Category = string.Empty,
-                    CategoryNumber = 0
-                });
+                    var oldMapping = await _context.AnalyticalLayerPillarMappings
+                        .FirstOrDefaultAsync(x => x.LayerID == update.LayerID && x.PillarID == update.ReplacedPillarID);
+                    if (oldMapping != null)
+                        _context.AnalyticalLayerPillarMappings.Remove(oldMapping);
+                }
+
+                // Add the mapping row for the NEW pillar, if it doesn't already exist
+                var existingNewMapping = await _context.AnalyticalLayerPillarMappings
+                    .FirstOrDefaultAsync(x => x.LayerID == update.LayerID && x.PillarID == pillarId);
+
+                if (existingNewMapping == null)
+                {
+                    _context.AnalyticalLayerPillarMappings.Add(new AnalyticalLayerPillarMapping
+                    {
+                        LayerID = update.LayerID,
+                        PillarID = pillarId,
+                        Category = null,
+                        CategoryNumber = update.CategoryNumber
+                    });
+                }
             }
         }
 
@@ -290,6 +297,13 @@ namespace VeridianClimatePulse.Services
 
                 if (pillar.IsDeleted)
                     return ResultResponseDto<bool>.Failure(new[] { "Pillar already deleted." });
+
+                var pillarKPIMapping = await _context.AnalyticalLayerPillarMappings.Where(x => x.PillarID == id).FirstOrDefaultAsync();
+
+                if (pillarKPIMapping != null)
+                {
+                    return ResultResponseDto<bool>.Failure(new[] { "Pillar cannot be deleted as it is bound to KPI's." });
+                }
 
                 pillar.IsDeleted = true;
                 _context.Pillars.Update(pillar);
