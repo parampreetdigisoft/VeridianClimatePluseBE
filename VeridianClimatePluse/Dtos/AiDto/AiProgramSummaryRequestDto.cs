@@ -21,7 +21,6 @@ namespace VeridianClimatePulse.Dtos.AiDto
     public class AiProgramPillarRequestDto
     {
         public int ClimateProgramID { get; set; }
-        public int Year { get; set; } = DateTime.UtcNow.Year;
     }
     public class AiProgramDocumentRequestDto : PaginationRequest
     {

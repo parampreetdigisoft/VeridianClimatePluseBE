@@ -26,13 +26,12 @@ namespace VeridianClimatePulse.Backgroundjob
             return "Execution has been started";
         }
 
-        public Task AiResearchByClimateProgramID(int climateProgramID , bool programEnable,bool pillarEnable, bool questionEnable,bool immediateSummaryEnable = false, bool regenerateMissingQuestionsEnable = false)
+        public Task AiResearchByClimateProgramID(int climateProgramID , bool programEnable,bool pillarEnable, bool questionEnable, bool regenerateMissingQuestionsEnable = false)
         {
             this.ClimateProgramID = climateProgramID;
             this.ProgramEnable = programEnable;
             this.PillarEnable = pillarEnable;
             this.QuestionEnable = questionEnable;
-            this.ImmediateSummaryEnable = immediateSummaryEnable;
             this.RegenerateMissingQuestionsEnable = regenerateMissingQuestionsEnable;
             Type = "AiResearchByClimateProgramID";
             channelService.Write(this);

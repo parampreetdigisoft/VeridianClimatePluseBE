@@ -22,7 +22,7 @@ namespace VeridianClimatePulse.IServices
         Task<ResultResponseDto<bool>> RegenerateAiSearch(RegenerateAiSearchDto aiClimateProgramIDsDto, int userID, UserRole userRole);
         Task<ResultResponseDto<bool>> AddComment(AddCommentDto aiClimateProgramIDsDto, int userID, UserRole userRole);
         Task<ResultResponseDto<bool>> RegeneratePillarAiSearch(RegeneratePillarAiSearchDto aiClimateProgramIDsDto, int userID, UserRole userRole);
-        Task<AiProgramSummeryDto> GetProgramAiSummeryDetail(int userID, UserRole userRole, int? climateProgramID, int year, string reportType = "AI");
+        Task<AiProgramSummeryDto> GetProgramAiSummeryDetail(int userID, UserRole userRole, int? climateProgramID, string reportType = "AI");
         Task<List<AiProgramSummeryDto>> GetAllProgramAiSummeryDetail(int userID, UserRole userRole, int year);   
         Task<byte[]> GenerateAllProgramDetailsReport(List<AiProgramSummeryDto> programDetails, UserRole userRole, int userID, int year, DocumentFormat format = DocumentFormat.Pdf);
         Task<ResultResponseDto<string>> AITransferAssessment(AITransferAssessmentRequestDto r, int userID, UserRole userRole);
