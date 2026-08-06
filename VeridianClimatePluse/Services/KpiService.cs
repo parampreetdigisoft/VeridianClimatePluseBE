@@ -476,8 +476,7 @@ namespace VeridianClimatePulse.Services
                     // ?? REPORT HEADER (TOP)
                     // =========================
                     ws.Range(1, 1, 1, totalCols).Merge().Value = "Key Performance Integrated Report";
-                    ws.Range(2, 1, 2, totalCols).Merge().Value = $"Report Year: {DateTime.Now.Year}";
-                    ws.Range(3, 1, 3, totalCols).Merge().Value = $"Generated On: {DateTime.Now:dd-MMM-yyyy HH:mm}";
+                    ws.Range(2, 1, 2, totalCols).Merge().Value = $"Generated On: {DateTime.Now:dd-MMM-yyyy HH:mm}";
 
                     var titleRange = ws.Range(1, 1, 3, totalCols);
                     titleRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#2F7D6D");

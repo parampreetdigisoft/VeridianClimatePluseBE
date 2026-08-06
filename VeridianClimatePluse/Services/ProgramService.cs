@@ -1042,8 +1042,7 @@ namespace VeridianClimatePulse.Services
             int totalColumns = isRanking ? 5 : 10;
 
             ws.Range(1, 1, 1, totalColumns).Merge().Value = "Programs Progress Report";
-            ws.Range(2, 1, 2, totalColumns).Merge().Value = $"Report Year: {DateTime.UtcNow.Year}";
-            ws.Range(3, 1, 3, totalColumns).Merge().Value = $"Generated On: {DateTime.UtcNow:dd-MMM-yyyy HH:mm}";
+            ws.Range(2, 1, 2, totalColumns).Merge().Value = $"Generated On: {DateTime.UtcNow:dd-MMM-yyyy HH:mm}";
 
             var headerRange = ws.Range(1, 1, 3, totalColumns);
             headerRange.Style.Fill.BackgroundColor = XLColor.FromArgb(57, 123, 103);

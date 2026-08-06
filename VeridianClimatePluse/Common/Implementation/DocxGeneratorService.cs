@@ -405,8 +405,8 @@ namespace VeridianClimatePulse.Common.Implementation
             cell.Append(CenteredBoldPara("Overall Program Score", "212529", "20"));
             // ── Ranking Labels ──
             var globalRankLabel = program.Rank.HasValue && program.TotalProgram.HasValue && program.TotalProgram >=1
-                ? $"Location Rank: {program.Rank} / {program.TotalProgram}"
-                : "Location Rank: N/A";
+                ? $"Program Rank: {program.Rank} / {program.TotalProgram}"
+                : "Program Rank: N/A";
 
            
             // ── Donut image ──
@@ -716,7 +716,7 @@ namespace VeridianClimatePulse.Common.Implementation
             // Rankings Section
             body.AppendChild(CreateRankingHeader("Rankings"));
 
-            body.AppendChild(CreateRankRow("Location Rank",
+            body.AppendChild(CreateRankRow("Program Rank",
                 data.Rank, data.TotalProgram, "16A34A"));
 
             body.AppendChild(Gap(160));
@@ -1131,7 +1131,7 @@ namespace VeridianClimatePulse.Common.Implementation
 
             leftCell.Append(
                 HeaderParagraph(title, "42", "FFFFFF", true, "40"),
-                HeaderParagraph($"{data.ProgramName}, {data.Location} | Data Year: {data.Year}", "20", "B8E8EC", false, "20"),
+                HeaderParagraph($"{data.ProgramName}, {data.Location} | Conference Year: {data.Year}", "20", "B8E8EC", false, "20"),
                 HeaderParagraph($"Generated: {DateTime.Now:MMM dd, yyyy}", "16", ReportThemeColors.LightBgHex, false, "0")
             );
 

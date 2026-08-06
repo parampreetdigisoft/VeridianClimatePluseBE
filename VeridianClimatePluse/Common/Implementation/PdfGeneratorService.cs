@@ -109,7 +109,7 @@ namespace VeridianClimatePulse.Common.Implementation
             var kpiChartItems = kpis.ToList();
 
             // Build pillar chart items (max 14)
-            var pillarChartItems = pillars.Select(p => new PillarChartItem( SanitizeText(p.PillarName)?.Length > 20   ? SanitizeText(p.PillarName)[..20]
+            var pillarChartItems = pillars.Select(p => new PillarChartItem(SanitizeText(p.PillarName)?.Length > 20   ? SanitizeText(p.PillarName)[..20]
                   : SanitizeText(p.PillarName) ?? "-",  SanitizeText(p.PillarName) ?? "-", p.AIProgress)).ToList();
 
             // -- Section 1 : Global Dashboard ---------------------------------
@@ -303,12 +303,11 @@ namespace VeridianClimatePulse.Common.Implementation
         {
 
             float score = (float)Program.AIProgress.GetValueOrDefault();
-
+            
             // Overall rank label
             var globalRankLabel = Program.Rank.HasValue && Program.TotalProgram.HasValue && Program.TotalProgram > 1
-                ? $"Location Rank: {Program.Rank} / {Program.TotalProgram}"
-                : "Location Rank: N/A";
-
+                ? $"Program Rank: {Program.Rank} / {Program.TotalProgram}"
+                : "Program Rank: N/A";
 
             container
                 .Background(ReportThemeColors.White)
@@ -393,7 +392,7 @@ namespace VeridianClimatePulse.Common.Implementation
                         });
 
                     // ---------------------------------------------
-                    // Best Pillar + Location Rank
+                    // Best Pillar + Program Rank
                     // ---------------------------------------------
                     if (best != null)
                     {
@@ -412,16 +411,6 @@ namespace VeridianClimatePulse.Common.Implementation
                                     .FontColor(ReportThemeColors.SuccessGreenText);
 
                                 row.ConstantItem(4);
-
-                                // Global rank
-                                row.AutoItem()
-                                    .Background(ReportThemeColors.SurfaceGreen)
-                                    .PaddingVertical(3)
-                                    .PaddingHorizontal(5)
-                                    .Text(globalRankLabel)
-                                    .FontSize(7)
-                                    .Bold()
-                                    .FontColor(ReportThemeColors.PdfDarkGreen);
                             });
                     }
 
@@ -1220,8 +1209,8 @@ namespace VeridianClimatePulse.Common.Implementation
                         string condFg = isHit ? ReportThemeColors.White : ReportThemeColors.Gray900;
 
                         string rangeStr = (interp.MinRange.HasValue && interp.MaxRange.HasValue)
-                            ? $"{Math.Round(interp.MinRange.Value, 0)}.{Math.Round(interp.MaxRange.Value, 0)}"
-                            : ".";
+                            ? $"({Math.Round(interp.MinRange.Value, 0)}) - ({Math.Round(interp.MaxRange.Value, 0)})"
+                            : "-";
 
                         inner.Item()
                              .BorderBottom(0.3f).BorderColor(ReportThemeColors.Gray350)
@@ -1428,7 +1417,7 @@ namespace VeridianClimatePulse.Common.Implementation
 
         void DrawPillarsRadialChart(IContainer container, List<PillarChartItem> pillars)
         {
-            var data = pillars.Where(p => p.Value.HasValue).ToList();
+            var data = pillars.Where(p => p.Value.HasValue).OrderByDescending(p => p.Value).ToList();
             if (!data.Any()) return;
 
             float avg = (float)data.Average(x => x.Value ?? 0);
@@ -1583,7 +1572,7 @@ namespace VeridianClimatePulse.Common.Implementation
                             .Bold()
                             .FontColor(ReportThemeColors.White);
 
-                        col.Item().Text($"{data.ProgramName} | Data Year: {data.Year}")
+                        col.Item().Text($"{data.ProgramName} | Conference Year: {data.Year}")
                             .FontSize(10)
                             .FontColor(ReportThemeColors.HeaderTextPale);
 
@@ -1593,7 +1582,7 @@ namespace VeridianClimatePulse.Common.Implementation
                     });
 
                     // Right logo
-                    row.ConstantItem(80)
+                    row.ConstantItem(60)
                         .AlignRight()
                         .AlignMiddle()
                         .Background(ReportThemeColors.White)
@@ -1615,7 +1604,7 @@ namespace VeridianClimatePulse.Common.Implementation
 
             container.Column(column =>
             {
-                column.Item().Background(ReportThemeColors.NavyBlue).Padding(12).Row(row =>
+                column.Item().Background(ReportThemeColors.NavyBlue).Padding(10).Row(row =>
                 {
                     // Left content
                     row.RelativeItem().Column(col =>
@@ -1627,7 +1616,7 @@ namespace VeridianClimatePulse.Common.Implementation
                             .Bold()
                             .FontColor(ReportThemeColors.White);
 
-                        col.Item().Text($"{data.ProgramName} | Data Year: {data.AIDataYear}")
+                        col.Item().Text($"{data.ProgramName} | Conference Year: {data.AIDataYear}")
                             .FontSize(10)
                             .FontColor(ReportThemeColors.HeaderTextPale);
 
@@ -1637,7 +1626,7 @@ namespace VeridianClimatePulse.Common.Implementation
                     });
 
                     // Logo
-                    row.ConstantItem(90)
+                    row.ConstantItem(60)
                         .AlignRight()
                         .AlignMiddle()
                         .Background(ReportThemeColors.White)
@@ -1973,7 +1962,7 @@ namespace VeridianClimatePulse.Common.Implementation
 
                         col.Item().PaddingTop(8);
 
-                        RankRowModern(col, "Location Rank", data.Rank, data.TotalProgram, ReportThemeColors.RankGreen);
+                        RankRowModern(col, "Program Rank", data.Rank, data.TotalProgram, ReportThemeColors.RankGreen);
                     });
                 });
         }

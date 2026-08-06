@@ -222,7 +222,7 @@ namespace VeridianClimatePulse.Services
                     //Program = c.Program ?? string.Empty,
                     Location = c.Location ?? string.Empty,
                     Image = c.Image ?? string.Empty,
-                    Year = score != null ? score.Year : 0,
+                    Year = c.Year,
                     AIProgress = score != null ? score.AIProgress : null,
                     EvaluatorScore = score != null ? score.EvaluatorScore : null,
                     Discrepancy = score != null ? score.Discrepancy : null,
@@ -618,7 +618,7 @@ namespace VeridianClimatePulse.Services
 
                 var pillars = await GetAIProgramPillars(programDetails.ClimateProgramID, userID, userRole);
 
-                var kpis = await GetAccessKpis(userID, userRole, programDetails.ClimateProgramID, programDetails.Year, !isManual);
+                var kpis = await GetAccessKpis(userID, userRole, programDetails.ClimateProgramID, !isManual);
 
                 if (isManual)
                 {
@@ -1007,14 +1007,14 @@ namespace VeridianClimatePulse.Services
 
                 if (userRole != UserRole.ProgramUser && programs != null)
                 {
-                    var ProgramScore = programs
+                    var programScore = programs
                         .Select(x => x.ScoreProgress)
                         .DefaultIfEmpty(0)
                         .Sum();
-                    ProgramScore = Math.Round(ProgramScore / (decimal)pillarCount, 2);
+                    programScore = Math.Round(programScore / (decimal)pillarCount, 2);
 
-                    programDetails.EvaluatorScore = Math.Round(ProgramScore, 2);
-                    programDetails.Discrepancy = Math.Abs(ProgramScore - (programDetails.AIProgress ?? 0));
+                    programDetails.EvaluatorScore = Math.Round(programScore, 2);
+                    programDetails.Discrepancy = Math.Abs(programScore - (programDetails.AIProgress ?? 0));
 
                     if(reportType != "AI")
                     {
@@ -1034,54 +1034,54 @@ namespace VeridianClimatePulse.Services
             // Global rank lookup
             var programRankLookup = programRanks.ToDictionary(x => x.ClimateProgramID);
 
-            // Region -> ClimateProgramIDs lookup
-            var regionLookup = programsDetails      
-                .GroupBy(x => x.Location)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.Select(x => x.ClimateProgramID).ToList()
-                );
+            //// Region -> ClimateProgramIDs lookup
+            //var regionLookup = programsDetails      
+            //    .GroupBy(x => x.Location)
+            //    .ToDictionary(
+            //        g => g.Key,
+            //        g => g.Select(x => x.ClimateProgramID).ToList()
+            //    );
 
-            // Region rank lookup
-            var regionRankLookup = new Dictionary<int, (int Rank, int TotalProgram)>();
+            //// Region rank lookup
+            //var regionRankLookup = new Dictionary<int, (int Rank, int TotalProgram)>();
 
-            foreach (var region in regionLookup)
-            {
-                var rankedPrograms = programRanks
-                    .Where(x => region.Value.Contains(x.ClimateProgramID))
-                    .OrderByDescending(x => reportType == "AI"
-                        ? (x.AiProgress ?? 0)
-                        : (x.ScoreProgress ?? 0))
+            //foreach (var region in regionLookup)
+            //{
+            //    var rankedPrograms = programRanks
+            //        .Where(x => region.Value.Contains(x.ClimateProgramID))
+            //        .OrderByDescending(x => reportType == "AI"
+            //            ? (x.AiProgress ?? 0)
+            //            : (x.ScoreProgress ?? 0))
 
-                    .Select((x, index) => new
-                    {
-                        x.ClimateProgramID,
-                        Rank = index + 1
-                    })
-                    .ToList();
+            //        .Select((x, index) => new
+            //        {
+            //            x.ClimateProgramID,
+            //            Rank = index + 1
+            //        })
+            //        .ToList();
 
-                var regionTotal = rankedPrograms.Count;
+            //    var regionTotal = rankedPrograms.Count;
 
-                foreach (var Program in rankedPrograms)
-                {
-                    regionRankLookup[Program.ClimateProgramID] = (Program.Rank, regionTotal);
-                }
-            }
+            //    foreach (var Program in rankedPrograms)
+            //    {
+            //        regionRankLookup[Program.ClimateProgramID] = (Program.Rank, regionTotal);
+            //    }
+            //}
 
             // Final mapping
-            foreach (var Program in programsDetails)
+            foreach (var program in programsDetails)
             {
-                if (programRankLookup.TryGetValue(Program.ClimateProgramID, out var globalRank))
+                if (programRankLookup.TryGetValue(program.ClimateProgramID, out var globalRank))
                 {
-                    Program.Rank = globalRank.Rank;
-                    Program.TotalProgram = totalProgramCount;
+                    program.Rank = globalRank.Rank;
+                    program.TotalProgram = totalProgramCount;
                 }
 
-                if (regionRankLookup.TryGetValue(Program.ClimateProgramID, out var regionRank))
-                {
-                    Program.RegionRank = regionRank.Rank;
-                    Program.RegionTotalProgram = regionRank.TotalProgram;
-                }
+                //if (regionRankLookup.TryGetValue(program.ClimateProgramID, out var regionRank))
+                //{
+                //    program.RegionRank = regionRank.Rank;
+                //    program.RegionTotalProgram = regionRank.TotalProgram;
+                //}
             }
         }
         private List<dynamic> CalculateProgramRanks(List<EvaluationProgramProgressResultDto> progress, decimal pillarCount, string reportType = "AI")
@@ -1092,7 +1092,7 @@ namespace VeridianClimatePulse.Services
                 {
                     ClimateProgramID = g.Key,
                     ScoreProgress = Math.Round((g.Select(x => x.ScoreProgress).DefaultIfEmpty(0).Sum()) / (decimal)pillarCount, 2),
-                    AiProgress = g.Select(x => x.AIProgress).DefaultIfEmpty(0).Average()
+                    AiProgress = Math.Round((g.Select(x => x.AIProgress).DefaultIfEmpty(0).Sum()) / (decimal)pillarCount, 2),
                 });
 
             return groupedProgress
@@ -1108,17 +1108,13 @@ namespace VeridianClimatePulse.Services
         }
 
 
-        private async Task<List<KpiChartItem>> GetAccessKpis(int userID, UserRole role, int? ClimateProgramID, int year = 0, bool isAiScore = true)
+        private async Task<List<KpiChartItem>> GetAccessKpis(int userID, UserRole role, int? climateProgramID, bool isAiScore = true)
         {
-            var startDate = new DateTime(year, 1, 1);
-            var endDate = new DateTime(year + 1, 1, 1);
-
-            var baseQuery = _context.AnalyticalLayerResults
+            IQueryable<AnalyticalLayerResult> baseQuery = _context.AnalyticalLayerResults
                 .AsNoTracking()
                 .Include(ar => ar.AnalyticalLayer)
-                    .ThenInclude(al => al.FiveLevelInterpretations)
-                .Include(ar => ar.Program)
-                .Where(x => x.AiLastUpdated >= startDate && x.AiLastUpdated < endDate);
+                .ThenInclude(al => al.FiveLevelInterpretations)
+                .Include(ar => ar.Program);
 
             if (role == UserRole.ProgramUser)
             {
@@ -1142,7 +1138,7 @@ namespace VeridianClimatePulse.Services
             }
 
             var kpiRaw = baseQuery
-            .Where(x => !ClimateProgramID.HasValue || x.ClimateProgramID == ClimateProgramID)
+            .Where(x => !climateProgramID.HasValue || x.ClimateProgramID == climateProgramID)
             .Select(x => new
             {
                 KpiShortName = x.AnalyticalLayer.LayerCode,
@@ -1180,15 +1176,15 @@ namespace VeridianClimatePulse.Services
 
             return kpis ?? new List<KpiChartItem>();
         }
-        public async Task<List<AiProgramSummeryDto>> GetAllProgramAiSummeryDetail(int userID, UserRole userRole, int year)
+        public async Task<List<AiProgramSummeryDto>> GetAllProgramAiSummeryDetail(int userID, UserRole userRole)
         {
             var query = await GetProgramAiSummeryDetails(userID, userRole, null);
             var programsDetails = await query.ToListAsync();
             int pillarCount = (await _commonService.GetPillars()).Count;
 
-            var progress = await _commonService.GetProgramProgressAsync(userID, (int)userRole, DateTime.Now.Year);
-            var ProgramRanks = CalculateProgramRanks(progress, pillarCount);
-            ApplyProgramRanking(programsDetails, ProgramRanks);
+            var progress = await _commonService.GetProgramProgressAsync(userID, (int)userRole);
+            var programRanks = CalculateProgramRanks(progress, pillarCount);
+            ApplyProgramRanking(programsDetails, programRanks);
 
             var analyticalLayers = _context.AnalyticalLayers.AsQueryable();
 
@@ -1237,11 +1233,11 @@ namespace VeridianClimatePulse.Services
             return programsDetails;
         }        
 
-        public async Task<byte[]> GenerateAllProgramDetailsReport(List<AiProgramSummeryDto> programDetails, UserRole userRole, int userID, int year, IServices.DocumentFormat format = IServices.DocumentFormat.Pdf)
+        public async Task<byte[]> GenerateAllProgramDetailsReport(List<AiProgramSummeryDto> programDetails, UserRole userRole, int userID, IServices.DocumentFormat format = IServices.DocumentFormat.Pdf)
         {
             try
             {
-                var pillars = await GetAllProgramAIPillars(userID, userRole, year);
+                var pillars = await GetAllProgramAIPillars(userID, userRole);
 
                 var kpis = new List<KpiChartItem>();
 

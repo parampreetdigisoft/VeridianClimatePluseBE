@@ -334,14 +334,14 @@ namespace VeridianClimatePulse.Controllers
                 {
                     return Unauthorized("You Don't have access.");
                 }
-                var year = DateTime.Now.Year;
-                var programDetails = await _aIComputationService.GetAllProgramAiSummeryDetail(userId ?? 0, userRole, year);
+
+                var programDetails = await _aIComputationService.GetAllProgramAiSummeryDetail(userId ?? 0, userRole);
                 
                 if (programDetails.Count > 0)
                 {
                     string fileName;
                     string contentType;
-                    var pdfBytes = await _aIComputationService.GenerateAllProgramDetailsReport(programDetails, userRole, userId.GetValueOrDefault(), year, request.Format);
+                    var pdfBytes = await _aIComputationService.GenerateAllProgramDetailsReport(programDetails, userRole, userId.GetValueOrDefault(), request.Format);
 
                     if (request.Format == IServices.DocumentFormat.Docx)
                     {
