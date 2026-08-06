@@ -7,6 +7,7 @@ namespace VeridianClimatePulse.Dtos.PublicDto
         public int ClimateProgramID { get; set; }
         public string ProgramName { get; set; }
         public string? Location { get; set; }
+        public int? Year { get; set; }
         public string? Image { get; set; }
     }
 

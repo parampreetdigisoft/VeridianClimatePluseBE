@@ -222,8 +222,6 @@ namespace VeridianClimatePulse.Services
                         new List<string> { "Promoted Programs fetched successfully" });
                 }
 
-                int currentYear = DateTime.UtcNow.Year;
-
                 var admin = await _context.Users
                     .AsNoTracking()
                     .Where(x => x.Role == Models.UserRole.Admin)
@@ -237,9 +235,9 @@ namespace VeridianClimatePulse.Services
                 int userId = admin?.UserID ?? 0;
                 int role = (int)(admin?.Role ?? Models.UserRole.Admin);
 
-                var pillarScores = await _commonService.GetProgramProgressAsync(userId, role, currentYear);
+                var pillarScores = await _commonService.GetProgramProgressAsync(userId, role);
 
-                int[] selectedPillars = { 1, 4, 7, 15, 22 };
+                int[] selectedPillars = { 4, 5, 8, 11, 16, 17, 20, 21 };
                 pillarScores = pillarScores.Where(x => selectedPillars.Contains(x.PillarID)).ToList();
 
                 var topProgramsByPillar = pillarScores
@@ -266,12 +264,10 @@ namespace VeridianClimatePulse.Services
 
                 var result = await _context.AIPillarScores
                     .AsNoTracking()
-                    .Where(x =>
-                        x.Year == currentYear &&
-                        climateProgramIDs.Contains(x.ClimateProgramID) &&
-                        selectedPillars.Contains(x.PillarID) &&
-                        x.Program.IsActive &&
-                        !x.Program.IsDeleted)
+                    .Where(x => climateProgramIDs.Contains(x.ClimateProgramID) && 
+                                selectedPillars.Contains(x.PillarID) &&
+                                x.Program.IsActive &&
+                                !x.Program.IsDeleted)
                     .GroupBy(x => new
                     {
                         x.PillarID,
@@ -779,7 +775,7 @@ namespace VeridianClimatePulse.Services
 
                 foreach (var mapping in mappings)
                 {
-                    spResultsByQuestion.TryGetValue(mapping.QuestionID, out var totalScore);
+                    spResultsByQuestion.TryGetValue(mapping.LayerID, out var totalScore);
                      var Score = (decimal)totalScore.GetValueOrDefault();
                     var questionScore = new ROSEWPublicQuestionDto
                     {

@@ -638,13 +638,10 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                int year = DateTime.UtcNow.Year;
-                var startDate = new DateTime(year, 1, 1);
-                var endDate = new DateTime(year + 1, 1, 1);
 
                 // Step 1??: Fetch program score averages as a dictionary
                 var programScoresDict = await _context.AIProgramScores
-                    .Where(ar => ar.UpdatedAt >= startDate && ar.UpdatedAt < endDate && ar.IsVerified && ar.Year == year)
+                    .Where(ar => ar.IsVerified)
                     .GroupBy(ar => ar.ClimateProgramID)
                     .Select(g => new
                     {
@@ -662,7 +659,8 @@ namespace VeridianClimatePulse.Services
                         ClimateProgramID = c.Program.ClimateProgramID,
                         ProgramName = c.Program.ProgramName,
                         Location = c.Program.Location,                     
-                        Image = c.Program.Image
+                        Image = c.Program.Image,
+                        Year = c.Program.Year
                     })
                     .AsNoTracking()
                     .ToListAsync();

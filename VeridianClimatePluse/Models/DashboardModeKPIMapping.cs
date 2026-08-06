@@ -4,7 +4,7 @@ namespace VeridianClimatePulse.Models
     {
         public int DashboardModeKPIMappingID { get; set; }
         public int DashboardModeID { get; set; }
-        public int QuestionID { get; set; }
+        public int LayerID { get; set; }
         public string? Description { get; set; }
         public int PriorityLevel { get; set; } = 1;
         public int? DisplayOrder { get; set; }

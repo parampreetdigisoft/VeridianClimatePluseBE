@@ -17,8 +17,6 @@ namespace VeridianClimatePulse.Dtos.ClientDto
 
         public decimal Value { get; set; }
 
-        public decimal? Delta { get; set; }
-
         public string Condition { get; set; } = string.Empty;
 
         public string Narrative { get; set; } = string.Empty;
@@ -53,8 +51,6 @@ namespace VeridianClimatePulse.Dtos.ClientDto
 
         public string Descriptor { get; set; } = string.Empty;
 
-        public string StrategicAction { get; set; } = string.Empty;
-
     }
 
     public class YearSignalPointDto
@@ -78,9 +74,7 @@ namespace VeridianClimatePulse.Dtos.ClientDto
 
     }
 
-
-
-    public class StressNarrativeDto
+    public class NarrativeDto
     {
 
         public string Headline { get; set; } = string.Empty;
@@ -97,17 +91,17 @@ namespace VeridianClimatePulse.Dtos.ClientDto
 
         public int Year { get; set; }
 
-        public decimal Pem { get; set; }
+        public decimal Vcp { get; set; }
 
         public decimal ProgramScore { get; set; }
 
-        public decimal PemDirectionalMovement { get; set; }
+        public decimal VcpDirectionalMovement { get; set; }
 
-        public string PemCondition { get; set; } = string.Empty;
+        public string VcpCondition { get; set; } = string.Empty;
 
-        public string PemDescriptor { get; set; } = string.Empty;
+        public string VcpDescriptor { get; set; } = string.Empty;
 
-        public string PemStrategicAction { get; set; } = string.Empty;
+        public string VcpStrategicAction { get; set; } = string.Empty;
 
         public List<SignalCardDto> Signals { get; set; } = new();
 
@@ -115,7 +109,7 @@ namespace VeridianClimatePulse.Dtos.ClientDto
 
         public List<SignalCardDto> SecondarySignals { get; set; } = new();
 
-        public List<StressNarrativeDto> Narratives { get; set; } = new();
+        public List<NarrativeDto> Narratives { get; set; } = new();
 
     }
 
@@ -152,7 +146,7 @@ namespace VeridianClimatePulse.Dtos.ClientDto
 
 
 
-    public class ResilienceScorecardDto
+    public class ReadinessScorecardDto
     {
 
         public int ClimateProgramID { get; set; }
