@@ -192,7 +192,22 @@ namespace VeridianClimatePulse.Services
 
             return match == null ? null : ToInterpretationDto(match);
         }
+  
 
+        private async Task<bool> ValidateProgramAccess(int climateProgramID, int userId)
+        {
+            return await _context.ClientProgramMappings
+                .AsNoTracking()
+                .AnyAsync(x => x.UserID == userId && x.ClimateProgramID == climateProgramID && x.IsActive);
+        }
+
+        private async Task<List<DashboardModeKPIMapping>> LoadActiveMappings(int dashboardModeId)
+        {
+            return await _context.DashboardModeKPIMappings
+                .AsNoTracking()
+                .Where(x => x.DashboardModeID == dashboardModeId && x.IsActive && !x.IsDeleted)
+                .ToListAsync();
+        }
         private async Task<Dictionary<int, AnalyticalLayer>> LoadLayers(IEnumerable<int> layerIds)
         {
             var ids = layerIds.Distinct().ToList();
@@ -242,6 +257,7 @@ namespace VeridianClimatePulse.Services
                 Score = scores != null ? scores.AIProgress : 0m
             };
         }
+
         private List<SignalCardDto> BuildSignalCards(
            IEnumerable<DashboardModeKPIMapping> mappings,
            IReadOnlyDictionary<int, LayerScoreResult> kpiResults,
@@ -268,7 +284,9 @@ namespace VeridianClimatePulse.Services
                 }
 
                 var interpretation = ResolveInterpretation(layer, kpiResult?.InterpretationId);
+
                 var condition = interpretation?.Condition ?? ResolveConditionByValue(layer, value);
+
                 var isAlert = IsAlertCondition(condition);
 
                 cards.Add(new SignalCardDto
