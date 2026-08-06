@@ -662,13 +662,11 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                var currentYear = DateTime.Now.Year;
                 var response = new AiCrossProgramsResponseDto();
 
-                var firstDate = new DateTime(currentYear, 1, 1);
 
                 var aiPillarScores = await _context.AIPillarScores
-                    .Where(x => climateProgramIDs.ClimateProgramIDs.Contains(x.ClimateProgramID) && x.UpdatedAt >= firstDate && x.Year== currentYear)
+                    .Where(x => climateProgramIDs.ClimateProgramIDs.Contains(x.ClimateProgramID))
                     .ToListAsync();
 
                 var programs = await _context.ClimatePrograms
@@ -699,7 +697,7 @@ namespace VeridianClimatePulse.Services
 
                 var aiPrograms = await _context.AIProgramScores
                     .Where(x => climateProgramIDs.ClimateProgramIDs.Contains(x.ClimateProgramID) &&
-                                x.Year == currentYear && ((userRole == UserRole.ProgramUser && x.IsVerified) || userRole != UserRole.ProgramUser))
+                                ((userRole == UserRole.ProgramUser && x.IsVerified) || userRole != UserRole.ProgramUser))
                     .GroupBy(x => x.ClimateProgramID)
                     .Select(g => new
                     {
@@ -747,8 +745,7 @@ namespace VeridianClimatePulse.Services
                     if (aiPrograms?.TryGetValue(program.ClimateProgramID,out var aiProgramValue) ?? false)
                     {
                         chartRow.Value = aiProgramValue.AIProgress ?? 0;
-                        chartRow.UpdatedAt = aiProgramValue.UpdatedAt;
-
+                        chartRow.UpdatedAt = string.IsNullOrEmpty(aiProgramValue.UpdatedAt.ToString()) ? DateTime.UtcNow : DateTime.Parse(aiProgramValue.UpdatedAt.ToString());
                     }
                     response.TableData.Add(chartRow);
 
@@ -779,7 +776,7 @@ namespace VeridianClimatePulse.Services
                 if ((v && userRole == UserRole.Analyst) || userRole == UserRole.Admin)
                 {
 
-                    var aiResponse = await _context.AIProgramScores.Where(x => x.ClimateProgramID == dto.ClimateProgramID && x.Year == DateTime.UtcNow.Year).FirstOrDefaultAsync();
+                    var aiResponse = await _context.AIProgramScores.Where(x => x.ClimateProgramID == dto.ClimateProgramID).FirstOrDefaultAsync();
                     if (aiResponse != null)
                     {
                         aiResponse.IsVerified = dto.IsVerified;
@@ -805,10 +802,8 @@ namespace VeridianClimatePulse.Services
             {
                 if (dto.QuestionEnable)
                 {
-                    var currentYear = DateTime.Now.Year;
-
                     var aiQuestionList = await _context.AIEstimatedQuestionScores
-                        .Where(x => x.ClimateProgramID == dto.ClimateProgramID && x.Year == currentYear)
+                        .Where(x => x.ClimateProgramID == dto.ClimateProgramID)
                         .ToListAsync();
 
                     if (aiQuestionList.Count > 0)
@@ -820,7 +815,7 @@ namespace VeridianClimatePulse.Services
 
 
                 await _download.AiResearchByClimateProgramID(dto.ClimateProgramID, dto.ProgramEnable, dto.PillarEnable,
-                    dto.QuestionEnable,dto.ImmediateSummaryEnable, dto.RegenerateMissingQuestionsEnable);
+                    dto.QuestionEnable, dto.RegenerateMissingQuestionsEnable);
                 var aiResponse = await _context.AIProgramScores.FirstOrDefaultAsync(x => x.ClimateProgramID == dto.ClimateProgramID);
                 if(aiResponse != null)
                 {
@@ -966,7 +961,7 @@ namespace VeridianClimatePulse.Services
             }
         }
 
-        public async Task<AiProgramSummeryDto> GetProgramAiSummeryDetail(int userID, UserRole userRole, int? climateProgramID, int year, string reportType = "AI")
+        public async Task<AiProgramSummeryDto> GetProgramAiSummeryDetail(int userID, UserRole userRole, int? climateProgramID, string reportType = "AI")
         {
             reportType = reportType.ToUpper();
             var query = await GetProgramAiSummeryDetails(userID, userRole, null);

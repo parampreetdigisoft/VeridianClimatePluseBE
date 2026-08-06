@@ -55,8 +55,6 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                int year = DateTime.UtcNow.Year;
-
                 int allowedPillars = tier switch
                 {
                     Enums.TieredAccessPlan.Basic => 4,
@@ -80,7 +78,6 @@ namespace VeridianClimatePulse.Services
                     .AsNoTracking()
                     .Where(x =>
                         accessibleClimateProgramIDs.Contains(x.ClimateProgramID) &&
-                        x.Year == year &&
                         x.IsVerified)
                     .Select(x => x.AIProgress)
                     .ToListAsync();
@@ -641,13 +638,10 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                int year = DateTime.UtcNow.Year;
-                var startDate = new DateTime(year, 1, 1);
-                var endDate = new DateTime(year + 1, 1, 1);
 
                 // Step 1??: Fetch program score averages as a dictionary
                 var programScoresDict = await _context.AIProgramScores
-                    .Where(ar => ar.UpdatedAt >= startDate && ar.UpdatedAt < endDate && ar.IsVerified && ar.Year == year)
+                    .Where(ar => ar.IsVerified)
                     .GroupBy(ar => ar.ClimateProgramID)
                     .Select(g => new
                     {
@@ -665,7 +659,8 @@ namespace VeridianClimatePulse.Services
                         ClimateProgramID = c.Program.ClimateProgramID,
                         ProgramName = c.Program.ProgramName,
                         Location = c.Program.Location,                     
-                        Image = c.Program.Image
+                        Image = c.Program.Image,
+                        Year = c.Program.Year
                     })
                     .AsNoTracking()
                     .ToListAsync();
@@ -1002,16 +997,13 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                var currentYear = request.Year;
-                var firstDate = new DateTime(currentYear, 1, 1);
-
                 // 1. Check if program is finalized for this user (EXISTS instead of JOIN)
                 var isProgramFinalized = await _context.ClientProgramMappings
                     .AnyAsync(pum =>
                         pum.UserID == userID &&
                         pum.ClimateProgramID == request.ClimateProgramID &&
                         _context.AIProgramScores.Any(ac =>
-                            ac.ClimateProgramID == request.ClimateProgramID && ac.IsVerified && ac.Year == currentYear));
+                            ac.ClimateProgramID == request.ClimateProgramID && ac.IsVerified));
 
                 if (!isProgramFinalized)
                 {
@@ -1019,7 +1011,7 @@ namespace VeridianClimatePulse.Services
                 }
 
                 var res = await _context.AIPillarScores
-                    .Where(x => x.ClimateProgramID == request.ClimateProgramID && x.UpdatedAt >= firstDate && x.Year == currentYear) 
+                    .Where(x => x.ClimateProgramID == request.ClimateProgramID) 
                     .Include(x => x.DataSourceCitations)
                     .ToListAsync();
 

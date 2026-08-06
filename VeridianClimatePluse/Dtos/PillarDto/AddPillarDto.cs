@@ -10,5 +10,6 @@ namespace VeridianClimatePulse.Dtos.PillarDto
         public string? KpiLayerIds { get; set; }
         public string? PillarCode { get; set; }
         public int DisplayOrder { get; set; }
+        public string? KpiUpdates { get; set; }
     }
 }

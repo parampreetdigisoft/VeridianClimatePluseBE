@@ -65,36 +65,36 @@ namespace VeridianClimatePulse.Controllers
                    tierName == TieredAccessPlan.Basic.ToString();
         }
 
-        [HttpGet("getPeaceStressTestDashboard")]
-        public async Task<IActionResult> GetPeaceStressTestDashboard([FromQuery] int climateProgramID)
+        [HttpGet("getAmbitionDeliveryIndexDashboard")]
+        public async Task<IActionResult> GetAmbitionDeliveryIndexDashboard([FromQuery] int climateProgramID)
         {
             var (userId, userRole, error) = ValidateRequest();
             if (error != null)
                 return error;
 
-            var result = await _signalDashboardService.GetPeaceStressTestDashboard(climateProgramID, userId!.Value, userRole);
+            var result = await _signalDashboardService.GetAmbitionDeliveryIndexDashboard(climateProgramID, userId!.Value, userRole);
             return Ok(result);
         }
 
-        [HttpGet("getEarlyWarningDashboard")]
-        public async Task<IActionResult> GetEarlyWarningDashboard([FromQuery] int climateProgramID)
+        [HttpGet("getDiplomaticRiskDashboard")]
+        public async Task<IActionResult> GetDiplomaticRiskDashboard([FromQuery] int climateProgramID)
         {
             var (userId, userRole, error) = ValidateRequest();
             if (error != null)
                 return error;
 
-            var result = await _signalDashboardService.GetEarlyWarningDashboard(climateProgramID, userId!.Value, userRole);
+            var result = await _signalDashboardService.GetDiplomaticRiskDashboard(climateProgramID, userId!.Value, userRole);
             return Ok(result);
         }
 
-        [HttpGet("getResilienceScorecard")]
-        public async Task<IActionResult> GetResilienceScorecard([FromQuery] int climateProgramID)
+        [HttpGet("getReadinessScorecardDashboard")]
+        public async Task<IActionResult> GetReadinessScorecardDashboard([FromQuery] int climateProgramID)
         {
             var (userId, userRole, error) = ValidateRequest();
             if (error != null)
                 return error;
 
-            var result = await _signalDashboardService.GetResilienceScorecard(climateProgramID, userId!.Value, userRole);
+            var result = await _signalDashboardService.GetReadinessScorecardDashboard(climateProgramID, userId!.Value, userRole);
             return Ok(result);
         }        
     }

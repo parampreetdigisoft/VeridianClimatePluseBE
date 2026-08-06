@@ -26,21 +26,20 @@ namespace VeridianClimatePulse.Services
         }
 
         #region GetAnalyticalLayerResults
-        public async Task<PaginationResponse<GetAnalyticalLayerResultDto>> 
-            GetAnalyticalLayerResults(GetAnalyticalLayerRequestDto request, int userId, UserRole role, TieredAccessPlan userPlan = TieredAccessPlan.Pending)
+        public async Task<PaginationResponse<GetAnalyticalLayerResultDto>> GetAnalyticalLayerResults(GetAnalyticalLayerRequestDto request, int userId, UserRole role, TieredAccessPlan userPlan = TieredAccessPlan.Pending)
         {
             try
             {
                 var year = request.Year;
                 var startDate = new DateTime(year, 1, 1);
                 var endDate = new DateTime(year + 1, 1, 1);
-
                 var baseQuery = _context.AnalyticalLayerResults
                     .AsNoTracking()
                     .Include(ar => ar.AnalyticalLayer)
                         .ThenInclude(al => al.FiveLevelInterpretations)
                     .Include(ar => ar.Program)
                     .Where(x => (x.LastUpdated >= startDate && x.LastUpdated < endDate) || (x.AiLastUpdated >= startDate && x.AiLastUpdated < endDate));
+                    
 
                 if (role == UserRole.ProgramUser )
                 {
@@ -151,6 +150,49 @@ namespace VeridianClimatePulse.Services
                 return ResultResponseDto<List<AnalyticalLayer>>.Failure(new List<string> { "An error occurred" });
             }
         }
+
+        public async Task<ResultResponseDto<List<AnalyticalLayer>>> GetAllKpiPillarMapping(int userId, UserRole role)
+        {
+            try
+            {
+                // Get LayerIDs that exist in AnalyticalLayerPillarMappings
+                var layerIdsWithMappings = await _context.AnalyticalLayerPillarMappings
+                    .Select(m => m.LayerID)
+                    .Distinct()
+                    .ToListAsync();
+
+                IQueryable<AnalyticalLayer> query = _context.AnalyticalLayers
+                    .Where(x => !x.IsDeleted && layerIdsWithMappings.Contains(x.LayerID));
+
+                if (role == UserRole.ProgramUser)
+                {
+                    query =
+                        from layer in _context.AnalyticalLayers
+                        join map in _context.AnalyticalLayerPillarMappings
+                            on layer.LayerID equals map.LayerID
+                        join userMap in _context.ClientPillarMappings
+                            on map.PillarID equals userMap.PillarID
+                        where !layer.IsDeleted
+                              && userMap.IsActive
+                              && userMap.UserID == userId
+                              && layerIdsWithMappings.Contains(layer.LayerID)
+                        select layer;
+                }
+
+                var result = await query
+                    .AsNoTracking()
+                    .Distinct()
+                    .ToListAsync();
+
+                return ResultResponseDto<List<AnalyticalLayer>>.Success(result);
+            }
+            catch (Exception ex)
+            {
+                await _appLogger.LogAsync("Error occurred in GetAllKpiWithMappingStatus", ex);
+                return ResultResponseDto<List<AnalyticalLayer>>.Failure(new List<string> { "An error occurred while fetching KPIs with mapping status" });
+            }
+        }
+
         public async Task<ResultResponseDto<CompareProgramResponseDto>> ComparePrograms(CompareProgramsRequestDto c, int userId, UserRole role, bool applyPagination = true)
         {
             try
@@ -408,8 +450,6 @@ namespace VeridianClimatePulse.Services
             }
         }
 
-
-
         public async Task<Tuple<string, byte[]>> ExportComparePrograms(CompareProgramsRequestDto c, int userId, UserRole role)
         {
             try
@@ -611,11 +651,47 @@ namespace VeridianClimatePulse.Services
                 return new Tuple<string, byte[]>("", Array.Empty<byte>());
             }
         }
+        
         private string StripHtml(string input)
         {
             if (string.IsNullOrEmpty(input)) return string.Empty;
 
             return Regex.Replace(input, "<.*?>", string.Empty).Trim();
+        }
+
+       public async Task<ResultResponseDto<List<AnalyticalLayerPillarMappingDTO>>> GetKPIDetailsByLayerID(int layerID)
+       {
+            try
+            {
+                var layer = await _context.AnalyticalLayers.AsNoTracking().FirstOrDefaultAsync(x => !x.IsDeleted && x.LayerID == layerID);
+                
+                if (layer == null)
+                {
+                    return ResultResponseDto<List<AnalyticalLayerPillarMappingDTO>>.Failure(new List<string> { "Layer not found" });
+                }
+                
+                // Base mapping query, always scoped to this LayerID
+                IQueryable<AnalyticalLayerPillarMapping> mappingQuery = _context.AnalyticalLayerPillarMappings.AsNoTracking().Where(m => m.LayerID == layerID);
+                
+                var result = await mappingQuery
+                    .Join(_context.Pillars, mapping => mapping.PillarID, pillar => pillar.PillarID,
+                    (mapping, pillar) => new AnalyticalLayerPillarMappingDTO
+                    {
+                        AnalyticalLayerPillarMappingID = mapping.AnalyticalLayerPillarMappingID,
+                        LayerID = mapping.LayerID,
+                        PillarID = mapping.PillarID,
+                        Category = mapping.Category,
+                        CategoryNumber = mapping.CategoryNumber,
+                        PillarName = pillar.PillarName
+                    }).ToListAsync();
+                
+                return ResultResponseDto<List<AnalyticalLayerPillarMappingDTO>>.Success(result);
+            }
+            catch (Exception ex)
+            {
+                await _appLogger.LogAsync("Error occurred in GetKPIDetailsByLayerID", ex);
+                return ResultResponseDto<List<AnalyticalLayerPillarMappingDTO>>.Failure(new List<string> { "An error occurred" });
+            }
         }
     }
 }

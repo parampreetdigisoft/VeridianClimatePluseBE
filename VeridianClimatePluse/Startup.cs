@@ -60,12 +60,12 @@ namespace VeridianClimatePulse
                     builder.WithOrigins(
                         "http://localhost:4200",
                         "https://localhost:4200",
-                        "http://africahealthintelligence.ai",
-                        "https://africahealthintelligence.ai",
-                        "http://admin.africahealthintelligence.ai",
-                        "https://admin.africahealthintelligence.ai",
-                        "http://www.africahealthintelligence.ai",
-                        "https://www.africahealthintelligence.ai"
+                        "http://veridianclimatepulse.org",
+                        "https://veridianclimatepulse.org",
+                        "http://admin.veridianclimatepulse.org",
+                        "https://admin.veridianclimatepulse.org",
+                        "http://www.veridianclimatepulse.org",
+                        "https://www.veridianclimatepulse.org"
                         )
                         .AllowAnyHeader()
                         .AllowAnyMethod()

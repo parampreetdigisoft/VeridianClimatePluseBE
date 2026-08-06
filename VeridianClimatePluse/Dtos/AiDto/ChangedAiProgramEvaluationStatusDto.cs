@@ -14,7 +14,6 @@ namespace VeridianClimatePulse.Dtos.AiDto
         public bool ProgramEnable { get; set; }
         public bool PillarEnable { get; set; }
         public bool QuestionEnable { get; set; }
-        public bool ImmediateSummaryEnable { get; set; }       
         public bool RegenerateMissingQuestionsEnable { get; set; }       
 
         public List<int> ViewerUserIDs { get; set; } = new();

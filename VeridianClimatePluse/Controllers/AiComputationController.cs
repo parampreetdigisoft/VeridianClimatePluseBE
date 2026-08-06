@@ -121,7 +121,7 @@ namespace VeridianClimatePulse.Controllers
                     return Unauthorized("You Don't have access.");
                 }
 
-                var programDetails = await _aIComputationService.GetProgramAiSummeryDetail(userId ?? 0, userRole, request.ClimateProgramID,request.Year, request.ReportType);
+                var programDetails = await _aIComputationService.GetProgramAiSummeryDetail(userId ?? 0, userRole, request.ClimateProgramID, request.ReportType);
 
                 // Generate PDF               
 
@@ -370,6 +370,7 @@ namespace VeridianClimatePulse.Controllers
                 });
             }
         }
+
         [HttpPost("aiResultTransfer")]
         [Authorize(Roles = "Admin, Analyst")]
         public async Task<IActionResult> AiResultTransfer([FromBody] AITransferAssessmentRequestDto aiClimateProgramIDsDto)

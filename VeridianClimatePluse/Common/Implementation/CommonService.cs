@@ -181,11 +181,11 @@ namespace VeridianClimatePulse.Common.Implementation
             {
                 var result = await _context.GetDashboardModeResults
                  .FromSqlRaw(
-                     "EXEC usp_getDashboardModeResult @userID, @role, @DashboardModeID, @ClimateProgramID",
+                     "EXEC usp_getDashboardModeResult @userID, @role, @dashboardModeID, @climateProgramID",
                      new SqlParameter("@userID", userId),
                      new SqlParameter("@role", role),
-                     new SqlParameter("@DashboardModeID", dashboardModeID),
-                     new SqlParameter("@ClimateProgramID", climateProgramID)
+                     new SqlParameter("@dashboardModeID", dashboardModeID),
+                     new SqlParameter("@climateProgramID", climateProgramID)
                  )
                  .AsNoTracking()
                  .ToListAsync();

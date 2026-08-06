@@ -1,4 +1,4 @@
-using VeridianClimatePulse.Models;
+using VeridianClimatePulse.Dtos.ClientDto;
 
 namespace VeridianClimatePulse.Dtos.dashboard
 {
@@ -8,8 +8,17 @@ namespace VeridianClimatePulse.Dtos.dashboard
         public int DashboardModeID { get; set; }
         public string ModeName { get; set; } = string.Empty;
         public string? Description { get; set; }
-        public List<DashboardQuestionScoreDto> Questions { get; set; } = new();
-        public List<DashboardInterpretation> DashboardInterpretations { get; set; } = new();
+        public int Year { get; set; }
+        public decimal Vcp { get; set; }
+        public decimal ProgramScore { get; set; }
+        public decimal VcpDirectionalMovement { get; set; }
+        public string VcpCondition { get; set; } = string.Empty;
+        public string VcpDescriptor { get; set; } = string.Empty;
+        public string VcpStrategicAction { get; set; } = string.Empty;
+        public List<SignalCardDto> Signals { get; set; } = new();
+        public List<SignalCardDto> PrimarySignals { get; set; } = new();
+        public List<SignalCardDto> SecondarySignals { get; set; } = new();
+        public List<NarrativeDto> Narratives { get; set; } = new();
     }
 
     public class DashboardQuestionScoreDto
