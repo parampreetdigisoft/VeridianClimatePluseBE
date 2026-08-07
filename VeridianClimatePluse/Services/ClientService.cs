@@ -193,13 +193,8 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-
-                int year = DateTime.UtcNow.Year;
-                var startDate = new DateTime(year, 1, 1);
-                var endDate = new DateTime(year + 1, 1, 1);
-
                 var programScores = from ac in _context.AIProgramScores
-                                   .Where(x => x.UpdatedAt >= startDate && x.UpdatedAt < endDate && x.IsVerified && x.Year == year)
+                                   .Where(x => x.IsVerified)
                                  join pc in _context.ClientProgramMappings on ac.ClimateProgramID equals pc.ClimateProgramID
                                  group ac by ac.ClimateProgramID into g
                                  select new
