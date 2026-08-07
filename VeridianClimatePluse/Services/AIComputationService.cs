@@ -1431,7 +1431,6 @@ namespace VeridianClimatePulse.Services
             try
             {
                 var currentDate = DateTime.Now;
-                var year = currentDate.Year;
 
                 if (userRole == UserRole.ProgramUser || userRole == UserRole.Evaluator)
                 {
@@ -1451,7 +1450,7 @@ namespace VeridianClimatePulse.Services
                 }
 
                 var aiAssessmentData = await _context.AIEstimatedQuestionScores
-                                    .Where(x => x.ClimateProgramID == r.ClimateProgramID && x.Year == year)
+                                    .Where(x => x.ClimateProgramID == r.ClimateProgramID)
                                     .ToListAsync();
 
                 var aiAssessmentQuestions = aiAssessmentData
@@ -1472,8 +1471,7 @@ namespace VeridianClimatePulse.Services
                 var existingAssessment = await _context.Assessments
                     .Include(a => a.PillarAssessments)
                         .ThenInclude(p => p.Responses)
-                    .FirstOrDefaultAsync(a => a.StaffProgramMappingID == StaffProgramMapping.StaffProgramMappingID &&
-                                              a.UpdatedAt.Year == year);
+                    .FirstOrDefaultAsync(a => a.StaffProgramMappingID == StaffProgramMapping.StaffProgramMappingID);
 
                 if (existingAssessment == null)
                 {
