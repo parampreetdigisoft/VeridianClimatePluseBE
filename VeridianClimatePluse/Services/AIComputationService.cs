@@ -964,9 +964,9 @@ namespace VeridianClimatePulse.Services
         public async Task<AiProgramSummeryDto> GetProgramAiSummeryDetail(int userID, UserRole userRole, int? climateProgramID, string reportType = "AI")
         {
             reportType = reportType.ToUpper();
-            var query = await GetProgramAiSummeryDetails(userID, userRole, null);
+            var query = await GetProgramAiSummeryDetails(userID, userRole, climateProgramID);
             var programsDetails = await query.ToListAsync();
-            var progress = await _commonService.GetProgramProgressAsync(userID, (int)userRole, (int)climateProgramID);
+            var progress = await _commonService.GetProgramProgressAsync(userID, (int)userRole, 0);
 
             var analyticalLayers = _context.AnalyticalLayers.AsQueryable();
 

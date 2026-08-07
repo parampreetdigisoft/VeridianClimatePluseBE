@@ -506,7 +506,7 @@ namespace VeridianClimatePulse.Services
 
         private IQueryable<StaffProgramMappingResponseDto> GetAdminProgramQuery()
         {
-            var query = ( 
+            return ( 
                 from c in _context.ClimatePrograms.AsNoTracking()
                 where !c.IsDeleted
                 join ai in _context.AIProgramScores.Where(x => x.IsVerified)
@@ -524,13 +524,11 @@ namespace VeridianClimatePulse.Services
                     EndAt = c.EndAt,
                     UpdatedAt = c.UpdatedAt,
                     IsDeleted = c.IsDeleted,
-                    Score = 0,
+                    Score = ai.AIProgress ?? 0,
                     Status = c.Status,
                     Description = c.Description,
                     ProgramPeers = c.ProgramPeers,
                 });
-            var sql = query.ToQueryString();
-            return query;
         }
 
         private IQueryable<StaffProgramMappingResponseDto> GetUserProgramQuery(long? userId)
@@ -601,7 +599,6 @@ namespace VeridianClimatePulse.Services
                 if (userRole == UserRole.Admin)
                 {
                     programQuery = GetAdminProgramQuery();
-                    var sql = programQuery.ToQueryString();
                 }
                 else
                 {
