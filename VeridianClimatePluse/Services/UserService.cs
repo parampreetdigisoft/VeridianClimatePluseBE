@@ -42,7 +42,7 @@ namespace VeridianClimatePulse.Services
                     UserRole.Admin => x => !x.IsDeleted && (request.GetUserRole.HasValue
                                         ? x.Role == request.GetUserRole
                                         : (x.Role == UserRole.Evaluator)),
-                    _ => x => !x.IsDeleted && x.Role == UserRole.Evaluator
+                    _ => x => !x.IsDeleted && x.Role == UserRole.Evaluator && x.CreatedBy == userid
                 };
 
                 var query =
@@ -142,6 +142,7 @@ namespace VeridianClimatePulse.Services
                 return new PaginationResponse<GetUserByRoleResponse>();
             }
         }
+
         public async Task<ResultResponseDto<List<PublicUserResponse>>> GetEvaluatorByAnalyst(GetAssignUserDto request)
         {
             try

@@ -106,7 +106,7 @@ namespace VeridianClimatePulse.Common.Implementation
         public void AddProgramDetailsPdf(IDocumentContainer container, AiProgramSummeryDto programDetails, List<AiProgramPillarResponse> pillars, List<KpiChartItem> kpis,
             List<PeerProgramHistoryReportDto> peerPrograms, UserRole userRole, bool isAllPrograms = false)
         {
-            var kpiChartItems = kpis.ToList();
+            var kpiChartItems = kpis.OrderByDescending(x => x.Value).ToList();
 
             // Build pillar chart items (max 14)
             var pillarChartItems = pillars.Select(p => new PillarChartItem(SanitizeText(p.PillarName)?.Length > 20   ? SanitizeText(p.PillarName)[..20]
@@ -683,13 +683,13 @@ namespace VeridianClimatePulse.Common.Implementation
                     col.Item().PaddingTop(7).Row(row =>
                     {
                         DashboardStatCard(row.RelativeItem(),
-                            green.ToString(), "Performing =70%", ReportThemeColors.AccentEquityAssessment, ReportThemeColors.SuccessGreen);
+                            green.ToString(), "Performing ≥70%", ReportThemeColors.AccentEquityAssessment, ReportThemeColors.SuccessGreen);
                         row.ConstantItem(8);
                         DashboardStatCard(row.RelativeItem(),
-                            amber.ToString(), "Developing 40.69%", ReportThemeColors.WarningAmberBg, ReportThemeColors.WarningOrangeDark);
+                            amber.ToString(), "Developing 20-69%", ReportThemeColors.WarningAmberBg, ReportThemeColors.WarningOrangeDark);
                         row.ConstantItem(8);
                         DashboardStatCard(row.RelativeItem(),
-                            red.ToString(), "Needs Improvement < 40 %", ReportThemeColors.DangerRedBg, ReportThemeColors.DangerRed);
+                            red.ToString(), "Needs Improvement <20%", ReportThemeColors.DangerRedBg, ReportThemeColors.DangerRed);
                         row.ConstantItem(8);
                         DashboardStatCard(row.RelativeItem(),
                             total.ToString(), "Total KPIs", ReportThemeColors.SurfaceGreenAlt, ReportThemeColors.PdfDarkGreen);
@@ -844,8 +844,8 @@ namespace VeridianClimatePulse.Common.Implementation
 
             int total = kpis.Count;
             int green = kpis.Count(x => x.Value >= 70);
-            int amber = kpis.Count(x => x.Value is >= 40 and < 70);
-            int red = kpis.Count(x =>  x.Value < 40);
+            int amber = kpis.Count(x => x.Value is >= 20 and < 70);
+            int red = kpis.Count(x =>  x.Value < 20);
             float avg = (float)kpis.Average(x => x.Value);
 
             // 18 bars per chart row . compact but legible
@@ -894,14 +894,14 @@ namespace VeridianClimatePulse.Common.Implementation
                 {
                     KpiStatPill(row.RelativeItem(), total.ToString(), "Total KPIs", ReportThemeColors.AccentGreen, ReportThemeColors.AccentGreenAlpha15);
                     row.ConstantItem(6);
-                    KpiStatPill(row.RelativeItem(), green.ToString(), "Performing = 70 %", ReportThemeColors.AccentGreen, ReportThemeColors.AccentGreenAlpha15);
+                    KpiStatPill(row.RelativeItem(), green.ToString(), "Performing ≥ 70 %", ReportThemeColors.AccentGreen, ReportThemeColors.AccentGreenAlpha15);
                     row.ConstantItem(6);
-                    KpiStatPill(row.RelativeItem(), amber.ToString(), "Developing 40.69 %", ReportThemeColors.WarningOrange, ReportThemeColors.WarningOrangeAlpha15);
+                    KpiStatPill(row.RelativeItem(), amber.ToString(), "Developing 20-69 %", ReportThemeColors.WarningOrange, ReportThemeColors.WarningOrangeAlpha15);
                     row.ConstantItem(6);
-                    KpiStatPill(row.RelativeItem(), red.ToString(), "Needs Improvement < 40 %", ReportThemeColors.DangerRedLight, ReportThemeColors.DangerRedAlpha15);
+                    KpiStatPill(row.RelativeItem(), red.ToString(), "Needs Improvement < 20 %", ReportThemeColors.DangerRedLight, ReportThemeColors.DangerRedAlpha15);
                     row.ConstantItem(6);
                     KpiStatPill(row.RelativeItem(), $"{avg:F1}%", "Average Score",
-                        avg >= 70 ? ReportThemeColors.AccentGreen : avg >= 40 ? ReportThemeColors.WarningOrange : ReportThemeColors.DangerRedLight,
+                        avg >= 70 ? ReportThemeColors.AccentGreen : avg >= 20 ? ReportThemeColors.WarningOrange : ReportThemeColors.DangerRedLight,
                         ReportThemeColors.AccentGreenAlpha15);
                 });
         }
@@ -940,8 +940,8 @@ namespace VeridianClimatePulse.Common.Implementation
                 {
                     if (!data.Any()) return;
 
-                    const float lp = 8f;   // left pad
-                    const float rp = 8f;   // right pad
+                    const float lp = 30f;   // left pad (increased for negative labels)
+                    const float rp = 12f;   // right pad
                     const float tp = 22f;  // top pad  (value labels)
                     const float bp = 26f;  // bottom pad (index labels)
 
@@ -951,6 +951,9 @@ namespace VeridianClimatePulse.Common.Implementation
                     float barW = chartW / n;
                     float innerW = barW * 0.62f;
                     float barGap = (barW - innerW) / 2f;
+
+                    // Calculate zero baseline (middle of chart for -100 to 100 range)
+                    float zeroY = tp + chartH / 2f;
 
                     // -- background grid lines -------------------------------------
                     using var gridPaint = new SKPaint
@@ -964,18 +967,20 @@ namespace VeridianClimatePulse.Common.Implementation
                         Color = SKColor.Parse(ReportThemeColors.BlueGrayLight),
                         TextSize = 7f,
                         IsAntialias = true,
-                        TextAlign = SKTextAlign.Left
+                        TextAlign = SKTextAlign.Right
                     };
 
-                    foreach (float pct in new[] { 25f, 50f, 75f, 100f })
+                    // Draw grid lines for range -100 to 100
+                    foreach (float pct in new[] { -100f, -80f, -60f, -40f, -20f, 0f, 20f, 40f, 60f, 80f, 100f })
                     {
-                        float gy = tp + chartH - pct / 100f * chartH;
+                        // Map value from -100..100 to y coordinate
+                        float gy = zeroY - (pct / 100f * (chartH / 2f));
                         canvas.DrawLine(lp, gy, lp + chartW, gy, gridPaint);
-                        canvas.DrawText($"{(int)pct}", lp + 2, gy - 2, gridLblPaint);
+                        canvas.DrawText($"{(int)pct}", lp - 4, gy + 3, gridLblPaint);
                     }
 
                     // -- dashed 70 % performance threshold ------------------------
-                    float y70 = tp + chartH - 0.70f * chartH;
+                    float y70 = zeroY - (70f / 100f * (chartH / 2f));
                     using var threshPaint = new SKPaint
                     {
                         Color = SKColor.Parse(ReportThemeColors.SuccessGreen).WithAlpha(100),
@@ -984,6 +989,15 @@ namespace VeridianClimatePulse.Common.Implementation
                         IsAntialias = true
                     };
                     canvas.DrawLine(lp, y70, lp + chartW, y70, threshPaint);
+
+                    // -- stronger zero baseline ------------------------------------
+                    using var zeroLinePaint = new SKPaint
+                    {
+                        Color = SKColor.Parse(ReportThemeColors.BlueGrayDark),
+                        StrokeWidth = 1.2f,
+                        IsAntialias = true
+                    };
+                    canvas.DrawLine(lp, zeroY, lp + chartW, zeroY, zeroLinePaint);
 
                     // -- paint reused across bars ----------------------------------
                     using var valLblPaint = new SKPaint
@@ -1001,27 +1015,42 @@ namespace VeridianClimatePulse.Common.Implementation
                     {
                         float v = (float)(data[i].Value);
                         float bx = lp + i * barW + barGap;
-                        float bh = v / 100f * chartH;
-                        float by = tp + chartH - bh;
+
+                        // Calculate bar height for -100 to 100 range
+                        float bh = Math.Abs(v) / 100f * (chartH / 2f);
+                        float by, barBottom;
+
+                        if (v >= 0)
+                        {
+                            // Positive values: bar goes up from zero
+                            by = zeroY - bh;
+                            barBottom = zeroY;
+                        }
+                        else
+                        {
+                            // Negative values: bar goes down from zero
+                            by = zeroY;
+                            barBottom = zeroY + bh;
+                        }
+
                         SKColor color = GetColor(v);
-                        SKColor textcolor = v > 85 ? SKColor.Parse(ReportThemeColors.White) : SKColor.Parse(ReportThemeColors.Black);
+                        SKColor textcolor = SKColor.Parse(ReportThemeColors.Black);
 
-
-                        // ghost (full-height tinted background)
+                        // ghost (full-height tinted background) - only in bar direction
                         using var ghostPaint = new SKPaint
                         { Color = color.WithAlpha(35), IsAntialias = true };
                         canvas.DrawRoundRect(
-                            new SKRoundRect(new SKRect(bx, tp, bx + innerW, tp + chartH), 2, 2),
+                            new SKRoundRect(new SKRect(bx, by, bx + innerW, barBottom), 2, 2),
                             ghostPaint);
 
                         // filled bar with linear gradient
                         using var shader = SKShader.CreateLinearGradient(
-                            new SKPoint(0, by), new SKPoint(0, tp + chartH),
+                            new SKPoint(0, by), new SKPoint(0, barBottom),
                             new[] { color, color.WithAlpha(180) },
                             null, SKShaderTileMode.Clamp);
                         using var barPaint = new SKPaint { Shader = shader, IsAntialias = true };
                         canvas.DrawRoundRect(
-                            new SKRoundRect(new SKRect(bx, by, bx + innerW, tp + chartH), 2, 2),
+                            new SKRoundRect(new SKRect(bx, by, bx + innerW, barBottom), 2, 2),
                             barPaint);
 
                         // top cap accent line
@@ -1032,11 +1061,28 @@ namespace VeridianClimatePulse.Common.Implementation
                             StrokeCap = SKStrokeCap.Round,
                             IsAntialias = true
                         };
-                        canvas.DrawLine(bx + 1, by, bx + innerW - 1, by, capPaint);
+                        if (v >= 0)
+                        {
+                            canvas.DrawLine(bx + 1, by, bx + innerW - 1, by, capPaint);
+                        }
+                        else
+                        {
+                            canvas.DrawLine(bx + 1, barBottom, bx + innerW - 1, barBottom, capPaint);
+                        }
 
-                        // value label above bar
-                        float vly = by - 3f;
-                        if (vly < tp + 8f) vly = by + 10f;
+                        // value label - position based on bar direction
+                        float vly;
+                        if (v >= 0)
+                        {
+                            vly = by - 3f;
+                            if (vly < tp + 8f) vly = by + 10f;
+                        }
+                        else
+                        {
+                            vly = barBottom + 10f;
+                            if (vly > size.Height - bp - 8f) vly = barBottom - 3f;
+                        }
+
                         valLblPaint.Color = textcolor;
                         canvas.DrawText($"{v:F1}%", bx + innerW / 2f, vly, valLblPaint);
 
@@ -2188,19 +2234,42 @@ namespace VeridianClimatePulse.Common.Implementation
 
         static SKColor GetColor(float value)
         {
-            if (value >= 80) return SKColor.Parse(ReportThemeColors.DangerRed);
-            else if (value >= 60) return SKColor.Parse(ReportThemeColors.BarOrangeMid);
-            else if(value >= 40) return SKColor.Parse(ReportThemeColors.WarningAmber);
-            else if(value >= 20) return SKColor.Parse(ReportThemeColors.BarGreenLow);
-            return SKColor.Parse(ReportThemeColors.SuccessGreen);
+            if (value > 40)
+                return SKColor.Parse(ReportThemeColors.DarkGreen);
+
+            else if (value > 20)
+                return SKColor.Parse(ReportThemeColors.SuccessGreen);
+
+            else if (value > 5)
+                return SKColor.Parse(ReportThemeColors.WarningAmber);
+
+            else if (value > -20)
+                return SKColor.Parse(ReportThemeColors.Yellow);
+
+            else if (value > -39)
+                return SKColor.Parse(ReportThemeColors.DangerRed);
+
+            return SKColor.Parse(ReportThemeColors.DarkRed);
         }
+
         static string GetBarColor(float value)
         {
-            if (value >= 80) return ReportThemeColors.DangerRed;
-            else if (value >= 60) return ReportThemeColors.BarOrangeMid;
-            else if (value >= 40) return ReportThemeColors.WarningAmber;
-            else if (value >= 20) return ReportThemeColors.BarGreenLow;
-            return ReportThemeColors.SuccessGreen;
+            if (value > 40)
+                return ReportThemeColors.DarkGreen;
+
+            else if (value > 20)
+                return ReportThemeColors.SuccessGreen;
+
+            else if (value > 5)
+                return ReportThemeColors.WarningAmber;
+
+            else if (value > -20)
+                return ReportThemeColors.Yellow;
+
+            else if (value > -39)
+                return ReportThemeColors.DangerRed;
+
+            return ReportThemeColors.DarkRed;
         }
 
         static string GetSourceTypeBadgeColor(string sourceType) => sourceType?.ToLower() switch
@@ -3078,7 +3147,7 @@ namespace VeridianClimatePulse.Common.Implementation
             float Yp(float v) => padT + h - Math.Clamp(v, 0, 100) / 100f * h;
 
             // Grid
-            foreach (int s in new[] { 0, 25, 50, 75, 100 })
+            foreach (int s in new[] { -100, -40, -20, 0, 20, 40, 100 })
             {
                 float y = Yp(s);
                 canvas.DrawLine(padL, y, padL + w, y,
@@ -3163,7 +3232,7 @@ namespace VeridianClimatePulse.Common.Implementation
             float Xp(int yr) => padL + (yr - years.First()) / (float)(years.Last() - years.First()) * w;
             float Yp(float v) => padT + h - Math.Clamp(v, 0, 100) / 100f * h;
 
-            foreach (int s in new[] { 0, 25, 50, 75, 100 })
+            foreach (int s in new[] { -100, -40, -20, 0, 20, 40, 100 })
             {
                 float y = Yp(s);
                 canvas.DrawLine(padL, y, padL + w, y,
@@ -3239,7 +3308,7 @@ namespace VeridianClimatePulse.Common.Implementation
             float Xp(int yr) => padL + (yr - years.First()) / (float)(years.Last() - years.First()) * w;
             float Yp(float v) => padT + h - Math.Clamp(v, 0, 100) / 100f * h;
 
-            foreach (int s in new[] { 0, 25, 50, 75, 100 })
+            foreach (int s in new[] { -100, -40, -20, 0, 20, 40, 100 })
             {
                 float y = Yp(s);
                 canvas.DrawLine(padL, y, padL + w, y,
@@ -3306,7 +3375,7 @@ namespace VeridianClimatePulse.Common.Implementation
         //    canvas.DrawLine(padL, padT + h, padL + w, padT + h,
         //        new SKPaint { Color = SKColor.Parse(ReportThemeColors.GrayMuted), StrokeWidth = 0.8f });
 
-        //    foreach (int s in new[] { 0, 25, 50, 75, 100 })
+        //    foreach (int s in new[] { -100, -40, -20, 0, 20, 40, 100 })
         //    {
         //        float y = Yp(s);
         //        canvas.DrawLine(padL, y, padL + w, y,

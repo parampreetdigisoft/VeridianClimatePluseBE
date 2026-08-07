@@ -19,6 +19,12 @@ namespace VeridianClimatePulse.Common.Implementation
         public const string DarkBg = "#005A62";
         public const string GreenText = "#003D44";
 
+        // New interpretation-based colors
+        public const string DarkGreen = "#1B5E20";     // Strong positive (>40)
+        public const string Green = "#2E7D32";         // 20–40 (already similar to SuccessGreen)
+        public const string Yellow = "#E6B800";        // -20 to 5 (neutral zone)
+        public const string DarkRed = "#7F0000";       // Extreme negative (< -39)
+
         // OpenXML hex (no leading #)
         public const string PrimaryHex = "006D77";
         public const string SecondaryHex = "A8E063";

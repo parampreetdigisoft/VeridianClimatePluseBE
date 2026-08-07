@@ -1218,14 +1218,14 @@ namespace VeridianClimatePulse.Services
 
                     if (programs != null)
                     {
-                        var ProgramScore = programs
+                        var programScore = programs
                             .Select(x => x.ScoreProgress)
                             .DefaultIfEmpty(0)
                             .Sum();
-                        ProgramScore = Math.Round(ProgramScore / (decimal)pillarCount, 2);
+                        programScore = Math.Round(programScore / (decimal)pillarCount, 2);
 
-                        programDetail.EvaluatorScore = Math.Round(ProgramScore, 2);
-                        programDetail.Discrepancy = Math.Abs(ProgramScore - (programDetail.AIProgress ?? 0));
+                        programDetail.EvaluatorScore = Math.Round(programScore, 2);
+                        programDetail.Discrepancy = Math.Abs(programScore - (programDetail.AIProgress ?? 0));
                     }
                 }
 
@@ -1260,16 +1260,12 @@ namespace VeridianClimatePulse.Services
             }
         }
         public async Task<ResultResponseDto<Dictionary<int, List<AiProgramPillarResponse>>>> GetAllProgramAIPillars(
-         int userID, UserRole userRole, int currentYear = 0)
+         int userID, UserRole userRole)
         {
             try
             {
                 int pillarCount = (await _commonService.GetPillars()).Count;
-                currentYear = currentYear == 0 ? DateTime.Now.Year : currentYear;
-                var firstDate = new DateTime(currentYear, 1, 1);
-
                 var scores = await _context.AIPillarScores
-                    .Where(x => x.UpdatedAt >= firstDate && x.Year == currentYear)
                     .Include(x => x.Program)
                     .Include(x => x.DataSourceCitations)
                     .ToListAsync();
@@ -1293,17 +1289,17 @@ namespace VeridianClimatePulse.Services
                     TotalQuestions = x.Questions.Count(x=>!x.IsDeleted)
                 }).ToListAsync();
 
-                var ClimateProgramIDs = scores.Select(x => x.ClimateProgramID).Distinct().ToList();
+                var climateProgramIDs = scores.Select(x => x.ClimateProgramID).Distinct().ToList();
 
                 var result = new Dictionary<int, List<AiProgramPillarResponse>>();
 
-                foreach (var ClimateProgramID in ClimateProgramIDs)
+                foreach (var climateProgramID in climateProgramIDs)
                 {
-                    var ProgramScores = scores.Where(x => x.ClimateProgramID == ClimateProgramID).ToList();
+                    var programScores = scores.Where(x => x.ClimateProgramID == climateProgramID).ToList();
 
                     var pillarResults = pillars
                         .GroupJoin(
-                            ProgramScores,
+                            programScores,
                             p => p.PillarID,
                             s => s.PillarID,
                             (pillar, score) => new { pillar, score = score.FirstOrDefault() }
@@ -1315,7 +1311,7 @@ namespace VeridianClimatePulse.Services
                             var r = new AiProgramPillarResponse
                             {
                                 PillarScoreID = x.score?.PillarScoreID ?? 0,
-                                ClimateProgramID = x.score?.ClimateProgramID ?? ClimateProgramID,
+                                ClimateProgramID = x.score?.ClimateProgramID ?? climateProgramID,
                                 ProgramName = x.score?.Program?.ProgramName ?? "",                         
                                 PillarID = x.pillar.PillarID,
                                 PillarName = x.pillar.PillarName,
@@ -1362,13 +1358,12 @@ namespace VeridianClimatePulse.Services
                         .ThenBy(x => x.DisplayOrder)
                         .ToList();
 
-                    result.Add(ClimateProgramID, pillarResults);
+                    result.Add(climateProgramID, pillarResults);
                 }
 
-                var progress = await _commonService.GetProgramProgressAsync(userID, (int)userRole, currentYear);
+                var progress = await _commonService.GetProgramProgressAsync(userID, (int)userRole);
 
                 var answeredQuestions = await _context.AIEstimatedQuestionScores
-                    .Where(x => x.Year == currentYear)
                     .GroupBy(x => new { x.ClimateProgramID, x.PillarID })
                     .Select(g => new
                     {
@@ -1378,17 +1373,17 @@ namespace VeridianClimatePulse.Services
                     })
                     .ToListAsync();
 
-                foreach (var Program in result)
+                foreach (var program in result)
                 {
-                    foreach (var c in Program.Value)
+                    foreach (var c in program.Value)
                     {
                         var totalQuestions = pillars.FirstOrDefault(x => x.PillarID == c.PillarID)?.TotalQuestions ?? 1;
 
                         var answeredQuestion = answeredQuestions
-                            .FirstOrDefault(x => x.ClimateProgramID == Program.Key && x.PillarID == c.PillarID)?.AnsweredQuestions ?? 0;
+                            .FirstOrDefault(x => x.ClimateProgramID == program.Key && x.PillarID == c.PillarID)?.AnsweredQuestions ?? 0;
 
                         var ProgramScore = progress
-                            .Where(x => x.ClimateProgramID == Program.Key && x.PillarID == c.PillarID)
+                            .Where(x => x.ClimateProgramID == program.Key && x.PillarID == c.PillarID)
                             .Select(x => x.ScoreProgress)
                             .DefaultIfEmpty(0)
                             .Sum();

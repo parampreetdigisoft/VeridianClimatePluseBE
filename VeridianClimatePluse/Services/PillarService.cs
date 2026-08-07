@@ -888,7 +888,6 @@ namespace VeridianClimatePulse.Services
                     join q in _context.Questions on aq.QuestionID equals q.QuestionID
                     where aq.ClimateProgramID == request.ClimateProgramID
                         && (!request.PillarID.HasValue || aq.PillarID == request.PillarID)
-                        && aq.Year == 2026
                     select new
                     {
                         aq.PillarID,

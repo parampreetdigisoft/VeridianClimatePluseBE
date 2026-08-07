@@ -259,7 +259,7 @@ namespace VeridianClimatePulse.Common.Implementation
 
             using var grid  = new SKPaint { Color = SKColor.Parse(ReportThemeColors.Gray250), StrokeWidth = 0.5f };
             using var glbl  = new SKPaint { Color = SKColor.Parse(ReportThemeColors.GrayMuted), TextSize = 7f, IsAntialias = true };
-            foreach (int sc in new[] { 0, 25, 50, 75, 100 }) { float y = Yp(sc); c.DrawLine(padL, y, padL + w, y, grid); c.DrawText(sc.ToString(), 2, y - 5, glbl); }
+            foreach (int sc in new[] { -100, -40, -20, 0, 20, 40, 100 }) { float y = Yp(sc); c.DrawLine(padL, y, padL + w, y, grid); c.DrawText(sc.ToString(), 2, y - 5, glbl); }
             foreach (int yr in years)                          { float x = Xp(yr); c.DrawLine(x, padT, x, padT + h, new SKPaint { Color = SKColor.Parse(ReportThemeColors.Gray150), StrokeWidth = 0.5f }); c.DrawText(yr.ToString(), x - 14, padT + h + 7, glbl); }
 
             // Peer lines
@@ -293,7 +293,7 @@ namespace VeridianClimatePulse.Common.Implementation
 
             using var grid = new SKPaint { Color = SKColor.Parse(ReportThemeColors.Gray250), StrokeWidth = 0.5f };
             using var glbl = new SKPaint { Color = SKColor.Parse(ReportThemeColors.GrayMuted), TextSize = 7f, IsAntialias = true };
-            foreach (int sc in new[] { 0, 25, 50, 75, 100 }) { float y = Yp(sc); c.DrawLine(padL, y, padL + w, y, grid); c.DrawText(sc.ToString(), 2, y - 5, glbl); }
+            foreach (int sc in new[] { -100, -40, -20, 0, 20, 40, 100 }) { float y = Yp(sc); c.DrawLine(padL, y, padL + w, y, grid); c.DrawText(sc.ToString(), 2, y - 5, glbl); }
             foreach (int yr in years) c.DrawText(yr.ToString(), Xp(yr) - 12, padT + h + 5, glbl);
 
             for (int pi = 0; pi < pillars.Count; pi++)
@@ -377,7 +377,7 @@ namespace VeridianClimatePulse.Common.Implementation
             using var glbl = new SKPaint { Color = SKColor.Parse(ReportThemeColors.GrayLight), TextSize = 7f, IsAntialias = true };
             c.DrawLine(padL, padT, padL, padT + h, axis);
             c.DrawLine(padL, padT + h, padL + w, padT + h, axis);
-            foreach (int sc in new[] { 0, 25, 50, 75, 100 })
+            foreach (int sc in new[] { -100, -40, -20, 0, 20, 40, 100 })
             {
                 float y = Yp(sc);
                 c.DrawLine(padL, y, padL + w, y, grid);
