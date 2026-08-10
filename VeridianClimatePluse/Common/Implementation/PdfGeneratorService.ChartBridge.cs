@@ -66,17 +66,17 @@ namespace VeridianClimatePulse.Common.Implementation
             float barW  = chartW / n;
             float innerW = barW * 0.62f;
             float barGap = (barW - innerW) / 2f;
+            float zeroY = tp + chartH / 2f;
 
             using var gridPaint = new SKPaint { Color = SKColor.Parse(ReportThemeColors.Background), StrokeWidth = 0.6f };
             using var gridLbl   = new SKPaint { Color = SKColor.Parse(ReportThemeColors.BlueGrayLight), TextSize = 7f, IsAntialias = true, TextAlign = SKTextAlign.Left };
-            foreach (float pct in new[] { 25f, 50f, 75f, 100f })
+            foreach (float pct in new[] { -100f, -80f, -60f, -40f, -20f, 0f, 20f, 40f, 60f, 80f, 100f })
             {
-                float gy = tp + chartH - pct / 100f * chartH;
+                float gy = zeroY - (pct / 100f * (chartH / 2f));
                 c.DrawLine(lp, gy, lp + chartW, gy, gridPaint);
                 c.DrawText($"{(int)pct}", lp + 2, gy - 2, gridLbl);
             }
-
-            float y70 = tp + chartH - 0.70f * chartH;
+            float y70 = zeroY - (70f / 100f * (chartH / 2f));
             using var thPaint = new SKPaint
             {
                 Color = SKColor.Parse(ReportThemeColors.AccentGreen).WithAlpha(100), StrokeWidth = 0.9f,

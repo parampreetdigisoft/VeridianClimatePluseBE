@@ -3,8 +3,6 @@ namespace VeridianClimatePulse.Dtos.ProgramDto
     public class EvaluationProgramProgressResultDto
     {
         public int PillarID { get; set; }
-        public double Weight { get; set; }
-        public bool Reliability { get; set; }
         public int ClimateProgramID { get; set; }
         public int TotalScore { get; set; }
         public int TotalAns { get; set; }
@@ -30,15 +28,12 @@ namespace VeridianClimatePulse.Dtos.ProgramDto
     public class EvaluationProgramProgressHistoryResultDto
     {
         public int PillarID { get; set; }
-        public double Weight { get; set; }
-        public bool Reliability { get; set; }
         public int ClimateProgramID { get; set; }
-        public int TotalScore { get; set; }
-        public int TotalAns { get; set; }
-        public decimal ScoreProgress { get; set; }
-        public int Year { get; set; }
-        public decimal NormalizedValue { get; set; }
-        public int TotalAssessments { get; set; }
         public int UserID { get; set; }
+        public int TotalAns { get; set; }
+        public int TotalAssessments { get; set; }
+        public int Year { get; set; }
+        public int HasCriticalFailure { get; set; }
+        public decimal ScoreProgress { get; set; }
     }
 }

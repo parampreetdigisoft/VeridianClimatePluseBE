@@ -480,7 +480,7 @@ namespace VeridianClimatePulse.Services
                 return new PaginationResponse<AIEstimatedQuestionScoreDto>();
             }
         }        
-        private async Task<List<PeerProgramHistoryReportDto>> GetPeerPrograms(int userID, UserRole role, int climateProgramID, int year, bool isAiScore = true)
+        private async Task<List<PeerProgramHistoryReportDto>> GetPeerPrograms(int userID, UserRole role, int climateProgramID, bool isAiScore = true)
         {
             var peerPrograms = new List<PeerProgramHistoryReportDto>();
             int pillarCount = (await _commonService.GetPillars()).Count;
@@ -495,8 +495,6 @@ namespace VeridianClimatePulse.Services
                 peersClimateProgramIDs.Add(climateProgramID);
             }
 
-            var startYear = year - 5;
-
             peerPrograms = await _context.ClimatePrograms
                 .Where(c => peersClimateProgramIDs.Contains(c.ClimateProgramID))
                 .Select(c => new PeerProgramHistoryReportDto
@@ -506,7 +504,8 @@ namespace VeridianClimatePulse.Services
                     Location = c.Location,
                     UpdatedDate = c.UpdatedAt,
                     Image = c.Image,
-
+                    Year = c.Year,
+                    Description = c.Description
                 }).ToListAsync();
 
             if (isAiScore)
@@ -516,9 +515,7 @@ namespace VeridianClimatePulse.Services
                     c.ProgramHistory = _context.AIPillarScores
                     .Include(x => x.Pillar)
                     .Where(x =>
-                        x.ClimateProgramID == c.ClimateProgramID &&
-                        x.Year >= startYear &&
-                        x.Year <= year)
+                        x.ClimateProgramID == c.ClimateProgramID)
                     .GroupBy(x => x.Year)
                     .Select(yearGroup => new PeerProgramYearHistoryDto
                     {
@@ -552,9 +549,7 @@ namespace VeridianClimatePulse.Services
             {
                 var pillars = await _commonService.GetPillars();
 
-                var programProgress = await _commonService
-                    .GetProgramProgressHistoryAsync(userID, (int)role, year - 5, year);
-
+                var programProgress = await _commonService.GetProgramProgressHistoryAsync(userID, (int)role);
                 var filterPrograms = programProgress
                     .Where(x => peersClimateProgramIDs.Contains(x.ClimateProgramID))
                     .ToList();
@@ -574,10 +569,12 @@ namespace VeridianClimatePulse.Services
                             Year = yearGroup.Key,
 
                             // {Program} level score
-                            ScoreProgress = Math.Round(
-                                yearGroup.Select(x => x.ScoreProgress)
-                                         .DefaultIfEmpty(0)
-                                         .Sum()/pillarCount, 2),
+                            ScoreProgress = yearGroup.Any(x => x.HasCriticalFailure == 1) 
+                                ? 0 
+                                : Math.Round(
+                                    yearGroup.Select(x => x.ScoreProgress)
+                                             .DefaultIfEmpty(0)
+                                             .Sum()/pillarCount, 2),
 
                             // Pillar level score
                             Pillars = pillars
@@ -630,7 +627,7 @@ namespace VeridianClimatePulse.Services
                     }
                 }
 
-                var peerPrograms = await GetPeerPrograms(userID, userRole, programDetails.ClimateProgramID, programDetails.Year, !isManual);
+                var peerPrograms = await GetPeerPrograms(userID, userRole, programDetails.ClimateProgramID, !isManual);
 
                 var document = await _documentGeneratorService.GenerateProgramDetails(programDetails, pillars.Result.Pillars, kpis, peerPrograms, userRole, format);
 

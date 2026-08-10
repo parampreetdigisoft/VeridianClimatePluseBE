@@ -5,7 +5,7 @@ namespace VeridianClimatePulse.Common.Implementation
     /// <summary>Brand palette aligned with the VCP web application CSS variables.</summary>
     internal static class ReportThemeColors
     {
-        public const string Primary = "#006D77";
+        public const string Primary = "#001A3E";
         public const string Secondary = "#A8E063";
         public const string HoverPrimary = "#4CAF50";
         public const string AccentGreen = "#4CAF50";
@@ -47,6 +47,7 @@ namespace VeridianClimatePulse.Common.Implementation
         public const string PdfMediumGreen = "#336b58";
         public const string PdfTealGreen = "#4CAF8A";
         public const string NavyBlue = Primary;
+        public const string DarkBlue = "#001A3E";
         public const string PageBg = "#FAFAFA";
         public const string OverlayBlackAlpha = "#00000022";
 

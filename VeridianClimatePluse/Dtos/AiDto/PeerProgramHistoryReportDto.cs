@@ -8,6 +8,8 @@ namespace VeridianClimatePulse.Dtos.AiDto
         public string Program { get; set; }
         public DateTime? UpdatedDate { get; set; }
         public string? Image { get; set; }   
+        public int? Year { get; set; }   
+        public string? Description { get; set; }
         public List<PeerProgramYearHistoryDto> ProgramHistory { get; set; }
     }
 
