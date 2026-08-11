@@ -40,12 +40,11 @@ namespace VeridianClimatePulse.Common.Implementation
 
         private const uint   PageWidthDxa    = 11906;   // A4 width
         private const uint   PageHeightDxa   = 16838;   // A4 height
-        private const int   MarginDxa       = 720;     // 0.5 inch margins
+        private const int    MarginDxa       = 720;     // 0.5 inch margins
         private const int    ContentDxa      = (int)(PageWidthDxa - 2 * MarginDxa); // 10 466 DXA
         private const long   ContentWidthEmu = 6_645_000L;   // ≈ 7.27 inch in EMU
         private const long   HalfWidthEmu    = 3_220_000L;   // ≈ 3.52 inch in EMU
-        private const string DarkBlue       = ReportThemeColors.PrimaryHex;
-        private const string MedBlue        = ReportThemeColors.AccentGreenHex;
+        private const string DarkBlue       = ReportThemeColors.DarkBlue;
         private const string White           = ReportThemeColors.WhiteHex;
 
         // Unique image ID counter — reset per document
@@ -59,9 +58,8 @@ namespace VeridianClimatePulse.Common.Implementation
         // ════════════════════════════════════════════════════════════════════
         //  ENTRY POINTS
         // ════════════════════════════════════════════════════════════════════
-
         public async Task<byte[]> GenerateProgramDetailsDocx(
-            AiProgramSummeryDto program,
+            AiProgramSummeryDto programDetails,
             List<AiProgramPillarResponse> pillars,
             List<KpiChartItem> kpis,
             List<PeerProgramHistoryReportDto> peerPrograms,
@@ -73,7 +71,7 @@ namespace VeridianClimatePulse.Common.Implementation
                 {
                     var body = mainPart.Document.Body!;
                     _imgId = 1;
-                    AddProgramDetailsSections(body, mainPart, program, pillars, kpis, peerPrograms, userRole);
+                    AddProgramDetailsSections(body, mainPart, programDetails, pillars, kpis, peerPrograms, userRole);
                 });
             }
             catch (Exception ex)
@@ -189,8 +187,7 @@ namespace VeridianClimatePulse.Common.Implementation
         {
             // Reset pending header state for this document
             ResetSectionState();
-
-            var kpiChartItems = kpis.ToList();
+            var kpiChartItems = kpis.OrderByDescending(x => x.Value).ToList();
             var pillarChartItems = pillars
                 .Select(p => new PillarChartItem(
                     p.PillarName?.Length > 20 ? p.PillarName[..20] : p.PillarName ?? "—",
@@ -206,7 +203,7 @@ namespace VeridianClimatePulse.Common.Implementation
             }
 
             // ── 2. Program Summary ──────────────────────────────────────────────────────
-            AppendProgramHeader(mainPart, programDetails, null);          
+            AppendProgramHeader(mainPart, programDetails, null);
             AddProgramSummarySection(body, mainPart, programDetails, userRole);
 
             // ── 3. Pillar Radial Overview ────────────────────────────────────────────
@@ -219,8 +216,8 @@ namespace VeridianClimatePulse.Common.Implementation
             // ── 4. Peer Comparison & Trends ─────────────────────────────────────────
             if (!isAllPrograms && peerPrograms.Any())
             {
-                //AddPeerComparisonSections(body, mainPart, peerPrograms, programDetails, userRole);
-                AddPerformanceTrendSections(body, mainPart, peerPrograms, programDetails, userRole);
+                AddPeerComparisonSections(body, mainPart, peerPrograms, programDetails, userRole);
+                //AddPerformanceTrendSections(body, mainPart, peerPrograms, programDetails, userRole);
             }
 
             // ── 5. Per-Pillar Detail ─────────────────────────────────────────────────
@@ -273,9 +270,9 @@ namespace VeridianClimatePulse.Common.Implementation
             body.AppendChild(Gap(20));
 
             // Row 2: KPI stats band
-            int green = kpis.Count(k => k.Value >= 70);
-            int amber = kpis.Count(k => k.Value is >= 40 and < 70);
-            int red   = kpis.Count(k => k.Value < 40);
+            int green = kpis.Count(x => x.Value > 40);
+            int amber = kpis.Count(x => x.Value >= 4 && x.Value < 40);
+            int red = kpis.Count(x => x.Value == null || x.Value < 4);
             foreach (var el in CreateKpiStatSection(kpis.Count, green, amber, red))
                 body.Append(el);
 
@@ -291,8 +288,6 @@ namespace VeridianClimatePulse.Common.Implementation
                 var sparkPng = RenderPng((c, s) => PaintKpiSparkline(c, s, kpis), 700, 130);
                 body.AppendChild(CreateFullWidthImage(mainPart, sparkPng, 130));
             }
-
-
         }
         private static Table CreateKpiOverviewHeader(string avgText)
         {
@@ -316,7 +311,7 @@ namespace VeridianClimatePulse.Common.Implementation
                             new ParagraphProperties(new Justification { Val = JustificationValues.Left }),
                             new Run(
                                 new RunProperties(new Bold(), new FontSize { Val = "18" }),
-                                new Text("KPI Overview — All Indicators (sorted high → low)")
+                                new Text("KPI Overview — All Indicators (sorted high to low)")
                             )
                         )
                     ),
@@ -408,10 +403,10 @@ namespace VeridianClimatePulse.Common.Implementation
                 ? $"Program Rank: {program.Rank} / {program.TotalProgram}"
                 : "Program Rank: N/A";
 
-           
+
             // ── Donut image ──
             cell.Append(EmbedImage(mainPart, donutPng, imgEmuW, imgEmuH));
- 
+
 
             // ── Pillars | KPIs row ──
             cell.Append(BuildPillarKpiTable(pillarCount, kpiCount, leftDxa));
@@ -432,7 +427,7 @@ namespace VeridianClimatePulse.Common.Implementation
             }
 
             // ─────────────────────────────────────────────
-            // Worst Pillar
+            // Worst Domain
             // ─────────────────────────────────────────────
             if (worst != null)
             {
@@ -712,7 +707,7 @@ namespace VeridianClimatePulse.Common.Implementation
             // PROGRESS SECTION
             // =========================
             body.AppendChild(SectionHeading("Total Score", DarkBlue));
-            body.AppendChild(CreateProgressBar("Score", (float)(data.AIProgress ?? 0), MedBlue));
+            body.AppendChild(CreateProgressBar("Score", (float)(data.AIProgress ?? 0), DarkBlue));
             // Rankings Section
             body.AppendChild(CreateRankingHeader("Rankings"));
 
@@ -844,7 +839,6 @@ namespace VeridianClimatePulse.Common.Implementation
                 new TableRow(leftCell, rightCell));
         }
 
-
         // ════════════════════════════════════════════════════════════════════
         //  PILLAR OVERVIEW SECTION  (radial + horizontal bars)
         // ════════════════════════════════════════════════════════════════════
@@ -853,7 +847,7 @@ namespace VeridianClimatePulse.Common.Implementation
             Body body, MainDocumentPart mainPart,
             List<PillarChartItem> pillars)
         {
-            var data = pillars.Where(p => p.Value.HasValue).ToList();
+            var data = pillars.Where(p => p.Value.HasValue).OrderByDescending(p => p.Value).ToList();
             if (!data.Any()) return;
 
             var radialPng = RenderPng((c, s) => PaintPillarRadialChart(c, s, data), 340, 340);
@@ -868,14 +862,14 @@ namespace VeridianClimatePulse.Common.Implementation
         // ════════════════════════════════════════════════════════════════════
 
         private void AddPillarSection(
-    Body body, MainDocumentPart mainPart,
-    AiProgramPillarResponse data, UserRole userRole)
+            Body body, MainDocumentPart mainPart,
+            AiProgramPillarResponse data, UserRole userRole)
         {
             // =========================
             // PROGRESS SECTION
             // =========================
             body.AppendChild(SectionHeading("Progress Metrics", DarkBlue));
-            body.AppendChild(CreateProgressBar("Score", (float)(data.AIProgress ?? 0), MedBlue));
+            body.AppendChild(CreateProgressBar("Score", (float)(data.AIProgress ?? 0), DarkBlue));
             body.AppendChild(Gap(160));
 
             // =========================
@@ -990,9 +984,9 @@ namespace VeridianClimatePulse.Common.Implementation
             if (!kpis.Any()) return;
 
             int total = kpis.Count;
-            int green = kpis.Count(x => x.Value >= 70);
-            int amber = kpis.Count(x => x.Value is >= 40 and < 70);
-            int red   = kpis.Count(x => x.Value < 40);
+            int green = kpis.Count(x => x.Value > 40);
+            int amber = kpis.Count(x => x.Value >= 4 && x.Value < 40);
+            int red   = kpis.Count(x => x.Value == null || x.Value < 4);
             float avg = (float)kpis.Average(x => x.Value);
 
             body.AppendChild(CreateKpiSummaryBandTable(total, green, amber, red, avg));
@@ -1092,10 +1086,10 @@ namespace VeridianClimatePulse.Common.Implementation
             int logoColW = 2600;
             int leftColW = ContentDxa - logoColW;
 
-            const long logoWidthEmu = 900_000L;
-            const long logoHeightEmu = 300_000L; // ✅ slightly increased
+            const long logoWidthEmu = 885_600L;
+            const long logoHeightEmu = 856_800L;
 
-            // ✅ MAIN TABLE
+            // MAIN TABLE
             var layoutTable = new Table(
                 new TableProperties(
                     new TableWidth { Width = "5000", Type = TableWidthUnitValues.Pct },
@@ -1108,17 +1102,17 @@ namespace VeridianClimatePulse.Common.Implementation
                 new TableRowProperties(
                     new TableRowHeight
                     {
-                        Val = 900, // ✅ prevent compression
+                        Val = 900, // prevent compression
                         HeightType = HeightRuleValues.AtLeast
                     }
                 )
             );
 
-            // ✅ LEFT CELL
+            // LEFT CELL
             var leftCell = new TableCell(
                 new TableCellProperties(
                     new TableCellWidth { Width = leftColW.ToString(), Type = TableWidthUnitValues.Dxa },
-                    new Shading { Fill = ReportThemeColors.PrimaryHex },
+                    new Shading { Fill = ReportThemeColors.DarkBlue },
                     new TableCellVerticalAlignment { Val = TableVerticalAlignmentValues.Center },
                     new TableCellMargin(
                         new TopMargin { Width = "200", Type = TableWidthUnitValues.Dxa },
@@ -1137,11 +1131,11 @@ namespace VeridianClimatePulse.Common.Implementation
 
             mainRow.Append(leftCell);
 
-            // ✅ RIGHT CELL (BLUE BACKGROUND)
+            // RIGHT CELL (BLUE BACKGROUND)
             var rightCell = new TableCell(
                 new TableCellProperties(
                     new TableCellWidth { Width = logoColW.ToString(), Type = TableWidthUnitValues.Dxa },
-                    new Shading { Fill = ReportThemeColors.PrimaryHex },
+                    new Shading { Fill = ReportThemeColors.DarkBlue },
                     new TableCellVerticalAlignment { Val = TableVerticalAlignmentValues.Center },
                     new TableCellMargin(
                         new TopMargin { Width = "200", Type = TableWidthUnitValues.Dxa },
@@ -1152,7 +1146,7 @@ namespace VeridianClimatePulse.Common.Implementation
                 )
             );
 
-            // ✅ INNER TABLE (WHITE BOX)
+            // INNER TABLE (WHITE BOX)
             var innerTable = new Table(
                 new TableProperties(
                     new TableWidth { Width = "5000", Type = TableWidthUnitValues.Pct }
@@ -1166,7 +1160,7 @@ namespace VeridianClimatePulse.Common.Implementation
                     new Shading { Fill = "FFFFFF" },
                     new TableCellVerticalAlignment { Val = TableVerticalAlignmentValues.Center },
                     new TableCellMargin(
-                        new TopMargin { Width = "120", Type = TableWidthUnitValues.Dxa },   // ✅ FIX
+                        new TopMargin { Width = "120", Type = TableWidthUnitValues.Dxa },   // FIX
                         new BottomMargin { Width = "120", Type = TableWidthUnitValues.Dxa },
                         new LeftMargin { Width = "120", Type = TableWidthUnitValues.Dxa },
                         new RightMargin { Width = "120", Type = TableWidthUnitValues.Dxa }
@@ -1187,7 +1181,7 @@ namespace VeridianClimatePulse.Common.Implementation
                     new Justification { Val = JustificationValues.Center },
                     new SpacingBetweenLines
                     {
-                        Before = "0",   // ✅ REMOVE extra space
+                        Before = "0",   // REMOVE extra space
                         After = "0",
                         Line = "240",
                         LineRule = LineSpacingRuleValues.Auto
@@ -1209,7 +1203,7 @@ namespace VeridianClimatePulse.Common.Implementation
 
             layoutTable.Append(mainRow);
 
-            // ✅ DIVIDER
+            // DIVIDER
             var divider = new Paragraph(
                 new ParagraphProperties(
                     new ParagraphBorders(
@@ -1269,7 +1263,7 @@ namespace VeridianClimatePulse.Common.Implementation
         /// <see cref="MainDocumentPart"/> so the relationship is resolved inside the header.
         /// </summary>
         private Paragraph EmbedImageInPart(HeaderPart headerPart, byte[] pngBytes,
-      long widthEmu, long heightEmu)
+            long widthEmu, long heightEmu)
         {
             var imgPart = headerPart.AddImagePart(ImagePartType.Png);
             using (var ms = new MemoryStream(pngBytes))
@@ -1278,7 +1272,7 @@ namespace VeridianClimatePulse.Common.Implementation
             string relId = headerPart.GetIdOfPart(imgPart);
             uint id = _imgId++;
 
-            // ✅ Build blip with white luminance recolor
+            // Build blip with white luminance recolor
             var blip = new A.Blip { Embed = relId };
             //blip.AppendChild(new A.LuminanceEffect { Brightness = 100000, Contrast = 0 });
 
@@ -1295,7 +1289,7 @@ namespace VeridianClimatePulse.Common.Implementation
                                 new PIC.NonVisualPictureProperties(
                                     new PIC.NonVisualDrawingProperties { Id = 0U, Name = $"img{id}.png" },
                                     new PIC.NonVisualPictureDrawingProperties()),
-                                new PIC.BlipFill(           // ✅ uses the white-recolored blip
+                                new PIC.BlipFill(           // uses the white-recolored blip
                                     blip,
                                     new A.Stretch(new A.FillRectangle())),
                                 new PIC.ShapeProperties(
@@ -1434,7 +1428,7 @@ namespace VeridianClimatePulse.Common.Implementation
                         new TopMargin { Width = "120", Type = TableWidthUnitValues.Dxa },
                         new BottomMargin { Width = "120", Type = TableWidthUnitValues.Dxa }
                     ),
-                    // ✅ Accent line ONLY here (left border trick)
+                    // Accent line ONLY here (left border trick)
                     new TableCellBorders(
                         new LeftBorder
                         {
@@ -1473,34 +1467,42 @@ namespace VeridianClimatePulse.Common.Implementation
                 )
             );
 
-            foreach (var para in paragraphs)
+            if (paragraphs.Length > 0)
             {
-                contentCell.AppendChild(new Paragraph(
-                    new ParagraphProperties(
-                        new Justification { Val = JustificationValues.Both },
+                foreach (var para in paragraphs)
+                {
+                    contentCell.AppendChild(new Paragraph(
+                        new ParagraphProperties(
+                            new Justification { Val = JustificationValues.Both },
 
-                        // ✅ Force white background
-                        new Shading
-                        {
-                            Val = ShadingPatternValues.Clear,
-                            Fill = "FFFFFF"
-                        },
+                            // Force white background
+                            new Shading
+                            {
+                                Val = ShadingPatternValues.Clear,
+                                Fill = "FFFFFF"
+                            },
 
-                        new SpacingBetweenLines
-                        {
-                            Line = "276", // 1.15
-                            LineRule = LineSpacingRuleValues.Auto,
-                            After = "120"
-                        }
-                    ),
-                    new Run(
-                        new RunProperties(
-                            new Color { Val = bgColor },
-                            new FontSize { Val = "22" }
+                            new SpacingBetweenLines
+                            {
+                                Line = "276", // 1.15
+                                LineRule = LineSpacingRuleValues.Auto,
+                                After = "120"
+                            }
                         ),
-                        new Text(para) { Space = SpaceProcessingModeValues.Preserve }
-                    )
-                ));
+                        new Run(
+                            new RunProperties(
+                                new Color { Val = bgColor },
+                                new FontSize { Val = "22" }
+                            ),
+                            new Text(para) { Space = SpaceProcessingModeValues.Preserve }
+                        )
+                    ));
+                }
+            }
+            else
+            {
+                // Ensure cell always has at least one paragraph (required by OpenXML spec)
+                contentCell.AppendChild(new Paragraph());
             }
 
             table.AppendChild(new TableRow(contentCell));
@@ -1598,9 +1600,9 @@ namespace VeridianClimatePulse.Common.Implementation
                     new TableWidth { Width = ContentDxa.ToString(), Type = TableWidthUnitValues.Dxa }
                 ),
                 new TableRow(
-                    Stat(green.ToString(), "Performing ≥70%", "E8F5E9", "2E7D32"),
-                    Stat(amber.ToString(), "Developing 40–69%", "FFF8E1", "E65100"),
-                    Stat(red.ToString(), "Needs Improvement < 40 %", "FDECEA", "C62828"),
+                    Stat(green.ToString(), "Performing ≥ 40%", "E8F5E9", "2E7D32"),
+                    Stat(amber.ToString(), "Developing 0-39%", "FFF8E1", "E65100"),
+                    Stat(red.ToString(), "Needs Improvement < 0%", "FDECEA", "C62828"),
                     Stat(total.ToString(), "Total KPIs", "EEF5F1", "003D44")
                 )
             );
@@ -1639,9 +1641,9 @@ namespace VeridianClimatePulse.Common.Implementation
                     new TableWidth { Width = ContentDxa.ToString(), Type = TableWidthUnitValues.Dxa }),
                 new TableRow(
                     Pill(total.ToString(),  "Total KPIs",        "4CAF50"),
-                    Pill(green.ToString(),  "Performing ≥70%",   "4CAF50"),
-                    Pill(amber.ToString(),  "Developing 40–69%", "FFC107"),
-                    Pill(red.ToString(), "Needs Improvement < 40 %", "EF5350"),
+                    Pill(green.ToString(),  "Performing ≥40%",   "4CAF50"),
+                    Pill(amber.ToString(),  "Developing 0–39%", "FFC107"),
+                    Pill(red.ToString(), "Needs Improvement < 0%", "EF5350"),
                     Pill($"{avg:F1}%",      "Average Score",     avgColor)));
         }
 
@@ -2041,280 +2043,67 @@ namespace VeridianClimatePulse.Common.Implementation
                          new[] { "B71C1C", "C62828" }, "FDECEA")));
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  PERFORMANCE TREND SECTIONS
-        // ════════════════════════════════════════════════════════════════════
+        // ════════════════════════════════════════════════════════════════════════
+        //  PEER COMPARISON SECTIONS  –  mirrors PDF layout exactly
+        // ════════════════════════════════════════════════════════════════════════
 
-
-        private void AddPerformanceTrendSections(
-           Body body, MainDocumentPart mainPart,
-           List<PeerProgramHistoryReportDto> activePrograms,
-           AiProgramSummeryDto ProgramDetails, UserRole userRole)
+        private void AddPeerComparisonSections(
+             Body body, MainDocumentPart mainPart,
+             List<PeerProgramHistoryReportDto> activePrograms,
+             AiProgramSummeryDto ProgramDetails, UserRole userRole)
         {
             if (!activePrograms.Any()) return;
 
             var main = FindMainProgram(activePrograms, ProgramDetails);
             var peers = activePrograms.Where(p => !IsSameProgram(p.ProgramName, ProgramDetails.ProgramName)).ToList();
             var all = BuildAllPrograms(main, peers);
-
-            var allYears = all
-                .SelectMany(c => c.ProgramHistory ?? Enumerable.Empty<PeerProgramYearHistoryDto>())
-                .Select(h => h.Year).Distinct().OrderBy(y => y).ToList();
-
-            if (!allYears.Any()) return;
-
-            // Historical trend
-            AppendProgramHeader(mainPart, ProgramDetails, "Performance Trends Over Time");
-            var peerAvg = allYears.Select(yr =>
-            {
-                var scores = peers.Select(p => p.ProgramHistory?.FirstOrDefault(h => h.Year == yr))
-                    .Where(h => h != null).Select(h => (float)h!.ScoreProgress).ToList();
-                return (Year: yr, Avg: scores.Any() ? scores.Average() : 0f, HasData: scores.Any());
-            }).ToList();
-
-            var trendPng = RenderPng(
-                (c, s) => PaintMultiLineTrend(c, s, allYears, peers, main, ProgramDetails, peerAvg),
-                700, 200);
-            body.AppendChild(CreateFullWidthImage(mainPart, trendPng, 200));
-            body.AppendChild(Gap(100));
-
-            if (main != null)
-                body.AppendChild(CreateYoYTable(allYears.TakeLast(5).ToList(),
-                    (main.ProgramHistory ?? new()).OrderBy(h => h.Year).ToList(),
-                    peerAvg.Select(p => (p.Year, p.Avg)).ToList()));
-
-            body.AppendChild(PageBreak());
-
-            // Pillar trend
-            AppendProgramHeader(mainPart, ProgramDetails, "Pillar-Level Trend Analysis");
-            if (main != null)
-            {
-                var pillars = (main.ProgramHistory ?? new())
-                    .SelectMany(h => h.Pillars ?? Enumerable.Empty<PeerProgramPillarHistoryReportDto>())
-                    .GroupBy(p => p.PillarID)
-                    .Select(g => g.OrderBy(p => p.DisplayOrder).First())
-                    .OrderBy(p => p.DisplayOrder).ToList();
-
-                if (pillars.Any())
-                {
-                    var pillarTrendPng = RenderPng(
-                        (c, s) => PaintPillarLineChart(c, s, allYears, main.ProgramHistory ?? new(), pillars),
-                        700, 200);
-                    body.AppendChild(CreateFullWidthImage(mainPart, pillarTrendPng, 200));
-                    body.AppendChild(Gap(100));
-                    body.AppendChild(CreatePillarHeatmapTable(allYears, main.ProgramHistory ?? new(), pillars));
-                }
-            }
+            AppendProgramHeader(mainPart, ProgramDetails, "Relative Ranking Among Peer Programs");
+            AddRankingSection(body, mainPart, all, ProgramDetails);
         }
-
-
-
-        // ════════════════════════════════════════════════════════════════════════
-        //  PEER COMPARISON SECTIONS  –  mirrors PDF layout exactly
-        // ════════════════════════════════════════════════════════════════════════
-
-        // ════════════════════════════════════════════════════════════════════════
-        //  PEER COMPARISON SECTIONS  –  mirrors PDF layout exactly
-        // ════════════════════════════════════════════════════════════════════════
-
-        //private void AddPeerComparisonSections(
-        //     Body body, MainDocumentPart mainPart,
-        //     List<PeerProgramHistoryReportDto> activePrograms,
-        //     AiProgramSummeryDto ProgramDetails, UserRole userRole)
-        //{
-        //    if (!activePrograms.Any()) return;
-
-        //    var main = FindMainProgram(activePrograms, ProgramDetails);
-        //    var peers = activePrograms.Where(p => !IsSameProgram(p.ProgramName, ProgramDetails.ProgramName)).ToList();
-        //    var all = BuildAllPrograms(main, peers);
-
-        //    // ── 5.1  Population-Based ────────────────────────────────────────────
-        //    AppendProgramHeader(mainPart, ProgramDetails, "Population-Based Peer Comparison");
-
-        //    var popSorted = all
-        //        .Where(c => c.Population.HasValue)
-        //        .OrderByDescending(c => c.Population)
-        //        .ToList();
-
-        //    if (popSorted.Any())
-        //    {
-        //        body.AppendChild(CreateInsightBand(
-        //            $"{popSorted.Count} programs compared  |  " +
-        //            $"Largest: {popSorted.First().ProgramName} ({FormatPop(popSorted.First().Population)})  |  " +
-        //            $"Smallest: {popSorted.Last().ProgramName} ({FormatPop(popSorted.Last().Population)})"));
-
-        //        body.AppendChild(SectionHeading("Population Size by Program", DarkBlue));
-        //        int popH = Math.Max(popSorted.Count * 40, 80);
-        //        var popPng = RenderPng(
-        //            (c, s) => PdfGeneratorService.DrawPopulationBarsCanvas(c, s, popSorted, ProgramDetails),
-        //            700, popH);
-        //        body.AppendChild(CreateFullWidthImage(mainPart, popPng, popH));
-        //        body.AppendChild(Gap(80));
-        //        body.AppendChild(CreateProgramLegendTable(popSorted, ProgramDetails));
-        //        body.AppendChild(Gap(120));
-
-        //        body.AppendChild(SectionHeading("Score vs Population  (each dot = one Program)", DarkBlue));
-        //        int scatterH = Math.Max(popSorted.Count * 30, 160);
-        //        var scatterPng = RenderPng(
-        //            (c, s) => PdfGeneratorService.DrawScatterPlotCanvas(
-        //                c, s, popSorted, ProgramDetails,
-        //                Program => (float)(Program.Population ?? 0),
-        //                Program => PdfGeneratorService.GetLatestScoreOrZeroForDocx(Program),
-        //                "Population", "Score"),
-        //            700, scatterH);
-        //        body.AppendChild(CreateFullWidthImage(mainPart, scatterPng, scatterH));
-        //    }
-        //    body.AppendChild(PageBreak());
-
-        //    // ── 5.2  Regional ────────────────────────────────────────────────────
-        //    AppendProgramHeader(mainPart, ProgramDetails, "Regional Peer Group Comparison");
-        //    var regionPng = RenderPng((c, s) => PaintRegionalBars(c, s, all), 700, 220);
-        //    body.AppendChild(CreateFullWidthImage(mainPart, regionPng, 220));
-        //    body.AppendChild(PageBreak());
-
-        //    // ── 5.3  Income-Level ────────────────────────────────────────────────
-        //    AppendProgramHeader(mainPart, ProgramDetails, "Income-Level Peer Comparison");
-
-        //    // ══════════════════════════════════════════════════════════════════
-        //    // IncomePeerPage — DOCX (updated with PPP section)
-        //    // ══════════════════════════════════════════════════════════════════
-
-        //    var withIncome = all.Where(p => p.Income.HasValue).OrderBy(p => p.Income).ToList();
-        //    if (withIncome.Any())
-        //    {
-        //        body.AppendChild(CreateInsightBand(
-        //            $"Income quartile analysis  |  {withIncome.Count} programs  |  " +
-        //            $"Range: {withIncome.Min(p => p.Income):C0} – {withIncome.Max(p => p.Income):C0}"));
-
-        //        // ── Quartile bars ─────────────────────────────────────────────
-        //        body.AppendChild(SectionHeading("Average Score by Income Quartile", DarkBlue));
-        //        var quartilePng = RenderPng(
-        //            (c, s) => PdfGeneratorService.DrawIncomeQuartileBarsCanvas(c, s, all),
-        //            700, 145);
-        //        body.AppendChild(CreateFullWidthImage(mainPart, quartilePng, 145));
-        //        body.AppendChild(Gap(80));
-
-        //        // ── Income vs Score scatter ───────────────────────────────────
-        //        body.AppendChild(SectionHeading("Income vs Composite Score  (each dot = one Program)", DarkBlue));
-        //        var incScatterPng = RenderPng(
-        //            (c, s) => PdfGeneratorService.DrawScatterPlotCanvas(
-        //                c, s, withIncome, ProgramDetails,
-        //                Program => (float)(Program.Income ?? 0),
-        //                Program => PdfGeneratorService.GetLatestScoreOrZeroForDocx(Program),
-        //                "Income (USD)", "Score"),
-        //            700, 180);
-        //        body.AppendChild(CreateFullWidthImage(mainPart, incScatterPng, 180));
-        //        body.AppendChild(Gap(80));
-
-        //        // ══════════════════════════════════════════════════════════════
-        //        // NEW ── PPP Analytical Section
-        //        // ══════════════════════════════════════════════════════════════
-        //        //var withPpp = all.Where(p => p.PPP.HasValue && p.PPP > 0).ToList();
-        //        //if (withPpp.Any())
-        //        //{
-        //        //    // Section divider heading
-        //        //    body.AppendChild(CreateSectionDivider("Purchasing Power Parity (PPP) Analysis", DarkBlue));
-
-        //        //    // Explanatory note
-        //        //    body.AppendChild(CreateItalicNote(
-        //        //        "PPP-adjusted income reflects real purchasing power in International Dollars, " +
-        //        //        "correcting for local price differences. A higher PPP vs Nominal income indicates " +
-        //        //        "a more affordable city; a lower PPP suggests high cost of living that erodes nominal " +
-        //        //        "earnings. Use this alongside structural factors (inequality, informal markets) for a " +
-        //        //        "complete welfare picture."));
-        //        //    body.AppendChild(Gap(60));
-
-        //        //    // ── Nominal vs PPP scatter ────────────────────────────────
-        //        //    body.AppendChild(SectionHeading(
-        //        //        "Nominal Income vs PPP-Adjusted Income  (each dot = one city)", DarkBlue));
-        //        //    var pppScatterPng = RenderPng(
-        //        //        (c, s) => PdfGeneratorService.DrawScatterPlotCanvas(
-        //        //            c, s, withPpp, ProgramDetails,
-        //        //            city => (float)(city.Income ?? 0),
-        //        //            city => (float)(city.PPP ?? 0),
-        //        //            "Nominal Income (USD)", "PPP Income (Int'l $)"),
-        //        //        700, 180);
-        //        //    body.AppendChild(CreateFullWidthImage(mainPart, pppScatterPng, 180));
-        //        //    body.AppendChild(Gap(80));
-
-        //        //    // ── PPP Comparison Table ──────────────────────────────────
-        //        //    body.AppendChild(SectionHeading(
-        //        //        "Nominal vs PPP-Adjusted Income Comparison", DarkBlue));
-        //        //    //body.AppendChild(CreatePppComparisonTable(withPpp, ProgramDetails));
-        //        //    body.AppendChild(Gap(60));
-
-        //        //    // ── PPP signal legend ─────────────────────────────────────
-        //        //    body.AppendChild(CreatePppLegend());
-        //        //    body.AppendChild(Gap(40));
-
-        //        //    // Footnote
-        //        //    body.AppendChild(CreateFootnote(
-        //        //        "▲ PPP adjustment moves city to a higher income category.  " +
-        //        //        "▼ PPP adjustment moves city to a lower income category.  " +
-        //        //        "Signal Ratio = PPP ÷ Nominal Income."));
-        //        //    body.AppendChild(Gap(80));
-        //        //}
-
-        //        // ── Top performers by income group (PPP column added) ─────────
-        //        body.AppendChild(SectionHeading("Top Performers by Income Group", DarkBlue));
-        //        body.AppendChild(CreateIncomeGroupTable(all, ProgramDetails));
-        //    }
-        //    body.AppendChild(PageBreak());
-
-        //    // ── 5.5  Relative Ranking ────────────────────────────────────────────
-        //    AppendProgramHeader(mainPart, ProgramDetails, "Relative Ranking Among Peer Programs");
-        //    AddRankingSection(body, mainPart, all, ProgramDetails);
-        //}
 
         // ════════════════════════════════════════════════════════════════════════
         //  RANKING SECTION  –  hero banner + histogram + full table
         // ════════════════════════════════════════════════════════════════════════
 
-        //private void AddRankingSection(
-        //    Body body, MainDocumentPart mainPart,
-        //    List<PeerProgramHistoryReportDto> all,
-        //    AiProgramSummeryDto ProgramDetails)
-        //{
-        //    var ranked = all
-        //        .Select(c => (Program: c, Score: GetLatestScoreOrZero(c)))
-        //        .OrderByDescending(x => x.Score)
-        //        .ToList();
+        private void AddRankingSection(
+            Body body, MainDocumentPart mainPart,
+            List<PeerProgramHistoryReportDto> all,
+            AiProgramSummeryDto programDetails)
+        {
+            var ranked = all
+                .Select(c => (Program: c, Score: GetLatestScoreOrZero(c)))
+                .OrderByDescending(x => x.Score)
+                .ToList();
 
-        //    int mainRank = ranked.FindIndex(r => IsSameProgram(r.Program.ProgramName, ProgramDetails.ProgramName)) + 1;
-        //    float mainScore = mainRank > 0 ? ranked[mainRank - 1].Score : 0f;
-        //    float pctile = mainRank > 0 ? (1f - (float)mainRank / ranked.Count) * 100f : 0f;
+            int mainRank = ranked.FindIndex(r => IsSameProgram(r.Program.ProgramName, programDetails.ProgramName)) + 1;
+            float mainScore = mainRank > 0 ? ranked[mainRank - 1].Score : 0f;
+            float pctile = mainRank > 0 ? (1f - (float)mainRank / ranked.Count) * 100f : 0f;
 
-        //    // Hero banner
-        //    body.AppendChild(CreateHeroBanner(ProgramDetails, mainRank, ranked.Count, mainScore, pctile));
-        //    body.AppendChild(Gap(120));
+            // Hero banner
+            body.AppendChild(CreateHeroBanner(programDetails, mainRank, ranked.Count, mainScore, pctile));
+            body.AppendChild(Gap(120));
 
-        //    // Score distribution histogram
-        //    body.AppendChild(SectionHeading("Score Distribution Among All Programs", DarkBlue));
-        //    var histPng = RenderPng(
-        //        (c, s) => PdfGeneratorService.DrawHistogramCanvas(
-        //            c, s, ranked.Select(r => r.Score).ToList(), mainScore, 10),
-        //        700, 160);
-        //    body.AppendChild(CreateFullWidthImage(mainPart, histPng, 160));
-        //    body.AppendChild(Gap(100));
 
-        //    // Full ranking table
-        //    body.AppendChild(SectionHeading("Full Program Ranking", DarkBlue));
-        //    var rows = ranked.Select((r, i) => new[]
-        //    {
-        //         (i + 1).ToString(),
-        //         r.Program.ProgramName,
-        //         r.Program.Location    ?? "—",
-        //         //FormatPop(r.Program.Population),
-        //         $"{r.Score:F1}"
-        //         }).ToArray();
 
-        //    body.AppendChild(CreateStyledTable(
-        //        new[] { "#", "Program", "Location", "Region", "Pop.", "Score" },
-        //        new[] { 360, 2000, 1300, 1400, 1000, 900 },
-        //        rows,
-        //        highlightRow: i => IsSameProgram(ranked[i].Program.ProgramName, ProgramDetails.ProgramName)));
-        //    body.AppendChild(PageBreak());
-        //}
+            // Full ranking table
+            body.AppendChild(SectionHeading("Full Program Ranking", DarkBlue));
+            var rows = ranked.Select((r, i) => new[]
+            {
+                 (i + 1).ToString(),
+                 r.Program.ProgramName ?? "—",
+                 r.Program.Year?.ToString() ?? "—",
+                 r.Program.Description ?? "—",
+                 r.Program.Location ?? "—",
+                 $"{r.Score:F1}"
+            }).ToArray();
+
+            body.AppendChild(CreateStyledTable(
+                new[] { "#", "Program", "Conference Year", "Description", "Location", "Score" },
+                new[] { 450, 1800, 1200, 2800, 1800, 900 },
+                rows,
+                highlightRow: i => IsSameProgram(ranked[i].Program.ProgramName, programDetails.ProgramName)));
+            body.AppendChild(PageBreak());
+        }
 
         // ════════════════════════════════════════════════════════════════════════
         //  NEW ELEMENT BUILDERS
@@ -2346,133 +2135,79 @@ namespace VeridianClimatePulse.Common.Implementation
         /// <summary>
         /// Dark-green hero banner: rank left, score right — mirrors the PDF RelativeRankingPage banner.
         /// </summary>
-        //private static Table CreateHeroBanner(
-        //    AiProgramSummeryDto ProgramDetails,
-        //    int rank, int total, float score, float pctile)
-        //{
-        //    var noBorder = new EnumValue<BorderValues>(BorderValues.None);
-        //    TableCellBorders NoBorders() => new(
-        //        new TopBorder { Val = noBorder }, new BottomBorder { Val = noBorder },
-        //        new LeftBorder { Val = noBorder }, new RightBorder { Val = noBorder },
-        //        new InsideHorizontalBorder { Val = noBorder }, new InsideVerticalBorder { Val = noBorder });
-
-        //    var table = new Table(new TableProperties(
-        //        new TableWidth { Width = ContentDxa.ToString(), Type = TableWidthUnitValues.Dxa }));
-
-        //    var row = new TableRow();
-
-        //    // Left cell – rank + city line
-        //    int leftW = ContentDxa - 1900;
-        //    row.AppendChild(new TableCell(
-        //        new TableCellProperties(
-        //            new TableCellWidth { Width = leftW.ToString(), Type = TableWidthUnitValues.Dxa },
-        //            new Shading { Val = ShadingPatternValues.Clear, Fill = "003D44" },
-        //            NoBorders()),
-        //        new Paragraph(
-        //            new ParagraphProperties(new SpacingBetweenLines { Before = "60", After = "20" }),
-        //            new Run(
-        //                new RunProperties(
-        //                    new Bold(), new Color { Val = "F0B429" },
-        //                    new FontSize { Val = "64" }, new RunFonts { Ascii = "Arial" }),
-        //                new Text($"#{rank} of {total}"))),
-        //        new Paragraph(
-        //            new ParagraphProperties(new SpacingBetweenLines { Before = "0", After = "80" }),
-        //            new Run(
-        //                new RunProperties(
-        //                    new Color { Val = "A5D6C2" },
-        //                    new FontSize { Val = "22" }, new RunFonts { Ascii = "Arial" }),
-        //                new Text($"{ProgramDetails.ProgramName}  ·  {ProgramDetails.Location}")))));
-
-        //    // Right cell – score + percentile
-        //    row.AppendChild(new TableCell(
-        //        new TableCellProperties(
-        //            new TableCellWidth { Width = "1900", Type = TableWidthUnitValues.Dxa },
-        //            new Shading { Val = ShadingPatternValues.Clear, Fill = "003D44" },
-        //            NoBorders()),
-        //        new Paragraph(
-        //            new ParagraphProperties(
-        //                new Justification { Val = JustificationValues.Right },
-        //                new SpacingBetweenLines { Before = "60", After = "20" }),
-        //            new Run(
-        //                new RunProperties(
-        //                    new Color { Val = "A5A8AD" },
-        //                    new FontSize { Val = "18" }, new RunFonts { Ascii = "Arial" }),
-        //                new Text("Score"))),
-        //        new Paragraph(
-        //            new ParagraphProperties(
-        //                new Justification { Val = JustificationValues.Right },
-        //                new SpacingBetweenLines { Before = "0", After = "20" }),
-        //            new Run(
-        //                new RunProperties(
-        //                    new Bold(), new Color { Val = "FFFFFF" },
-        //                    new FontSize { Val = "56" }, new RunFonts { Ascii = "Arial" }),
-        //                new Text($"{score:F1}"))),
-        //        new Paragraph(
-        //            new ParagraphProperties(
-        //                new Justification { Val = JustificationValues.Right },
-        //                new SpacingBetweenLines { Before = "0", After = "80" }),
-        //            new Run(
-        //                new RunProperties(
-        //                    new Color { Val = "4CAF8A" },
-        //                    new FontSize { Val = "18" }, new RunFonts { Ascii = "Arial" }),
-        //                new Text($"Top {100 - pctile:F0}% of peers")))));
-
-        //    table.AppendChild(row);
-        //    return table;
-        //}
-
-        /// <summary>Income group table matching PDF IncomePeerPage top-performers table.</summary>
-        //private static Table CreateIncomeGroupTable(
-        //    List<PeerProgramHistoryReportDto> all,
-        //    AiProgramSummeryDto ProgramDetails)
-        //{
-        //    string[] categoryOrder = { "Low Income", "Lower-Middle Income", "Upper-Middle Income", "High Income" };
-
-        //    var segments = all
-        //        .GroupBy(x => PdfGeneratorService.GetIncomeCategory(x.Income ?? 0))
-        //        .ToDictionary(g => g.Key, g => g.ToList());
-
-        //    var orderedPrograms = new List<PeerProgramHistoryReportDto>();
-        //    foreach (var label in categoryOrder)
-        //        if (segments.TryGetValue(label, out var programs))
-        //            orderedPrograms.AddRange(programs.OrderByDescending(c => GetLatestScoreOrZero(c)));
-
-        //    var rows = orderedPrograms.Select(Program =>
-        //    {
-        //        float sc = GetLatestScoreOrZero(Program);
-
-        //        return new[]
-        //        {
-        //            Program.ProgramName,
-        //            Program.Location ?? "—",
-        //            sc < 0 ? "—" : $"{sc:F1}",
-        //            //PdfGeneratorService.GetIncomeCategory(Program.Income ?? 0),
-        //            //FormatPop(Program.Income)         // ← NEW column
-        //        };
-        //    }).ToArray();
-
-        //    return CreateStyledTableWithCellColors(
-        //        headers: new[] { "Program", "Location", "Score", "Income Group", "Income" },
-        //        widths: new[] { 1800, 1000, 700, 2000, 1200 },
-        //        rows: rows,
-        //        highlightRow: i => IsSameProgram(orderedPrograms[i].ProgramName, ProgramDetails.ProgramName)
-        //        );
-        //}
-
-        private static Table CreateProgramLegendTable(
-            List<PeerProgramHistoryReportDto> allPrograms, AiProgramSummeryDto ProgramDetails)
+        private static Table CreateHeroBanner(
+            AiProgramSummeryDto ProgramDetails,
+            int rank, int total, float score, float pctile)
         {
-            string[] palette = { "F0B429", "4CAF8A", "1E88E5", "FB8C00", "7B61FF", "E05252" };
-            var rows = new List<string[]>();
-            for (int i = 0; i < allPrograms.Count; i++)
-            {
-                bool isMain = IsSameProgram(allPrograms[i].ProgramName, ProgramDetails.ProgramName);
-                rows.Add(new[] { isMain ? "★" : "•", allPrograms[i].ProgramName, allPrograms[i].Program ?? "—" });
-            }
-            return CreateStyledTable(
-                new[] { "", "Program", "Program" },
-                new[] { 300, 4000, 2000 },
-                rows.ToArray());
+            var noBorder = new EnumValue<BorderValues>(BorderValues.None);
+            TableCellBorders NoBorders() => new(
+                new TopBorder { Val = noBorder }, new BottomBorder { Val = noBorder },
+                new LeftBorder { Val = noBorder }, new RightBorder { Val = noBorder },
+                new InsideHorizontalBorder { Val = noBorder }, new InsideVerticalBorder { Val = noBorder });
+
+            var table = new Table(new TableProperties(
+                new TableWidth { Width = ContentDxa.ToString(), Type = TableWidthUnitValues.Dxa }));
+
+            var row = new TableRow();
+
+            // Left cell – rank + city line
+            int leftW = ContentDxa - 1900;
+            row.AppendChild(new TableCell(
+                new TableCellProperties(
+                    new TableCellWidth { Width = leftW.ToString(), Type = TableWidthUnitValues.Dxa },
+                    new Shading { Val = ShadingPatternValues.Clear, Fill = "003D44" },
+                    NoBorders()),
+                new Paragraph(
+                    new ParagraphProperties(new SpacingBetweenLines { Before = "60", After = "20" }),
+                    new Run(
+                        new RunProperties(
+                            new Bold(), new Color { Val = "F0B429" },
+                            new FontSize { Val = "64" }, new RunFonts { Ascii = "Arial" }),
+                        new Text($"#{rank} of {total}"))),
+                new Paragraph(
+                    new ParagraphProperties(new SpacingBetweenLines { Before = "0", After = "80" }),
+                    new Run(
+                        new RunProperties(
+                            new Color { Val = "A5D6C2" },
+                            new FontSize { Val = "22" }, new RunFonts { Ascii = "Arial" }),
+                        new Text($"{ProgramDetails.ProgramName}  ·  {ProgramDetails.Location}")))));
+
+            // Right cell – score + percentile
+            row.AppendChild(new TableCell(
+                new TableCellProperties(
+                    new TableCellWidth { Width = "1900", Type = TableWidthUnitValues.Dxa },
+                    new Shading { Val = ShadingPatternValues.Clear, Fill = "003D44" },
+                    NoBorders()),
+                new Paragraph(
+                    new ParagraphProperties(
+                        new Justification { Val = JustificationValues.Right },
+                        new SpacingBetweenLines { Before = "60", After = "20" }),
+                    new Run(
+                        new RunProperties(
+                            new Color { Val = "A5A8AD" },
+                            new FontSize { Val = "18" }, new RunFonts { Ascii = "Arial" }),
+                        new Text("Score"))),
+                new Paragraph(
+                    new ParagraphProperties(
+                        new Justification { Val = JustificationValues.Right },
+                        new SpacingBetweenLines { Before = "0", After = "20" }),
+                    new Run(
+                        new RunProperties(
+                            new Bold(), new Color { Val = "FFFFFF" },
+                            new FontSize { Val = "56" }, new RunFonts { Ascii = "Arial" }),
+                        new Text($"{score:F1}"))),
+                new Paragraph(
+                    new ParagraphProperties(
+                        new Justification { Val = JustificationValues.Right },
+                        new SpacingBetweenLines { Before = "0", After = "80" }),
+                    new Run(
+                        new RunProperties(
+                            new Color { Val = "4CAF8A" },
+                            new FontSize { Val = "18" }, new RunFonts { Ascii = "Arial" }),
+                        new Text($"Top {100 - pctile:F0}% of peers")))));
+
+            table.AppendChild(row);
+            return table;
         }
 
         // ── General styled data table ─────────────────────────────────────────
@@ -2482,11 +2217,45 @@ namespace VeridianClimatePulse.Common.Implementation
             Func<int, bool>? highlightRow = null)
         {
             var borderSingle = new EnumValue<BorderValues>(BorderValues.Single);
-            TableCellBorders DataBorders() => new TableCellBorders(
-                new BottomBorder { Val = borderSingle, Size = 4, Color = "E4E4E4" });
 
-            var table = new Table(new TableProperties(
-                new TableWidth { Width = colWidthsDxa.Sum().ToString(), Type = TableWidthUnitValues.Dxa }));
+            TableCellBorders DataBorders() => new TableCellBorders(
+                new BottomBorder
+                {
+                    Val = borderSingle,
+                    Size = 4,
+                    Color = "E4E4E4"
+                });
+
+            var totalWidth = colWidthsDxa.Sum();
+
+            var table = new Table(
+                new TableProperties(
+                    new TableWidth
+                    {
+                        Width = totalWidth.ToString(),
+                        Type = TableWidthUnitValues.Dxa
+                    },
+                    new TableLayout
+                    {
+                        Type = TableLayoutValues.Fixed
+                    }
+                )
+            );
+
+            // Force the exact column widths
+            var grid = new TableGrid();
+
+            foreach (var width in colWidthsDxa)
+            {
+                grid.AppendChild(
+                    new GridColumn
+                    {
+                        Width = width.ToString()
+                    });
+            }
+
+            table.AppendChild(grid);
+
 
             // Header row
             var hRow = new TableRow();
@@ -2523,164 +2292,6 @@ namespace VeridianClimatePulse.Common.Implementation
                                 new Text(rows[r][c])))));
                 }
                 table.AppendChild(dRow);
-            }
-            return table;
-        }
-
-        // ── YoY performance table ─────────────────────────────────────────────
-
-        private static Table CreateYoYTable(
-            List<int> years,
-            List<PeerProgramYearHistoryDto> mainHistory,
-            List<(int Year, float Avg)> peerAvg)
-        {
-            int yearW = (ContentDxa - 1300) / Math.Max(years.Count, 1);
-            var table = new Table(new TableProperties(
-                new TableWidth { Width = ContentDxa.ToString(), Type = TableWidthUnitValues.Dxa }));
-
-            TableCell HdrCell(string txt, bool first = false) =>
-                new(new TableCellProperties(
-                    new TableCellWidth { Width = (first ? 1300 : yearW).ToString(), Type = TableWidthUnitValues.Dxa },
-                    new Shading { Val = ShadingPatternValues.Clear, Fill = "003D44" }),
-                    new Paragraph(new Run(
-                        new RunProperties(new Bold(), new Color { Val = White }, new FontSize { Val = "16" }),
-                        new Text(txt))));
-
-            var hRow = new TableRow();
-            hRow.AppendChild(HdrCell("Metric", first: true));
-            foreach (var yr in years) hRow.AppendChild(HdrCell(yr.ToString()));
-            table.AppendChild(hRow);
-
-            void DataRow(string label, Func<int, string> valFn, Func<int, string> colorFn, string bg)
-            {
-                var row = new TableRow();
-                row.AppendChild(new TableCell(
-                    new TableCellProperties(
-                        new TableCellWidth { Width = "1300", Type = TableWidthUnitValues.Dxa },
-                        new Shading { Val = ShadingPatternValues.Clear, Fill = bg }),
-                    new Paragraph(new Run(
-                        new RunProperties(new Color { Val = "333333" }, new FontSize { Val = "16" }),
-                        new Text(label)))));
-                foreach (var yr in years)
-                    row.AppendChild(new TableCell(
-                        new TableCellProperties(
-                            new TableCellWidth { Width = yearW.ToString(), Type = TableWidthUnitValues.Dxa },
-                            new Shading { Val = ShadingPatternValues.Clear, Fill = bg }),
-                        new Paragraph(
-                            new ParagraphProperties(new Justification { Val = JustificationValues.Right }),
-                            new Run(new RunProperties(
-                                new Bold(), new Color { Val = colorFn(yr) }, new FontSize { Val = "16" }),
-                                new Text(valFn(yr))))));
-                table.AppendChild(row);
-            }
-
-            DataRow("Score",
-                yr => { float s = (float)(mainHistory.FirstOrDefault(h => h.Year == yr)?.ScoreProgress ?? 0); return $"{s:F1}"; },
-                yr => { float s = (float)(mainHistory.FirstOrDefault(h => h.Year == yr)?.ScoreProgress ?? 0); return GetBarColor(s).TrimStart('#'); },
-                "F4F7F5");
-
-            DataRow("YoY Δ",
-                yr =>
-                {
-                    int idx = years.IndexOf(yr);
-                    if (idx == 0) return "—";
-                    float prev = (float)(mainHistory.FirstOrDefault(h => h.Year == years[idx - 1])?.ScoreProgress ?? 0);
-                    float curr = (float)(mainHistory.FirstOrDefault(h => h.Year == yr)?.ScoreProgress ?? 0);
-                    float d = curr - prev; return $"{(d >= 0 ? "+" : "")}{d:F1}";
-                },
-                yr =>
-                {
-                    int idx = years.IndexOf(yr);
-                    if (idx == 0) return "888888";
-                    float prev = (float)(mainHistory.FirstOrDefault(h => h.Year == years[idx - 1])?.ScoreProgress ?? 0);
-                    float curr = (float)(mainHistory.FirstOrDefault(h => h.Year == yr)?.ScoreProgress ?? 0);
-                    return curr >= prev ? "336B58" : "E05252";
-                },
-                "FFFFFF");
-
-            DataRow("vs Peers",
-                yr =>
-                {
-                    float mine = (float)(mainHistory.FirstOrDefault(h => h.Year == yr)?.ScoreProgress ?? 0);
-                    float peer = peerAvg.FirstOrDefault(p => p.Year == yr).Avg;
-                    float d = mine - peer; return $"{(d >= 0 ? "+" : "")}{d:F1}";
-                },
-                yr =>
-                {
-                    float mine = (float)(mainHistory.FirstOrDefault(h => h.Year == yr)?.ScoreProgress ?? 0);
-                    float peer = peerAvg.FirstOrDefault(p => p.Year == yr).Avg;
-                    return mine >= peer ? "336B58" : "E05252";
-                },
-                "F4F7F5");
-
-            return table;
-        }
-
-        // ── Pillar heatmap table ──────────────────────────────────────────────
-
-        private static Table CreatePillarHeatmapTable(
-            List<int> allYears,
-            List<PeerProgramYearHistoryDto> history,
-            List<PeerProgramPillarHistoryReportDto> pillars)
-        {
-            int yearW   = Math.Max(400, (ContentDxa - 1600) / Math.Max(allYears.Count, 1));
-            var table   = new Table(new TableProperties(
-                new TableWidth { Width = ContentDxa.ToString(), Type = TableWidthUnitValues.Dxa }));
-
-            // Header
-            var hRow = new TableRow();
-            hRow.AppendChild(new TableCell(
-                new TableCellProperties(
-                    new TableCellWidth { Width = "1600", Type = TableWidthUnitValues.Dxa },
-                    new Shading { Val = ShadingPatternValues.Clear, Fill = "003D44" }),
-                new Paragraph(new Run(
-                    new RunProperties(new Bold(), new Color { Val = White }, new FontSize { Val = "16" }),
-                    new Text("Pillar")))));
-            foreach (var yr in allYears)
-                hRow.AppendChild(new TableCell(
-                    new TableCellProperties(
-                        new TableCellWidth { Width = yearW.ToString(), Type = TableWidthUnitValues.Dxa },
-                        new Shading { Val = ShadingPatternValues.Clear, Fill = "003D44" }),
-                    new Paragraph(
-                        new ParagraphProperties(new Justification { Val = JustificationValues.Center }),
-                        new Run(new RunProperties(new Bold(), new Color { Val = White }, new FontSize { Val = "14" }),
-                            new Text(yr.ToString())))));
-            table.AppendChild(hRow);
-
-            // Data rows
-            foreach (var (pillar, pi) in pillars.Select((p, i) => (p, i)))
-            {
-                string rowBg = pi % 2 == 0 ? "F4F7F5" : "FFFFFF";
-                var row = new TableRow();
-                row.AppendChild(new TableCell(
-                    new TableCellProperties(
-                        new TableCellWidth { Width = "1600", Type = TableWidthUnitValues.Dxa },
-                        new Shading { Val = ShadingPatternValues.Clear, Fill = rowBg }),
-                    new Paragraph(new Run(
-                        new RunProperties(new Bold(), new Color { Val = "003D44" }, new FontSize { Val = "14" }),
-                        new Text(pillar.PillarName)))));
-
-                foreach (var yr in allYears)
-                {
-                    var h  = history.FirstOrDefault(h2 => h2.Year == yr);
-                    var ps = h?.Pillars?.FirstOrDefault(p2 => p2.PillarID == pillar.PillarID);
-                    bool hasData = ps != null;
-                    float score  = hasData ? (float)ps!.ScoreProgress : -1f;
-                    string cellBg = !hasData ? "F0F0F0"
-                        : InterpolateColor("FFFFFF", "003D44", score / 100f).TrimStart('#');
-
-                    row.AppendChild(new TableCell(
-                        new TableCellProperties(
-                            new TableCellWidth { Width = yearW.ToString(), Type = TableWidthUnitValues.Dxa },
-                            new Shading { Val = ShadingPatternValues.Clear, Fill = cellBg }),
-                        new Paragraph(
-                            new ParagraphProperties(new Justification { Val = JustificationValues.Center }),
-                            new Run(new RunProperties(
-                                new Color { Val = score >= 50 ? White : "333333" },
-                                new FontSize { Val = "14" }),
-                                new Text(!hasData ? "—" : $"{score:F1}")))));
-                }
-                table.AppendChild(row);
             }
             return table;
         }
@@ -2784,11 +2395,6 @@ namespace VeridianClimatePulse.Common.Implementation
             using var encoded = snap.Encode(SKEncodedImageFormat.Png, 100);
             return encoded.ToArray();
         }
-
-        // Forward declarations — these call the SAME static paint methods used by PdfGeneratorService.
-        // If PdfGeneratorService makes them internal/protected, call them directly; otherwise just
-        // redeclare the tiny wrappers below.
-
         private static void PaintDonut(SKCanvas c, QPDF.Size s, float score) =>
             PdfGeneratorService.PaintDonutPublic(c, s, score);
 
@@ -2809,26 +2415,6 @@ namespace VeridianClimatePulse.Common.Implementation
         private static void PaintPillarHorizontalBars(
             SKCanvas c, QPDF.Size s, List<PillarChartItem> pillars) =>
             PdfGeneratorService.DrawPillarHorizontalBarsCanvas(c, s, pillars);
-        //private static void PaintRegionalBars(
-        //    SKCanvas c, QPDF.Size s, List<PeerProgramHistoryReportDto> all) =>
-        //    PdfGeneratorService.DrawRegionalBarsCanvas(c, s, all);
-
-        private static void PaintMultiLineTrend(
-            SKCanvas c, QPDF.Size s,
-            List<int> years, List<PeerProgramHistoryReportDto> peers,
-            PeerProgramHistoryReportDto? main, AiProgramSummeryDto details,
-            List<(int Year, float Avg, bool HasData)> avg) =>
-            PdfGeneratorService.DrawMultiLineTrendChartCanvas(c, s, years, peers, main, details, avg);
-
-        private static void PaintPillarLineChart(
-            SKCanvas c, QPDF.Size s,
-            List<int> years, List<PeerProgramYearHistoryDto> history,
-            List<PeerProgramPillarHistoryReportDto> pillars) =>
-            PdfGeneratorService.DrawPillarLineChartCanvas(c, s, years, history, pillars);
-
-        // ════════════════════════════════════════════════════════════════════
-        //  PARAGRAPH / ELEMENT UTILITIES
-        // ════════════════════════════════════════════════════════════════════
 
         private static Paragraph NormalParagraph(
             string text, string hexColor, int halfPtSize,
@@ -2918,359 +2504,6 @@ namespace VeridianClimatePulse.Common.Implementation
             if (main != null) list.Add(main);
             list.AddRange(peers);
             return list;
-        }
-
-        private static string FormatPop(decimal? value)
-        {
-            if (!value.HasValue || value <= 0) return "N/A";
-            if (value >= 1_000_000_000) return $"{value / 1_000_000_000M:F1}B";
-            if (value >= 1_000_000)     return $"{value / 1_000_000M:F1}M";
-            if (value >= 1_000)         return $"{value / 1_000M:F0}K";
-            return value.Value.ToString("N0");
-        }
-        // ══════════════════════════════════════════════════════════════════
-        // NEW HELPERS — legend, italic note, divider, footnote
-        // ══════════════════════════════════════════════════════════════════
-
-        /// <summary>Section divider with bottom border line — for PPP heading</summary>
-        private static Paragraph CreateSectionDivider(string text, string hexColor)
-        {
-            var para = new Paragraph();
-            var pPr = new ParagraphProperties();
-            //pPr.AppendChild(new Paragraph(new BottomBorder
-            //{
-            //    Val = BorderValues.Single,
-            //    Size = 6,
-            //    Color = hexColor.Replace("#", "")
-            //}));
-            pPr.AppendChild(new SpacingBetweenLines { Before = "120", After = "60" });
-            para.AppendChild(pPr);
-
-            var run = new Run();
-            run.AppendChild(new RunProperties
-            {
-                Bold = new Bold(),
-                FontSize = new FontSize { Val = "22" },  // 11pt
-                Color = new Color { Val = hexColor.Replace("#", "") }
-            });
-            run.AppendChild(new Text(text));
-            para.AppendChild(run);
-            return para;
-        }
-
-        /// <summary>Small italic grey explanatory note</summary>
-        private static Paragraph CreateItalicNote(string text)
-        {
-            var para = new Paragraph();
-            para.AppendChild(new ParagraphProperties(
-                new SpacingBetweenLines { Before = "40", After = "40" }));
-
-            var run = new Run();
-            run.AppendChild(new RunProperties
-            {
-                Italic = new Italic(),
-                FontSize = new FontSize { Val = "16" },   // 8pt
-                Color = new Color { Val = "555555" }
-            });
-            run.AppendChild(new Text(text));
-            para.AppendChild(run);
-            return para;
-        }
-
-        /// <summary>Very small italic footnote (7pt)</summary>
-        private static Paragraph CreateFootnote(string text)
-        {
-            var para = new Paragraph();
-            para.AppendChild(new ParagraphProperties(
-                new SpacingBetweenLines { Before = "20", After = "20" }));
-
-            var run = new Run();
-            run.AppendChild(new RunProperties
-            {
-                Italic = new Italic(),
-                FontSize = new FontSize { Val = "14" },   // 7pt
-                Color = new Color { Val = "999999" }
-            });
-            run.AppendChild(new Text(text));
-            para.AppendChild(run);
-            return para;
-        }
-
-        /// <summary>PPP signal colour legend row</summary>
-        private static Paragraph CreatePppLegend()
-        {
-            var para = new Paragraph();
-            para.AppendChild(new ParagraphProperties(
-                new SpacingBetweenLines { Before = "40", After = "20" }));
-
-            var signals = new[]
-            {
-        ("Strong PPP Advantage ≥2×",  "2E7D32"),
-        ("Moderate Advantage ≥1.3×",  "0277BD"),
-        ("Near-Parity 0.9–1.3×",      "555555"),
-        ("Cost Pressure 0.7–0.9×",    "E65100"),
-        ("High Cost Penalty <0.7×",   "D9534F"),
-    };
-
-            // Label prefix
-            var prefix = new Run();
-            prefix.AppendChild(new RunProperties
-            {
-                Bold = new Bold(),
-                FontSize = new FontSize { Val = "14" },
-                Color = new Color { Val = "777777" }
-            });
-            prefix.AppendChild(new Text("PPP Signals:  ") { Space = SpaceProcessingModeValues.Preserve });
-            para.AppendChild(prefix);
-
-            foreach (var (label, color) in signals)
-            {
-                // Coloured bullet block
-                var bullet = new Run();
-                bullet.AppendChild(new RunProperties
-                {
-                    Bold = new Bold(),
-                    FontSize = new FontSize { Val = "14" },
-                    Color = new Color { Val = color }
-                });
-                bullet.AppendChild(new Text("■ ") { Space = SpaceProcessingModeValues.Preserve });
-                para.AppendChild(bullet);
-
-                // Label text
-                var lbl = new Run();
-                lbl.AppendChild(new RunProperties
-                {
-                    FontSize = new FontSize { Val = "14" },
-                    Color = new Color { Val = "555555" }
-                });
-                lbl.AppendChild(new Text(label + "   ") { Space = SpaceProcessingModeValues.Preserve });
-                para.AppendChild(lbl);
-            }
-
-            return para;
-        }
-
-        // ══════════════════════════════════════════════════════════════════
-        // NEW HELPER — CreatePppComparisonTable
-        // ══════════════════════════════════════════════════════════════════
-
-        //private static Table CreatePppComparisonTable(
-        //    List<PeerProgramHistoryReportDto> programs,
-        //    AiProgramSummeryDto ProgramDetails)
-        //{
-        //    var orderedPrograms = programs
-        //        .OrderByDescending(c => c.PPP ?? 0)
-        //        .ToList();
-
-        //    var rows = orderedCities.Select(city =>
-        //    {
-        //        float score = GetLatestScoreOrZero(city);
-        //        decimal nominal = city.Income ?? 0;
-        //        decimal ppp = city.PPP ?? 0;
-        //        decimal diff = ppp - nominal;
-        //        decimal ratio = nominal > 0 ? Math.Round(ppp / nominal, 2) : 1m;
-
-        //        string nomCat = PdfGeneratorService.GetIncomeCategory(nominal);
-        //        string pppCat = PdfGeneratorService.GetIncomeCategory(ppp);
-        //        bool upgraded = pppCat != nomCat && ppp > nominal;
-        //        bool downgraded = pppCat != nomCat && ppp < nominal;
-
-        //        string signalLabel = ratio switch
-        //        {
-        //            >= 2.0m => "Strong PPP Advantage",
-        //            >= 1.3m => "Moderate PPP Advantage",
-        //            >= 0.9m => "Near-Parity",
-        //            >= 0.7m => "Cost Pressure",
-        //            _ => "High Cost Penalty"
-        //        };
-
-        //        string diffStr = diff >= 0
-        //            ? $"+{FormatPop(diff)}"
-        //            : $"-{FormatPop(Math.Abs(diff))}";
-
-        //        string pppDisplay = FormatPop(ppp) + (upgraded ? " ▲" : downgraded ? " ▼" : "");
-
-        //        return new[]
-        //        {
-        //    city.CityName,
-        //    city.Program ?? "—",
-        //    score < 0 ? "—" : $"{score:F1}",
-        //    FormatPop(nominal),
-        //    pppDisplay,
-        //    diffStr,
-        //    signalLabel
-        //};
-        //    }).ToArray();
-
-        //    // Column widths: City, Program, Score, Nominal, PPP, Diff, Signal
-        //    var table = CreateStyledTableWithCellColors(
-        //        headers: new[] { "City", "Program", "Score", "Nominal (USD)", "PPP (Int'l $)", "Δ Difference", "Signal" },
-        //        widths: new[] { 1800, 1000, 700, 1300, 1300, 1100, 1600 },
-        //        rows: rows,
-        //        highlightRow: i => IsSameProgram(orderedCities[i].CityName, ProgramDetails.ProgramName),
-        //        cellColor: (rowIdx, colIdx) =>
-        //        {
-        //            var city = orderedCities[rowIdx];
-        //            decimal nominal = city.Income ?? 0;
-        //            decimal ppp = city.PPP ?? 0;
-        //            decimal ratio = nominal > 0 ? Math.Round(ppp / nominal, 2) : 1m;
-
-        //            // PPP column (col 4) — green if up, red if down
-        //            if (colIdx == 4)
-        //                return ppp > nominal ? "E8F5E9" : ppp < nominal ? "FFEBEE" : null;
-
-        //            // Diff column (col 5)
-        //            if (colIdx == 5)
-        //                return ppp >= nominal ? "E8F5E9" : "FFEBEE";
-
-        //            // Signal column (col 6)
-        //            if (colIdx == 6)
-        //                return ratio switch
-        //                {
-        //                    >= 2.0m => "E8F5E9",  // light green
-        //                    >= 1.3m => "E3F2FD",  // light blue
-        //                    >= 0.9m => "F5F5F5",  // light grey
-        //                    >= 0.7m => "FFF8E1",  // light amber
-        //                    _ => "FFEBEE"   // light red
-        //                };
-
-        //            return null;
-        //        },
-        //        cellFontColor: (rowIdx, colIdx) =>
-        //        {
-        //            var city = orderedCities[rowIdx];
-        //            decimal nominal = city.Income ?? 0;
-        //            decimal ppp = city.PPP ?? 0;
-        //            decimal ratio = nominal > 0 ? Math.Round(ppp / nominal, 2) : 1m;
-
-        //            if (colIdx == 4 || colIdx == 5)
-        //                return ppp >= nominal ? "2E7D32" : "D9534F";
-
-        //            if (colIdx == 6)
-        //                return ratio switch
-        //                {
-        //                    >= 2.0m => "2E7D32",
-        //                    >= 1.3m => "0277BD",
-        //                    >= 0.9m => "555555",
-        //                    >= 0.7m => "E65100",
-        //                    _ => "D9534F"
-        //                };
-
-        //            return null;
-        //        });
-
-        //    return table;
-        //}
-
-
-        // ══════════════════════════════════════════════════════════════════
-        // UPDATED — CreateStyledTableWithCellColors
-        // (if you only have CreateStyledTable, add this overload)
-        // ══════════════════════════════════════════════════════════════════
-
-        private static Table CreateStyledTableWithCellColors(
-            string[] headers,
-            int[] widths,
-            string[][] rows,
-            Func<int, bool> highlightRow,
-            Func<int, int, string?> cellColor = null,
-            Func<int, int, string?> cellFontColor = null)
-        {
-            var table = new Table();
-
-            // Table properties
-            var tblPr = new TableProperties(
-                new TableBorders(
-                    new TopBorder { Val = BorderValues.Single, Size = 4, Color = "E4E4E4" },
-                    new BottomBorder { Val = BorderValues.Single, Size = 4, Color = "E4E4E4" },
-                    new LeftBorder { Val = BorderValues.Single, Size = 4, Color = "E4E4E4" },
-                    new RightBorder { Val = BorderValues.Single, Size = 4, Color = "E4E4E4" },
-                    new InsideHorizontalBorder { Val = BorderValues.Single, Size = 2, Color = "E4E4E4" },
-                    new InsideVerticalBorder { Val = BorderValues.Single, Size = 2, Color = "E4E4E4" }),
-                new TableWidth { Width = "5000", Type = TableWidthUnitValues.Pct });
-            table.AppendChild(tblPr);
-
-            // Column widths
-            var tblGrid = new TableGrid();
-            foreach (var w in widths)
-                tblGrid.AppendChild(new GridColumn { Width = w.ToString() });
-            table.AppendChild(tblGrid);
-
-            // Header row
-            var headerRow = new TableRow();
-            headerRow.AppendChild(new TableRowProperties(
-                new TableRowHeight { Val = 260, HeightType = HeightRuleValues.AtLeast }));
-
-            for (int col = 0; col < headers.Length; col++)
-            {
-                var cell = new TableCell();
-                cell.AppendChild(new TableCellProperties(
-                    new TableCellWidth { Width = widths[col].ToString(), Type = TableWidthUnitValues.Dxa },
-                    new Shading { Val = ShadingPatternValues.Clear, Fill = "003D44" }));
-
-                var p = new Paragraph();
-                var pp = new ParagraphProperties();
-                pp.AppendChild(new SpacingBetweenLines { Before = "0", After = "0" });
-                p.AppendChild(pp);
-
-                var run = new Run();
-                run.AppendChild(new RunProperties
-                {
-                    Bold = new Bold(),
-                    FontSize = new FontSize { Val = "16" },  // 8pt
-                    Color = new Color { Val = "FFFFFF" }
-                });
-                run.AppendChild(new Text(headers[col]));
-                p.AppendChild(run);
-                cell.AppendChild(p);
-                headerRow.AppendChild(cell);
-            }
-            table.AppendChild(headerRow);
-
-            // Data rows
-            for (int rowIdx = 0; rowIdx < rows.Length; rowIdx++)
-            {
-                bool isHighlight = highlightRow(rowIdx);
-                string defaultBg = isHighlight ? "FFF9E6" : "FFFFFF";
-
-                var tr = new TableRow();
-                tr.AppendChild(new TableRowProperties(
-                    new TableRowHeight { Val = 240, HeightType = HeightRuleValues.AtLeast }));
-
-                for (int col = 0; col < rows[rowIdx].Length; col++)
-                {
-                    string? bg = cellColor?.Invoke(rowIdx, col) ?? defaultBg;
-                    string? fontColor = cellFontColor?.Invoke(rowIdx, col);
-                    bool isBold = (col == 2) || isHighlight && col == 0; // score col bold
-
-                    var cell = new TableCell();
-                    cell.AppendChild(new TableCellProperties(
-                        new TableCellWidth { Width = widths[col].ToString(), Type = TableWidthUnitValues.Dxa },
-                        new Shading { Val = ShadingPatternValues.Clear, Fill = bg ?? defaultBg }));
-
-                    var p = new Paragraph();
-                    var pp = new ParagraphProperties();
-                    pp.AppendChild(new SpacingBetweenLines { Before = "0", After = "0" });
-                    p.AppendChild(pp);
-
-                    var run = new Run();
-                    var rPr = new RunProperties
-                    {
-                        FontSize = new FontSize { Val = "16" },  // 8pt
-                        Color = new Color { Val = fontColor ?? (isHighlight && col == 0 ? "003D44" : "333333") }
-                    };
-                    if (isBold) rPr.AppendChild(new Bold());
-                    run.AppendChild(rPr);
-                    run.AppendChild(new Text(rows[rowIdx][col]));
-                    p.AppendChild(run);
-                    cell.AppendChild(p);
-                    tr.AppendChild(cell);
-                }
-
-                table.AppendChild(tr);
-            }
-
-            return table;
         }
     }
 }

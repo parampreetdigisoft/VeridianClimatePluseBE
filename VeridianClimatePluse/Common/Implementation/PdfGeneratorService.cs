@@ -683,13 +683,13 @@ namespace VeridianClimatePulse.Common.Implementation
                     col.Item().PaddingTop(7).Row(row =>
                     {
                         DashboardStatCard(row.RelativeItem(),
-                            green.ToString(), "Performing ≥70%", ReportThemeColors.AccentEquityAssessment, ReportThemeColors.SuccessGreen);
+                            green.ToString(), "Performing ≥ 40%", ReportThemeColors.AccentEquityAssessment, ReportThemeColors.SuccessGreen);
                         row.ConstantItem(8);
                         DashboardStatCard(row.RelativeItem(),
-                            amber.ToString(), "Developing 20-69%", ReportThemeColors.WarningAmberBg, ReportThemeColors.WarningOrangeDark);
+                            amber.ToString(), "Developing 0-39%", ReportThemeColors.WarningAmberBg, ReportThemeColors.WarningOrangeDark);
                         row.ConstantItem(8);
                         DashboardStatCard(row.RelativeItem(),
-                            red.ToString(), "Needs Improvement <20%", ReportThemeColors.DangerRedBg, ReportThemeColors.DangerRed);
+                            red.ToString(), "Needs Improvement < 0%", ReportThemeColors.DangerRedBg, ReportThemeColors.DangerRed);
                         row.ConstantItem(8);
                         DashboardStatCard(row.RelativeItem(),
                             total.ToString(), "Total KPIs", ReportThemeColors.SurfaceGreenAlt, ReportThemeColors.PdfDarkGreen);

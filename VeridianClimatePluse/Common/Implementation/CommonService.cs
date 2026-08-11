@@ -38,7 +38,7 @@ namespace VeridianClimatePulse.Common.Implementation
         }
 
         #endregion
-        public static string ProgramScoreSummery(decimal? progress, string? programName = "The program", int pillarCount = 21, int kpiCount = 37)
+        public static string ProgramScoreSummery(decimal? progress, string? programName = "The program", int pillarCount = 21, int kpiCount = 65)
         {
             var evidenceSummaryStaringLine = $"{programName ?? "The program"} records an overall VCP score of {progress ?? 0}, reflecting performance across {pillarCount} pillars and {kpiCount} KPIs.";
 
