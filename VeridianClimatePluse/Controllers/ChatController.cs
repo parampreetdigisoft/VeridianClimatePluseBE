@@ -116,7 +116,7 @@ namespace VeridianClimatePulse.Controllers
         }
 
         [HttpPost("programSlides")]
-        public async Task<IActionResult> GetProgramSlides([FromBody] int ClimateProgramID)
+        public async Task<IActionResult> GetProgramSlides([FromBody] int climateProgramID)
         {
             var userId = GetUserIdFromClaims();
             if (userId == null)
@@ -131,7 +131,7 @@ namespace VeridianClimatePulse.Controllers
                 return Unauthorized("You Don't have access.");
             }
 
-            return Ok(await _chatService.GetProgramSlides(ClimateProgramID, userId.GetValueOrDefault(), userRole));
+            return Ok(await _chatService.GetProgramSlides(climateProgramID, userId.GetValueOrDefault(), userRole));
         }
     }
 }

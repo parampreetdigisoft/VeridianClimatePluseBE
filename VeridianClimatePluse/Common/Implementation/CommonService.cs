@@ -4,7 +4,6 @@ using VeridianClimatePulse.Common.Models.views;
 using VeridianClimatePulse.Data;
 using VeridianClimatePulse.Dtos.ProgramDto;
 using VeridianClimatePulse.IServices;
-using VeridianClimatePulse.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -74,15 +73,14 @@ namespace VeridianClimatePulse.Common.Implementation
             }
         }
 
-        public async Task<List<ProgramRankingResultDto>> GetProgramRankings(int climateProgramID, int year)
+        public async Task<List<ProgramRankingResultDto>> GetProgramRankings(int climateProgramID = 0)
         {
             try
             {
                 return await _context.ProgramRankingResults
                  .FromSqlRaw(
-                     "EXEC usp_getProgramRanking @climateProgramID, @year",
-                     new SqlParameter("@climateProgramID", climateProgramID),
-                     new SqlParameter("@year", year)
+                     "EXEC usp_getProgramRanking @climateProgramID",
+                     new SqlParameter("@climateProgramID", climateProgramID)
                  )
                  .AsNoTracking()
                  .ToListAsync();
@@ -113,12 +111,13 @@ namespace VeridianClimatePulse.Common.Implementation
                 return new List<EvaluationProgramProgressHistoryResultDto>();
             }
         }
-        public async Task<List<GetProgramsProgressAdminDto>> GetProgramProgressForAdmin(int userId, int role, int year)
+
+        public async Task<List<GetProgramsProgressAdminDto>> GetProgramProgressForAdmin(int userId, int role)
         {
             try
             {
                 return await _context.GetProgramsProgressAdminDto
-                 .FromSqlRaw("EXEC usp_getProgramProgress_Admin @year", new SqlParameter("@year", year))
+                 .FromSqlRaw("EXEC usp_getProgramProgress_Admin")
                  .AsNoTracking()
                  .ToListAsync();
             }

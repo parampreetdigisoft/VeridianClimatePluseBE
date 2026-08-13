@@ -24,21 +24,17 @@ namespace VeridianClimatePulse.Services
             _context = context;
             _appLogger = appLogger;
         }
-
+        
         #region GetAnalyticalLayerResults
         public async Task<PaginationResponse<GetAnalyticalLayerResultDto>> GetAnalyticalLayerResults(GetAnalyticalLayerRequestDto request, int userId, UserRole role, TieredAccessPlan userPlan = TieredAccessPlan.Pending)
         {
             try
             {
-                var year = request.Year;
-                var startDate = new DateTime(year, 1, 1);
-                var endDate = new DateTime(year + 1, 1, 1);
-                var baseQuery = _context.AnalyticalLayerResults
+                IQueryable<AnalyticalLayerResult> baseQuery = _context.AnalyticalLayerResults
                     .AsNoTracking()
                     .Include(ar => ar.AnalyticalLayer)
                         .ThenInclude(al => al.FiveLevelInterpretations)
-                    .Include(ar => ar.Program)
-                    .Where(x => (x.LastUpdated >= startDate && x.LastUpdated < endDate) || (x.AiLastUpdated >= startDate && x.AiLastUpdated < endDate));
+                    .Include(ar => ar.Program);
                     
 
                 if (role == UserRole.ProgramUser )
@@ -197,11 +193,6 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                var year = c.UpdatedAt.Year;
-                var startDate = new DateTime(year, 1, 1);
-                var endDate = new DateTime(year + 1, 1, 1);
-
-
                 var validKpiIds = new List<int>();
 
                 if (c.Kpis.Count == 0)
@@ -262,7 +253,6 @@ namespace VeridianClimatePulse.Services
                 var analyticalResults = await _context.AnalyticalLayerResults
                     .Include(ar => ar.AnalyticalLayer)
                     .Where(x => selectedClimateProgramIDs.Contains(x.ClimateProgramID) 
-                    && ((x.AiLastUpdated >= startDate && x.AiLastUpdated < endDate || x.LastUpdated >= startDate && x.LastUpdated < endDate))
                     && validKpiIds.Contains(x.LayerID))
                     .Select(ar => new
                     {
@@ -377,10 +367,6 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                var year = request.Year;
-                var startDate = new DateTime(year, 1, 1);
-                var endDate = startDate.AddYears(1);
-
                 if (role == UserRole.ProgramUser)
                 {
                     var validClimateProgramIDs = await _context.ClientProgramMappings
@@ -405,11 +391,7 @@ namespace VeridianClimatePulse.Services
                     .AsNoTracking()
                     .Where(x =>
                         request.ClimateProgramIDs.Contains(x.ClimateProgramID) &&
-                        x.LayerID == request.LayerID &&
-                        (
-                            (x.LastUpdated >= startDate && x.LastUpdated < endDate) ||
-                            (x.AiLastUpdated >= startDate && x.AiLastUpdated < endDate)
-                        ));
+                        x.LayerID == request.LayerID);
 
                 var response = await query
                     .GroupBy(x => x.LayerID)

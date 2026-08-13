@@ -524,7 +524,8 @@ namespace VeridianClimatePulse.Services
                     EndAt = c.EndAt,
                     UpdatedAt = c.UpdatedAt,
                     IsDeleted = c.IsDeleted,
-                    Score = ai.AIProgress ?? 0,
+                    AiScore = ai.AIProgress ?? 0,
+                    Score = 0,
                     Status = c.Status,
                     Description = c.Description,
                     ProgramPeers = c.ProgramPeers,
@@ -751,11 +752,9 @@ namespace VeridianClimatePulse.Services
                     return ResultResponseDto<List<StaffProgramMappingResponseDto>>.Failure(new string[] { "Invalid user" });
                 }
 
-                var year = DateTime.Now.Year;
                 Expression<Func<Assessment, bool>>  predicate = a => 
                 !a.StaffProgramMapping.IsDeleted 
                 && a.StaffProgramMapping.UserID == userId 
-                && a.UpdatedAt.Year == year
                 && (a.AssessmentPhase == AssessmentPhase.Completed || a.AssessmentPhase == AssessmentPhase.EditRejected || a.AssessmentPhase == AssessmentPhase.EditRequested);
 
                 // Get distinct staffProgramMapping which are not show to user
@@ -857,6 +856,7 @@ namespace VeridianClimatePulse.Services
                 programHistory.ActiveProgram = programQuery.Where(x => x.HasMapping).Select(x => x.ClimateProgramID).Distinct().Count();
                 programHistory.CompeleteProgram = programQuery.Where(x => x.IsCompleted).Select(x => x.ClimateProgramID).Distinct().Count();
                 programHistory.InprocessProgram = programHistory.ActiveProgram - programHistory.CompeleteProgram;
+                programHistory.TotalAccessProgram = programHistory.ActiveProgram - programHistory.CompeleteProgram;
                 programHistory.FinalizeProgram = aiProgram.Where(x=>x.IsVerified).Count();
                 programHistory.UnFinalizeProgram = aiProgram.Where(x => !x.IsVerified).Count();
 
@@ -950,15 +950,10 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                IQueryable<StaffProgramMappingResponseDto> ProgramQuery;
-                int year = DateTime.UtcNow.Year;
-                var startDate = new DateTime(year, 1, 1);
-                var endDate = new DateTime(year + 1, 1, 1);
-
+                IQueryable<StaffProgramMappingResponseDto> programQuery;
                 // Step 1??: Fetch Program score averages as a dictionary
-                var ProgramScoresQuery =
+                var programScoresQuery =
                    from ar in _context.AIProgramScores
-                   where ar.UpdatedAt >= startDate && ar.UpdatedAt < endDate
                    group ar by ar.ClimateProgramID into g
                    select new
                    {
@@ -966,13 +961,13 @@ namespace VeridianClimatePulse.Services
                        Score = g.Average(x => (decimal?)x.AIProgress) ?? 0
                    };
 
-                ProgramQuery =
+                programQuery =
                     from c in _context.ClimatePrograms
                     join cm in _context.AIEvaluatorProgramMappings
                         .Where(x => x.IsActive && x.UserID == userId)
                         on c.ClimateProgramID equals cm.ClimateProgramID
                     join u in _context.Users on cm.AssignBy equals u.UserID
-                    join cs in ProgramScoresQuery on cm.ClimateProgramID equals cs.ClimateProgramID into scoreGroup
+                    join cs in programScoresQuery on cm.ClimateProgramID equals cs.ClimateProgramID into scoreGroup
                     from cs in scoreGroup.DefaultIfEmpty()
                     select new StaffProgramMappingResponseDto
                     {
@@ -987,7 +982,7 @@ namespace VeridianClimatePulse.Services
                         StaffProgramMappingID = cm.AIEvaluatorProgramMappingID,
                         Score = cs.Score,
                     };
-                var result = await ProgramQuery
+                var result = await programQuery
                     .OrderByDescending(x => x.Score)
                                 .ToListAsync();
 
@@ -1003,8 +998,7 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                int year = DateTime.UtcNow.Year;
-                var programs = await _commonService.GetProgramProgressForAdmin(userId, (int)userRole, year);
+                var programs = await _commonService.GetProgramProgressForAdmin(userId, (int)userRole);
 
                 if (programs == null) return ResultResponseDto<byte[]>.Failure(new string[] { "There is an error please try later" });
                 IEnumerable<IGrouping<(int ClimateProgramID, string ProgramName, string Location), GetProgramsProgressAdminDto>>
@@ -1028,7 +1022,7 @@ namespace VeridianClimatePulse.Services
         }
         private byte[] MakeProgramPillarSheet(
             ExportProgramsWithOptionDto request,
-            IEnumerable<IGrouping<(int ClimateProgramID, string ProgramName, string Location), GetProgramsProgressAdminDto>> ProgramGroups)
+            IEnumerable<IGrouping<(int ClimateProgramID, string ProgramName, string Location), GetProgramsProgressAdminDto>> programGroups)
         {
             using var workbook = new XLWorkbook();
             var ws = workbook.Worksheets.Add("Programs Progress Report");
@@ -1041,7 +1035,7 @@ namespace VeridianClimatePulse.Services
             ws.Range(1, 1, 1, totalColumns).Merge().Value = "Programs Progress Report";
             ws.Range(2, 1, 2, totalColumns).Merge().Value = $"Generated On: {DateTime.UtcNow:dd-MMM-yyyy HH:mm}";
 
-            var headerRange = ws.Range(1, 1, 3, totalColumns);
+            var headerRange = ws.Range(1, 1, 2, totalColumns);
             headerRange.Style.Fill.BackgroundColor = XLColor.FromArgb(57, 123, 103);
             headerRange.Style.Font.FontColor = XLColor.White;
             headerRange.Style.Font.Bold = true;
@@ -1077,10 +1071,10 @@ namespace VeridianClimatePulse.Services
             int sno = 1;
 
             // ---------------- Data ----------------
-            foreach (var ProgramGroup in ProgramGroups)
+            foreach (var programGroup in programGroups)
             {
-                var ProgramData = ProgramGroup.First();
-                var pillars = ProgramGroup.OrderBy(x => x.DisplayOrder).ToList();
+                var programData = programGroup.First();
+                var pillars = programGroup.OrderBy(x => x.DisplayOrder).ToList();
 
                 var ProgramProgress = pillars.Average(x => x.PillarProgress);
 
@@ -1090,9 +1084,9 @@ namespace VeridianClimatePulse.Services
                 if (isRanking)
                 {
                     ws.Cell(row, 1).Value = sno++;
-                    ws.Cell(row, 2).Value = ProgramData.ProgramName;
-                    ws.Cell(row, 3).Value = ProgramData.Location;                    
-                    ws.Cell(row, 5).Value = $"{ProgramProgress:F2} - {ProgramData.AIProgramProgress:F2}";
+                    ws.Cell(row, 2).Value = programData.ProgramName;
+                    ws.Cell(row, 3).Value = programData.Location;                    
+                    ws.Cell(row, 5).Value = $"{ProgramProgress:F2} - {programData.AIProgramProgress:F2}";
 
                     row++;
                     continue;
@@ -1107,8 +1101,8 @@ namespace VeridianClimatePulse.Services
                 foreach (var pillar in pillars)
                 {
                     ws.Cell(row, 1).Value = sno++;
-                    ws.Cell(row, 2).Value = ProgramData.ProgramName;
-                    ws.Cell(row, 3).Value = ProgramData.Location;                    
+                    ws.Cell(row, 2).Value = programData.ProgramName;
+                    ws.Cell(row, 3).Value = programData.Location;                    
 
                     ws.Cell(row, 5).Value = pillar.PillarName;
                     ws.Cell(row, 6).Value = pillar.TotalScore;
@@ -1118,7 +1112,7 @@ namespace VeridianClimatePulse.Services
 
                     if (first)
                     {
-                        ws.Cell(row, 10).Value = $"{ProgramProgress:F2} - {ProgramData.AIProgramProgress:F2}";
+                        ws.Cell(row, 10).Value = $"{ProgramProgress:F2} - {programData.AIProgramProgress:F2}";
                         first = false;
                     }
 

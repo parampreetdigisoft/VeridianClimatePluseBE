@@ -833,10 +833,6 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                var year = c.UpdatedAt.Year;
-                var startDate = new DateTime(year, 1, 1);
-                var endDate = new DateTime(year + 1, 1, 1);
-
                 var validKpiIds = new List<int>();
                 if (c.Kpis.Count == 0)
                 {
@@ -886,9 +882,7 @@ namespace VeridianClimatePulse.Services
                 // Step 3: Fetch analytical layer results for selected programs
                 var analyticalResults = await _context.AnalyticalLayerResults
                     .Include(ar => ar.AnalyticalLayer)
-                    .Where(x => c.Programs.Contains(x.ClimateProgramID) &&
-                                ((x.LastUpdated >= startDate && x.LastUpdated < endDate) || (x.AiLastUpdated >= startDate && x.AiLastUpdated < endDate))
-                                && validKpiIds.Contains(x.LayerID))
+                    .Where(x => c.Programs.Contains(x.ClimateProgramID) && validKpiIds.Contains(x.LayerID))
                     .Select(ar => new
                     {
                         ar.ClimateProgramID,

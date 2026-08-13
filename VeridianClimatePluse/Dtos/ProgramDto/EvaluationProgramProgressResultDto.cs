@@ -16,12 +16,9 @@ namespace VeridianClimatePulse.Dtos.ProgramDto
     {
         public int ClimateProgramID { get; set; }
         public string ProgramName { get; set; }
-        public int TotalProgram { get; set; }
-        public string Location { get; set; }
-        public int ProgramsRank { get; set; }
-        public int TotalProgramInRegion { get; set; }
-        public int RegionRank { get; set; }
         public decimal? ProgramAIScore { get; set; }
+        public int TotalPrograms { get; set; }
+        public int ProgramRank { get; set; }
         public int? DataYear { get; set; }
     }
 

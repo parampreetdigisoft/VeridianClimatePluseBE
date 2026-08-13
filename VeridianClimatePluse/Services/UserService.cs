@@ -189,7 +189,6 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                var year = DateTime.Now.Year;
                 var query =
                 from u in _context.Users
                 where !u.IsDeleted
@@ -205,7 +204,7 @@ namespace VeridianClimatePulse.Services
                     // LEFT JOIN to Assessments
                 join a in _context.Assessments
                         .Include(q => q.PillarAssessments)
-                            .ThenInclude(q => q.Responses).Where(x=>x.IsActive && x.CreatedAt.Year == year)
+                            .ThenInclude(q => q.Responses).Where(x=>x.IsActive)
                     on uc.StaffProgramMappingID equals a.StaffProgramMappingID into userAssessment
                 from a in userAssessment.DefaultIfEmpty()
 
@@ -228,8 +227,6 @@ namespace VeridianClimatePulse.Services
                     AssessmentYear = a != null ? a.UpdatedAt.Year : 0,
                     AssessmentPhase = a != null ? a.AssessmentPhase : null
                 };
-
-
 
                 var users = await query.Distinct().ToListAsync();
 

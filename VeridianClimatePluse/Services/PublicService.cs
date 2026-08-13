@@ -130,9 +130,6 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                var year = DateTime.Now.Year;
-
-
                 var programQuery =
                    from c in _context.ClimatePrograms.Where(x => !request.ClimateProgramID.HasValue || x.ClimateProgramID == request.ClimateProgramID)
                    join uc in _context.StaffProgramMappings on c.ClimateProgramID equals uc.ClimateProgramID into ucg
@@ -146,7 +143,7 @@ namespace VeridianClimatePulse.Services
                    from r in rg.DefaultIfEmpty()
                    where !c.IsDeleted && 
                     (uc == null || !uc.IsDeleted) &&
-                    (a == null || a.UpdatedAt.Year == year) 
+                    (a == null) 
                    group r by new
                    {
                        c.ClimateProgramID,                       

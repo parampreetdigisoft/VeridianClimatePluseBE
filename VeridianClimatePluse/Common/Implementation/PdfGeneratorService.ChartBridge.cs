@@ -244,40 +244,8 @@ namespace VeridianClimatePulse.Common.Implementation
         //    }
         //}
 
-        // ── Multi-line trend chart ────────────────────────────────────────────
-        internal static void DrawMultiLineTrendChartCanvas(
-            SKCanvas c, QPDF.Size s,
-            List<int> years, List<PeerProgramHistoryReportDto> peers,
-            PeerProgramHistoryReportDto? mainProgram, AiProgramSummeryDto ProgramDetails,
-            List<(int Year, float Avg, bool HasData)> peerAvg)
-        {
-            if (years.Count < 2) return;
-            const float padL = 36f, padR = 12f, padT = 10f, padB = 24f;
-            float w = s.Width - padL - padR, h = s.Height - padT - padB;
-            float Xp(int yr) => padL + (yr - years.First()) / (float)(years.Last() - years.First()) * w;
-            float Yp(float v) => padT + h - Math.Clamp(v, 0, 100) / 100f * h;
-
-            using var grid  = new SKPaint { Color = SKColor.Parse(ReportThemeColors.Gray250), StrokeWidth = 0.5f };
-            using var glbl  = new SKPaint { Color = SKColor.Parse(ReportThemeColors.GrayMuted), TextSize = 7f, IsAntialias = true };
-            foreach (int sc in new[] { -100, -40, -20, 0, 20, 40, 100 }) { float y = Yp(sc); c.DrawLine(padL, y, padL + w, y, grid); c.DrawText(sc.ToString(), 2, y - 5, glbl); }
-            foreach (int yr in years)                          { float x = Xp(yr); c.DrawLine(x, padT, x, padT + h, new SKPaint { Color = SKColor.Parse(ReportThemeColors.Gray150), StrokeWidth = 0.5f }); c.DrawText(yr.ToString(), x - 14, padT + h + 7, glbl); }
-
-            // Peer lines
-            string[] pal = { "F0B429","4CAF8A","1E88E5","FB8C00","7B61FF","E05252" };
-            for (int pi = 0; pi < peers.Count; pi++)
-            {
-                var pts = (peers[pi].ProgramHistory ?? new()).Where(h => years.Contains(h.Year)).OrderBy(h => h.Year)
-                    .Select(h => new SKPoint(Xp(h.Year), Yp((float)h.ScoreProgress))).ToList();
-                DrawPolylineStatic(c, pts, new SKPaint { Color = SKColor.Parse(pal[1 + (pi % (pal.Length - 1))]).WithAlpha(180), StrokeWidth = 1.2f, IsAntialias = true, IsStroke = true });
-            }
-
-            // Main city line
-            var mainPts = (mainProgram?.ProgramHistory ?? new()).Where(h => years.Contains(h.Year)).OrderBy(h => h.Year)
-                .Select(h => new SKPoint(Xp(h.Year), Yp((float)h.ScoreProgress))).ToList();
-            DrawPolylineStatic(c, mainPts, new SKPaint { Color = SKColor.Parse(pal[0]), StrokeWidth = 2.5f, IsAntialias = true, IsStroke = true });
-            foreach (var pt in mainPts) c.DrawCircle(pt.X, pt.Y, 4f, new SKPaint { Color = SKColor.Parse(pal[0]), IsAntialias = true });
-        }
-
+       
+       
         // ── Pillar line chart ─────────────────────────────────────────────────
         internal static void DrawPillarLineChartCanvas(
             SKCanvas c, QPDF.Size s,

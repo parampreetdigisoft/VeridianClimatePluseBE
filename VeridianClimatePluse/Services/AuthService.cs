@@ -842,8 +842,7 @@ namespace VeridianClimatePulse.Services
                 else
                 {
                     var user = users.FirstOrDefault(x => x.UserID == request.UserID);
-                    var year = DateTime.Now.Year;
-                    var assessment = await _context.Assessments.Include(x => x.StaffProgramMapping).FirstOrDefaultAsync(x => x.StaffProgramMappingID == request.StaffProgramMappingID && x.CreatedAt.Year== year);
+                    var assessment = await _context.Assessments.Include(x => x.StaffProgramMapping).FirstOrDefaultAsync(x => x.StaffProgramMappingID == request.StaffProgramMappingID);
                     if (assessment != null)
                     {
                         var program = _context.ClimatePrograms.FirstOrDefault(x => x.ClimateProgramID == assessment.StaffProgramMapping.ClimateProgramID);

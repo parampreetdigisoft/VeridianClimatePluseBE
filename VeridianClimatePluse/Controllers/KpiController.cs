@@ -1,5 +1,4 @@
 
-using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VeridianClimatePulse.Dtos.ClientDto;
@@ -7,8 +6,6 @@ using VeridianClimatePulse.Dtos.kpiDto;
 using VeridianClimatePulse.Enums;
 using VeridianClimatePulse.IServices;
 using VeridianClimatePulse.Models;
-using VeridianClimatePulse.Services;
-
 using System.Security.Claims;
 
 namespace VeridianClimatePulse.Controllers

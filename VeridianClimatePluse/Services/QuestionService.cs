@@ -316,12 +316,10 @@ namespace VeridianClimatePulse.Services
                 var valid = _context.StaffProgramMappings.Any(x => x.StaffProgramMappingID == request.StaffProgramMappingID && x.UserID == userId && !x.IsDeleted);
                 if (valid)
                 {
-                    var year = DateTime.Now.Year;
-                    // Load assessment once (if exists)
                     var answeredPillarIds = new List<int>();
                     var assessment = await _context.Assessments
                         .Include(x => x.PillarAssessments).ThenInclude(x => x.Responses)
-                        .Where(a => a.StaffProgramMappingID == request.StaffProgramMappingID && a.UpdatedAt.Year == year && a.IsActive)
+                        .Where(a => a.StaffProgramMappingID == request.StaffProgramMappingID && a.IsActive)
                         .FirstOrDefaultAsync();
                     if (assessment != null)
                     {
@@ -452,11 +450,10 @@ namespace VeridianClimatePulse.Services
                                 }).FirstOrDefault();
 
                 var sheetName = fileName?.ProgramName + "_" + fileName?.FullName;
-                var year = DateTime.Now.Year;
                 var pillarAssessments = _context.Assessments
                     .Include(x => x.PillarAssessments)
                     .ThenInclude(x => x.Responses)
-                    .Where(a => a.StaffProgramMappingID == staffProgramMappingID && a.IsActive && a.UpdatedAt.Year == year)
+                    .Where(a => a.StaffProgramMappingID == staffProgramMappingID && a.IsActive)
                     .SelectMany(x => x.PillarAssessments).ToList();
 
                 // Get next unanswered pillar
@@ -893,7 +890,6 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                var year = requestDto.UpdatedAt.Year;
                 // =========================
                 // 1. PILLAR + QUESTIONS
                 // =========================
@@ -933,8 +929,7 @@ namespace VeridianClimatePulse.Services
                         .Where(pa => pa.PillarID == requestDto.PillarID))
                     .ThenInclude(pa => pa.Responses)
                     .Where(a => mappingIds.Contains(a.StaffProgramMappingID)
-                                && a.IsActive
-                                && a.UpdatedAt.Year == year)
+                                && a.IsActive)
                     .AsNoTracking()
                     .ToListAsync();
 
@@ -965,8 +960,7 @@ namespace VeridianClimatePulse.Services
                 // =========================
                 var aiRaw = await _context.AIEstimatedQuestionScores
                     .Where(x => x.ClimateProgramID == requestDto.ClimateProgramID
-                                && x.PillarID == requestDto.PillarID
-                                && x.Year == year)
+                                && x.PillarID == requestDto.PillarID)
                     .ToListAsync();
 
                 var aiDict = aiRaw
@@ -1064,7 +1058,6 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                var year = DateTime.Now.Year;
                 var staffProgramMappings = await _context.StaffProgramMappings
                     .FirstOrDefaultAsync(x => x.StaffProgramMappingID == request.StaffProgramMappingID
                                            && x.UserID == userId
@@ -1076,7 +1069,6 @@ namespace VeridianClimatePulse.Services
                 
                 Expression<Func<Assessment, bool>> predicate = a =>
                                     a.StaffProgramMappingID == request.StaffProgramMappingID &&
-                                    a.UpdatedAt.Year == year &&
                                     a.IsActive;
 
                 // Load assessment with related data
@@ -1187,8 +1179,7 @@ namespace VeridianClimatePulse.Services
                 // Load analyst responses for this pillar
                 var analystResponses = await _context.Assessments
                     .Where(a => mappingIds.Contains(a.StaffProgramMappingID)
-                             && a.IsActive
-                             && a.UpdatedAt.Year == year)
+                             && a.IsActive)
                     .SelectMany(a => a.PillarAssessments
                         .Where(pa => pa.PillarID == selectPillar.PillarID)
                         .SelectMany(pa => pa.Responses
@@ -1213,8 +1204,7 @@ namespace VeridianClimatePulse.Services
                 // Load AI estimated scores for this pillar
                 var aiRawData = await _context.AIEstimatedQuestionScores
                     .Where(x => x.ClimateProgramID == staffProgramMappings.ClimateProgramID
-                             && x.PillarID == selectPillar.PillarID
-                             && x.Year == year)
+                             && x.PillarID == selectPillar.PillarID)
                     .AsNoTracking()
                     .ToListAsync();
 

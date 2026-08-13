@@ -181,13 +181,14 @@ namespace VeridianClimatePulse.Services
                 return ResultResponseDto<ChatResponseDto>.Failure(new[] { "An error occurred while processing your request. Please try again later." });
             }
         }
+
         public async Task<ResultResponseDto<ChatProgramExecutiveSlidesResponse>> GetProgramSlides(int climateProgramID, int userId, UserRole userRole)
         {
             string cacheKey = $"ProgramSlides_{climateProgramID}";
 
             try
             {
-                if (userRole == UserRole.ProgramUser)
+                if (userRole == UserRole.ProgramUser && climateProgramID != 0)
                 {
                     var isValidProgram = _context.ClientProgramMappings.Where(x => x.UserID == userId).Any(c => c.ClimateProgramID == climateProgramID);
                     if (!isValidProgram)
@@ -196,56 +197,97 @@ namespace VeridianClimatePulse.Services
                     }
                 }
 
-                var year = DateTime.UtcNow.Year;
+                var programRanking = await _commonService.GetProgramRankings(climateProgramID);
+                ProgramRankingResponseDto programResult;
+                List<PillarsUserHistroyResponseDto> pillars;
 
-                var programExists = await _commonService.GetProgramRankings(climateProgramID, year);
-
-                var program = programExists.FirstOrDefault(x=>x.ClimateProgramID == climateProgramID);
-
-                if (program == null)
+                if (climateProgramID == 0)
                 {
-                   return ResultResponseDto<ChatProgramExecutiveSlidesResponse>.Failure(new[] { "Program not found." });
-                }                
-
-                var pillars = (
-                    from p in _context.Pillars.Where(x => x.IsActive && !x.IsDeleted)
-
-                    join x in _context.AIPillarScores
-                        .Where(a => a.ClimateProgramID == program.ClimateProgramID
-                                 && a.Year == program.DataYear)
-                    on p.PillarID equals x.PillarID into pillarScores
-
-                    from score in pillarScores.DefaultIfEmpty()
-
-                    select new PillarsUserHistroyResponseDto
+                    if (programRanking != null && programRanking.Any())
                     {
-                        PillarID = p.PillarID,
-                        PillarName = p.PillarName ?? "",
-                        DisplayOrder = p.DisplayOrder,
-                        PillarScore = score != null ? score.AIProgress ?? 0 : 0,
-                        ImagePath = p.ImagePath
+                        var averageScore = programRanking.Average(p => p.ProgramAIScore ?? 0);
+                        var totalProgramCount = programRanking.Count();
+
+                        pillars = (
+                            from p in _context.Pillars.Where(x => x.IsActive && !x.IsDeleted)
+
+                            join x in _context.AIPillarScores
+                            on p.PillarID equals x.PillarID into pillarScores
+
+                            from score in pillarScores.DefaultIfEmpty()
+
+                            group score by new { p.PillarID, p.PillarName, p.DisplayOrder, p.ImagePath } into g
+
+                            select new PillarsUserHistroyResponseDto
+                            {
+                                PillarID = g.Key.PillarID,
+                                PillarName = g.Key.PillarName ?? "",
+                                DisplayOrder = g.Key.DisplayOrder,
+                                PillarScore = g.Where(s => s != null).Average(s => s.AIProgress ?? 0),
+                                ImagePath = g.Key.ImagePath
+                            }
+                        ).ToList();
+
+                        programResult = new ProgramRankingResponseDto
+                        {
+                            ClimateProgramID = 0,
+                            ProgramName = "All Programs Average",
+                            ProgramAIScore = averageScore,
+                            DataYear = programRanking.FirstOrDefault()?.DataYear,
+                            ProgramRank = 1,
+                            TotalProgram = totalProgramCount,
+                            Pillars = pillars.OrderBy(p => p.DisplayOrder).ToList()
+                        };
                     }
-                ).ToList();
-
-                if (userRole == UserRole.ProgramUser)
-                {
-                    var validPillars = _context.ClientPillarMappings.Where(x => x.UserID == userId).Select(x => x.PillarID);
-                    pillars = pillars.Where(x => validPillars.Contains(x.PillarID)).ToList();
+                    else
+                    {
+                        return ResultResponseDto<ChatProgramExecutiveSlidesResponse>.Failure(new[] { "No programs found to calculate average." });
+                    }
                 }
-               
-                var programResult = new ProgramRankingResponseDto
+                else
                 {
-                    ClimateProgramID = program.ClimateProgramID,
-                    ProgramName = program.ProgramName,
-                    ProgramAIScore = program.ProgramAIScore,
-                    DataYear = program.DataYear,
-                    Location = program.Location,
-                    RegionRank= program.RegionRank,
-                    TotalProgram = program.TotalProgram,
-                    TotalProgramInRegion = program.TotalProgramInRegion,
-                    Pillars = pillars.OrderBy(p => p.DisplayOrder).ToList()
-                };
+                    var program = programRanking.FirstOrDefault(x => x.ClimateProgramID == climateProgramID);
+                    if (program == null)
+                    {
+                        return ResultResponseDto<ChatProgramExecutiveSlidesResponse>.Failure(new[] { "Program not found." });
+                    }
 
+                    pillars = (
+                        from p in _context.Pillars.Where(x => x.IsActive && !x.IsDeleted)
+
+                        join x in _context.AIPillarScores
+                            .Where(a => a.ClimateProgramID == program.ClimateProgramID)
+                        on p.PillarID equals x.PillarID into pillarScores
+
+                        from score in pillarScores.DefaultIfEmpty()
+
+                        select new PillarsUserHistroyResponseDto
+                        {
+                            PillarID = p.PillarID,
+                            PillarName = p.PillarName ?? "",
+                            DisplayOrder = p.DisplayOrder,
+                            PillarScore = score != null ? score.AIProgress ?? 0 : 0,
+                            ImagePath = p.ImagePath
+                        }
+                    ).ToList();
+
+                    if (userRole == UserRole.ProgramUser && climateProgramID != 0)
+                    {
+                        var validPillars = _context.ClientPillarMappings.Where(x => x.UserID == userId).Select(x => x.PillarID);
+                        pillars = pillars.Where(x => validPillars.Contains(x.PillarID)).ToList();
+                    }
+
+                    programResult = new ProgramRankingResponseDto
+                    {
+                        ClimateProgramID = program.ClimateProgramID,
+                        ProgramName = program.ProgramName,
+                        ProgramAIScore = program.ProgramAIScore,
+                        DataYear = program.DataYear,
+                        ProgramRank = program.ProgramRank,
+                        TotalProgram = program.TotalPrograms,
+                        Pillars = pillars.OrderBy(p => p.DisplayOrder).ToList()
+                    };
+                }
                 if (_cache.TryGetValue(cacheKey, out ChatProgramExecutiveSlidesResponse cachedResult))
                 {
                     cachedResult.Result.Program = programResult;
@@ -259,32 +301,21 @@ namespace VeridianClimatePulse.Services
                     );
                 }
 
-                // ? Fetch from AI service
-                var result = await _aIAnalyzeService.GetProgramSlides(climateProgramID);
-
-                if (result == null || result.Success != true)
+                var response = new ChatProgramExecutiveSlidesResponse
                 {
-                    return ResultResponseDto<ChatProgramExecutiveSlidesResponse>.Failure(
-                        new[]
-                        {
-                            result?.Message ??
-                            "Failed to fetch Program executive slides from VCP Aevum."
-                        }
-                    );
-                }
+                    Success = true,
+                    Message = "Program executive slides fetched successfully.",
+                    Result = new ProgramExecutiveSlidesResult
+                    {
+                        Program = programResult,
+                        RecentPerformance = new PerformanceSummary(),
+                        CombinedRisks = new List<CombinedRiskItem>(),
+                        EarlyWarnings = new List<EarlyWarningItem>()
+                    }
+                };
 
-                // ? Store in cache
-                _cache.Set(cacheKey,  result,
-                    new MemoryCacheEntryOptions
-                    { 
-                        AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(12),
-                        SlidingExpiration = TimeSpan.FromHours(10),
-                        Priority = CacheItemPriority.High
-                    });
-
-                result.Result.Program = programResult;
                 return ResultResponseDto<ChatProgramExecutiveSlidesResponse>.Success(
-                    result,
+                    response,
                     new List<string>
                     {
                          "Program executive slides fetched successfully."

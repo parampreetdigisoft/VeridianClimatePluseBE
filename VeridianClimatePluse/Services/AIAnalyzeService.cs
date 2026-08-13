@@ -304,7 +304,7 @@ namespace VeridianClimatePulse.Services
     public static class AiEndpoints
     {
         private const string BasePath = "/api/programs-score-analysis";
-        private const string DocumentPath = "/api/r ag";
+        private const string DocumentPath = "/api/rag";
         private const string ChatPath = "/api/chat";
 
         public static string AnalyzeAllProgramsFull =>
@@ -334,7 +334,7 @@ namespace VeridianClimatePulse.Services
         public static string DeleteDocument(int documentId) =>
             $"{DocumentPath}/delete-document/{documentId}";
 
-        public static string ChatProgramAsk() => $"{ChatPath}/Program";
+        public static string ChatProgramAsk() => $"{ChatPath}/program";
         public static string ChatGlobalAsk() => $"{ChatPath}/global";
         public static string CrossComparision() => $"{ChatPath}/cross-comparision";
         public static string ProgramSlides() => $"{ChatPath}/executive-slides";

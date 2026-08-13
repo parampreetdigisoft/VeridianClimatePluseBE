@@ -338,8 +338,6 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                var year = request.UpdatedAt.Year;
-
                 // 1. Validate user
                 var user = await _context.Users
                     .AsNoTracking()
@@ -368,7 +366,6 @@ namespace VeridianClimatePulse.Services
                         .ThenInclude(pa => pa.Responses)
                     .Where(a => mappingIds.Contains(a.StaffProgramMappingID)
                                 && a.IsActive
-                                && a.UpdatedAt.Year == year
                                 )
                     .AsNoTracking()
                     .ToListAsync();
@@ -408,8 +405,7 @@ namespace VeridianClimatePulse.Services
                 // =========================================
                 var aiRaw = await _context.AIEstimatedQuestionScores
                     .Where(x => x.ClimateProgramID == request.ClimateProgramID
-                                && (!request.PillarID.HasValue || x.PillarID == request.PillarID)
-                                && x.Year == year)
+                                && (!request.PillarID.HasValue || x.PillarID == request.PillarID))
                     .ToListAsync();
 
                 var aiDict = aiRaw

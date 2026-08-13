@@ -66,6 +66,7 @@ namespace VeridianClimatePulse.Dtos.chatDto
         public string ProgramName { get; set; }
         public int TotalProgram { get; set; }
         public int TotalProgramInRegion { get; set; }
+        public int ProgramRank { get; set; }
         public int RegionRank { get; set; }
         public decimal? ProgramAIScore { get; set; }
         public int? DataYear { get; set; }
