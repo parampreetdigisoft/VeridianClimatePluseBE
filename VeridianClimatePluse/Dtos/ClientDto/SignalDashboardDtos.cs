@@ -15,9 +15,13 @@ namespace VeridianClimatePulse.Dtos.ClientDto
 
         public string Name { get; set; } = string.Empty;
 
-        public decimal Value { get; set; }
+        public decimal AIValue { get; set; }
 
-        public string Condition { get; set; } = string.Empty;
+        public string AICondition { get; set; } = string.Empty;
+        
+        public decimal ManualValue { get; set; }
+
+        public string ManualCondition { get; set; } = string.Empty;
 
         public string Narrative { get; set; } = string.Empty;
 
@@ -25,7 +29,9 @@ namespace VeridianClimatePulse.Dtos.ClientDto
 
         public string StrategicAction { get; set; } = string.Empty;
 
-        public int InterpretationID { get; set; }
+        public int AIInterpretationID { get; set; }
+
+        public int ManualInterpretationID { get; set; }
 
         public bool IsAlert { get; set; }
 

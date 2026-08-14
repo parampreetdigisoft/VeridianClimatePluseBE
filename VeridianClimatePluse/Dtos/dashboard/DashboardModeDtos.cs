@@ -10,10 +10,14 @@ namespace VeridianClimatePulse.Dtos.dashboard
         public string? Description { get; set; }
         public int Year { get; set; }
         public decimal Vcp { get; set; }
-        public decimal ProgramScore { get; set; }
+        public decimal AIProgramScore { get; set; }
+        public decimal ManualProgramScore { get; set; }
+        public decimal ManualValue{ get; set; }
         public decimal VcpDirectionalMovement { get; set; }
         public string VcpCondition { get; set; } = string.Empty;
+        public string ManualCondition { get; set; } = string.Empty;
         public string VcpDescriptor { get; set; } = string.Empty;
+        public string ManualDescriptor { get; set; } = string.Empty;
         public string VcpStrategicAction { get; set; } = string.Empty;
         public List<SignalCardDto> Signals { get; set; } = new();
         public List<SignalCardDto> PrimarySignals { get; set; } = new();

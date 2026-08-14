@@ -71,10 +71,11 @@ namespace VeridianClimatePulse.Services
 
                 var accessibleLayerIds = await GetAccessibleLayerIds(userId);
                 var kpiResults = await LoadLayerResults(climateProgramID, layerIds);
-                var vcpScores = await LoadProgramVcpScores(climateProgramID);
+                var vcpAIScores = await LoadProgramVcpScores(climateProgramID);
+                var vcpManualScores = await LoadProgramVcpManualScores(userId, climateProgramID, userRole);
                 var primaryMappings = OrderMappings(mappings.Where(x => x.PriorityLevel == 1));
                 var secondaryMappings = OrderMappings(mappings.Where(x => x.PriorityLevel != 1));
-                var primarySignals = BuildSignalCards(primaryMappings, kpiResults,layers, accessibleLayerIds, vcpScores.Score);
+                var primarySignals = BuildSignalCards(primaryMappings, kpiResults,layers, accessibleLayerIds, vcpAIScores.Score);
 
                 primarySignals.Insert(0, new SignalCardDto
                 {
@@ -83,29 +84,34 @@ namespace VeridianClimatePulse.Services
                     LayerName = "Program Score",
                     Description = "Represents the program's overall progress score based on the latest assessment.",
                     Descriptor = "Overall assessment of the program's current progress and performance.",
-                    StrategicAction = "Review the score category and prioritize actions to strengthen performance and improve overall progress.",
                     Code = "VCP Score",
                     Name = "Program Score",
-                    Value = vcpScores.Score ?? 0m,
-                    Condition = CommonStaticMethods.GetConditionByScore(vcpScores.Score ?? 0m)
+                    AIValue = vcpAIScores.Score ?? 0m,
+                    ManualValue = vcpManualScores.Score ?? -1,
+                    AICondition = CommonStaticMethods.GetConditionByScore(vcpAIScores.Score ?? 0m),
+                    ManualCondition = CommonStaticMethods.GetConditionByScore(vcpManualScores.Score ?? 0m),
                 });
 
-                var secondarySignals = BuildSignalCards(secondaryMappings, kpiResults, layers, accessibleLayerIds, vcpScores.Score);
+                var secondarySignals = BuildSignalCards(secondaryMappings, kpiResults, layers, accessibleLayerIds, vcpAIScores.Score);
                 var vcpLayer = layers.Values.FirstOrDefault(x => x.LayerCode.Equals("VCP", StringComparison.OrdinalIgnoreCase));
 
-                var vcpInterpretation = vcpLayer != null 
-                    ? MatchInterpretationByValue(vcpLayer, vcpScores.Score ?? 0m)
+                var vcpAIInterpretation = vcpLayer != null 
+                    ? MatchInterpretationByValue(vcpLayer, vcpAIScores.Score ?? 0m)
                     : null;
-                var vcpCondition = CommonStaticMethods.GetConditionByScore(vcpScores.Score ?? 0m);
+                var vcpManualInterpretation = vcpLayer != null
+                    ? MatchInterpretationByValue(vcpLayer, vcpManualScores.Score ?? 0m)
+                    : null;
+                var vcpAICondition = CommonStaticMethods.GetConditionByScore(vcpAIScores.Score ?? 0m);
+                var vcpManualCondition = CommonStaticMethods.GetConditionByScore(vcpManualScores.Score ?? 0m);
 
                 var narratives = primarySignals
                     .Where(x => !x.LayerCode.Equals("VCP", StringComparison.OrdinalIgnoreCase))
                     .OrderByDescending(x => x.IsAlert)
-                    .ThenByDescending(x => x.Value)
+                    .ThenByDescending(x => x.AIValue)
                     .Take(4)
                     .Select(x => new NarrativeDto
                     {
-                        Headline = $"{x.LayerName} ({x.Condition})",
+                        Headline = $"{x.LayerName} ({x.AICondition})",
                         Detail = string.IsNullOrWhiteSpace(x.Descriptor) ? x.Narrative : x.Descriptor
                     })
                     .ToList();
@@ -120,12 +126,15 @@ namespace VeridianClimatePulse.Services
                         ModeName = dashboardMode.ModeName ?? string.Empty,
                         Description = dashboardMode.Description,
                         Year = DateTime.Now.Year,
-                        Vcp = vcpScores.Score ?? 0m,
-                        ProgramScore = vcpScores.Score ?? 0m,
+                        Vcp = vcpAIScores.Score ?? 0m,
+                        AIProgramScore = vcpAIScores.Score ?? 0m,
+                        ManualProgramScore = vcpManualScores.Score ?? 0m,
+                        ManualValue = vcpManualScores.Score ?? 0m,
                         VcpDirectionalMovement = 0m,
-                        VcpCondition = vcpCondition,
-                        VcpDescriptor = vcpInterpretation?.Descriptor ?? string.Empty,
-                        VcpStrategicAction = vcpInterpretation?.Descriptor ?? string.Empty,
+                        VcpCondition = vcpAICondition,
+                        ManualCondition = vcpManualCondition,
+                        VcpDescriptor = vcpAIInterpretation?.Descriptor ?? string.Empty,
+                        ManualDescriptor = vcpManualInterpretation?.Descriptor ?? string.Empty,
                         PrimarySignals = primarySignals,
                         SecondarySignals = secondarySignals,
                         Signals = allSignals,
@@ -159,7 +168,10 @@ namespace VeridianClimatePulse.Services
                     x.LayerID,
                     x.AiCalValue5,
                     x.AiInterpretationID,
-                    x.AiLastUpdated
+                    x.AiLastUpdated,
+                    x.CalValue5,
+                    x.InterpretationID,
+                    x.LastUpdated
                 })
                 .ToListAsync();
             
@@ -174,8 +186,10 @@ namespace VeridianClimatePulse.Services
                         .First();
                     return new LayerScoreResult
                     {
-                        Value = Math.Round(score.AiCalValue5 ?? 0m, 2),
-                        InterpretationId = score.AiInterpretationID
+                        AIValue = Math.Round(score.AiCalValue5 ?? 0m, 2),
+                        AIInterpretationId = score.AiInterpretationID,
+                        ManualValue = score.CalValue5 ?? 0m,
+                        ManualInterpretationId = score.InterpretationID
                     };
                 });
         }
@@ -258,6 +272,26 @@ namespace VeridianClimatePulse.Services
             };
         }
 
+        private async Task<ProgramVcpScores> LoadProgramVcpManualScores(
+            int userID,
+            int climateProgramID,
+            UserRole userRole)
+        {
+            var progress = await _commonService.GetProgramProgressAsync(
+                userID,
+                (int)userRole,
+                climateProgramID);
+
+            var averageScoreProgress = progress != null && progress.Any()
+                ? progress.Average(x => x.ScoreProgress)
+                : 0m;
+
+            return new ProgramVcpScores
+            {
+                Score = averageScoreProgress
+            };
+        }
+
         private List<SignalCardDto> BuildSignalCards(
            IEnumerable<DashboardModeKPIMapping> mappings,
            IReadOnlyDictionary<int, LayerScoreResult> kpiResults,
@@ -275,7 +309,8 @@ namespace VeridianClimatePulse.Services
 
                 kpiResults.TryGetValue(mapping.LayerID, out var kpiResult);
 
-                var value = kpiResult?.Value ?? 0m;
+                var value = kpiResult?.AIValue ?? 0m;
+                var manualValue = kpiResult?.ManualValue ?? 0m;
 
                 if (vcpOverride.HasValue &&
                     layer.LayerCode.Equals("VCP", StringComparison.OrdinalIgnoreCase))
@@ -283,9 +318,11 @@ namespace VeridianClimatePulse.Services
                     value = vcpOverride.Value;
                 }
 
-                var interpretation = ResolveInterpretation(layer, kpiResult?.InterpretationId);
+                var aiInterpretation = ResolveInterpretation(layer, kpiResult?.AIInterpretationId);
+                var manualInterpretation = ResolveInterpretation(layer, kpiResult?.ManualInterpretationId);
 
-                var condition = interpretation?.Condition ?? ResolveConditionByValue(layer, value);
+                var condition = aiInterpretation?.Condition ?? ResolveConditionByValue(layer, value);
+                var manualCondition = manualInterpretation?.Condition ?? ResolveConditionByValue(layer, manualValue);
 
                 var isAlert = IsAlertCondition(condition);
 
@@ -297,11 +334,14 @@ namespace VeridianClimatePulse.Services
                     Description = CommonStaticMethods.StripHtml(layer.Purpose),
                     Code = layer.LayerCode,
                     Name = layer.LayerName,
-                    Value = value,
-                    Condition = condition,
-                    Descriptor = interpretation?.Descriptor ?? string.Empty,
-                    Narrative = interpretation?.Descriptor ?? string.Empty,
-                    InterpretationID = interpretation?.InterpretationID ?? 0,
+                    AIValue = value,
+                    AICondition = condition,
+                    ManualValue = manualValue,
+                    ManualCondition = manualCondition ?? string.Empty,
+                    Descriptor = manualInterpretation?.Descriptor ?? string.Empty,
+                    Narrative = manualInterpretation?.Descriptor ?? string.Empty,
+                    AIInterpretationID = aiInterpretation?.InterpretationID ?? 0,
+                    ManualInterpretationID = manualInterpretation?.InterpretationID ?? 0,
                     IsAlert = isAlert,
                     IsAccessible = accessibleLayerIds.Contains(layer.LayerID),
                     Interpretations = MapInterpretations(layer),
@@ -371,8 +411,10 @@ namespace VeridianClimatePulse.Services
         }
         private sealed class LayerScoreResult
         {
-            public decimal Value { get; init; }
-            public int? InterpretationId { get; init; }
+            public decimal AIValue { get; init; }
+            public int? AIInterpretationId { get; init; }
+            public decimal ManualValue { get; init; }
+            public int? ManualInterpretationId { get; init; }
         }
 
     }

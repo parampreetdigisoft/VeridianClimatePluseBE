@@ -138,6 +138,7 @@ namespace VeridianClimatePulse.Common.Implementation
                         AddProgramDetailsSections(body, mainPart, program, pillars, programKpis,
                                                new List<PeerProgramHistoryReportDto>(), userRole, isAllPrograms: true);
                     }
+                  string xml = mainPart.Document.OuterXml;
                 });
             }
             catch (Exception ex)
@@ -219,18 +220,18 @@ namespace VeridianClimatePulse.Common.Implementation
                     AddPeerComparisonSections(body, mainPart, peerPrograms, programDetails, userRole);
                     //AddPerformanceTrendSections(body, mainPart, peerPrograms, programDetails, userRole);
                 }
+
+                // ── 5. Per-Pillar Detail ─────────────────────────────────────────────────
+                var accessiblePillars = pillars.Where(x =>
+                    (x.IsAccess && userRole == UserRole.ProgramUser) || userRole != UserRole.ProgramUser).ToList();
+
+                foreach (var pillar in accessiblePillars)
+                {
+                    AppendProgramHeader(mainPart, programDetails, pillar.PillarName);
+                    AddPillarSection(body, mainPart, pillar, userRole);
+                }
             }
-
-            // ── 5. Per-Pillar Detail ─────────────────────────────────────────────────
-            var accessiblePillars = pillars.Where(x =>
-                (x.IsAccess && userRole == UserRole.ProgramUser) || userRole != UserRole.ProgramUser).ToList();
-
-            foreach (var pillar in accessiblePillars)
-            {
-                AppendProgramHeader(mainPart, programDetails, pillar.PillarName);
-                AddPillarSection(body, mainPart, pillar, userRole);
-            }
-
+          
             // ── 6. KPI Dashboard (LAST section) ─────────────────────────────────────
             if (kpiChartItems.Any())
             {
@@ -2480,17 +2481,6 @@ namespace VeridianClimatePulse.Common.Implementation
         private static string TruncateText(string text, int maxLength) =>
             string.IsNullOrEmpty(text) || text.Length <= maxLength
                 ? text : text[..maxLength] + "...";
-
-        private static string InterpolateColor(string from, string to, float t)
-        {
-            t = Math.Clamp(t, 0f, 1f);
-            var c1 = SKColor.Parse(from);
-            var c2 = SKColor.Parse(to);
-            byte r = (byte)(c1.Red   + (c2.Red   - c1.Red)   * t);
-            byte g = (byte)(c1.Green + (c2.Green - c1.Green) * t);
-            byte b = (byte)(c1.Blue  + (c2.Blue  - c1.Blue)  * t);
-            return $"#{r:X2}{g:X2}{b:X2}";
-        }
 
         private static float GetLatestScoreOrZero(PeerProgramHistoryReportDto program) =>
             program.ProgramHistory?.OrderByDescending(h => h.Year).FirstOrDefault() is { } last
