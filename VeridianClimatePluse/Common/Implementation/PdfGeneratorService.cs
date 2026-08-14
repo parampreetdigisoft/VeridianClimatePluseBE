@@ -862,7 +862,7 @@ namespace VeridianClimatePulse.Common.Implementation
             // 18 bars per chart row . compact but legible
             var groups = kpis
                 .Select((k, i) => new { k, i })
-                .GroupBy(x => x.i / 18)
+                .GroupBy(x => x.i / 13)
                 .Select(g => g.Select(x => x.k).ToList())
                 .ToList();
 

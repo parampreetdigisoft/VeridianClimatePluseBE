@@ -52,35 +52,33 @@ namespace VeridianClimatePulse.Common.Implementation
         internal static void DrawKpiBarChartCanvas(
             SKCanvas c, QPDF.Size s, List<KpiChartItem> data, int offset)
         {
-            // PdfGeneratorService.DrawKpiBarChart uses IContainer (QuestPDF).
-            // Replicate the canvas-only portion here since it is already
-            // purely SkiaSharp.  This is the ONLY method that needs a copy
-            // because the original wraps an IContainer.Background().Canvas() call.
-
             if (!data.Any()) return;
-
             const float lp = 8f, rp = 8f, tp = 22f, bp = 26f;
             float chartW = s.Width - lp - rp;
             float chartH = s.Height - tp - bp;
+            float halfH = chartH / 2f;
             int n = data.Count;
-            float barW  = chartW / n;
+            float barW = chartW / n;
             float innerW = barW * 0.62f;
             float barGap = (barW - innerW) / 2f;
-            float zeroY = tp + chartH / 2f;
+            float zeroY = tp + halfH;
 
             using var gridPaint = new SKPaint { Color = SKColor.Parse(ReportThemeColors.Background), StrokeWidth = 0.6f };
-            using var gridLbl   = new SKPaint { Color = SKColor.Parse(ReportThemeColors.BlueGrayLight), TextSize = 7f, IsAntialias = true, TextAlign = SKTextAlign.Left };
+            using var gridLbl = new SKPaint { Color = SKColor.Parse(ReportThemeColors.BlueGrayLight), TextSize = 7f, IsAntialias = true, TextAlign = SKTextAlign.Left };
             foreach (float pct in new[] { -100f, -80f, -60f, -40f, -20f, 0f, 20f, 40f, 60f, 80f, 100f })
             {
-                float gy = zeroY - (pct / 100f * (chartH / 2f));
+                float gy = zeroY - (pct / 100f * halfH);
                 c.DrawLine(lp, gy, lp + chartW, gy, gridPaint);
                 c.DrawText($"{(int)pct}", lp + 2, gy - 2, gridLbl);
             }
-            float y70 = zeroY - (70f / 100f * (chartH / 2f));
+
+            float y70 = zeroY - (70f / 100f * halfH);
             using var thPaint = new SKPaint
             {
-                Color = SKColor.Parse(ReportThemeColors.AccentGreen).WithAlpha(100), StrokeWidth = 0.9f,
-                PathEffect = SKPathEffect.CreateDash(new[] { 4f, 3f }, 0), IsAntialias = true
+                Color = SKColor.Parse(ReportThemeColors.AccentGreen).WithAlpha(100),
+                StrokeWidth = 0.9f,
+                PathEffect = SKPathEffect.CreateDash(new[] { 4f, 3f }, 0),
+                IsAntialias = true
             };
             c.DrawLine(lp, y70, lp + chartW, y70, thPaint);
 
@@ -89,30 +87,44 @@ namespace VeridianClimatePulse.Common.Implementation
 
             for (int i = 0; i < n; i++)
             {
-                float v  = (float)(data[i].Value);
+                float v = (float)(data[i].Value);
                 var shortName = data[i].ShortName;
                 float bx = lp + i * barW + barGap;
-                float bh = v / 100f * chartH;
-                float by = tp + chartH - bh;
+
+                bool isNeg = v < 0;
+                float bh = Math.Abs(v) / 100f * halfH;
+                // "by" = top edge of the bar rect, "bottom" = bottom edge
+                float by = isNeg ? zeroY : zeroY - bh;
+                float bottom = isNeg ? zeroY + bh : zeroY;
+                // the "tip" of the bar (the end furthest from the zero line)
+                float tip = isNeg ? bottom : by;
+
                 SKColor color = GetColorStatic(v);
                 SKColor textColor = v > 85 ? SKColor.Parse(ReportThemeColors.White) : SKColor.Parse(ReportThemeColors.Black);
 
                 using var ghost = new SKPaint { Color = color.WithAlpha(35), IsAntialias = true };
                 c.DrawRoundRect(new SKRoundRect(new SKRect(bx, tp, bx + innerW, tp + chartH), 2), ghost);
 
+                // gradient: always full color at the tip, fading toward the zero line
+                var gradStart = isNeg ? new SKPoint(0, bottom) : new SKPoint(0, by);
+                var gradEnd = new SKPoint(0, zeroY);
                 using var shader = SKShader.CreateLinearGradient(
-                    new SKPoint(0, by), new SKPoint(0, tp + chartH),
+                    gradStart, gradEnd,
                     new[] { color, color.WithAlpha(180) }, null, SKShaderTileMode.Clamp);
                 using var barPaint = new SKPaint { Shader = shader, IsAntialias = true };
-                c.DrawRoundRect(new SKRoundRect(new SKRect(bx, by, bx + innerW, tp + chartH), 2), barPaint);
+                c.DrawRoundRect(new SKRoundRect(new SKRect(bx, by, bx + innerW, bottom), 2), barPaint);
 
+                // cap line at the tip (top for positive, bottom for negative)
                 using var cap = new SKPaint { Color = color, StrokeWidth = 2.5f, StrokeCap = SKStrokeCap.Round, IsAntialias = true };
-                c.DrawLine(bx + 1, by, bx + innerW - 1, by, cap);
+                c.DrawLine(bx + 1, tip, bx + innerW - 1, tip, cap);
 
-                float vly = by - 3f;
-                if (vly < tp + 8f) vly = by + 10f;
+                // value label near the tip, flipped depending on sign
+                float vly = isNeg ? tip + 9f : tip - 3f;
+                if (!isNeg && vly < tp + 8f) vly = tip + 10f;
+                if (isNeg && vly > tp + chartH - 4f) vly = tip - 4f;
                 valLbl.Color = textColor;
                 c.DrawText($"{v:F1}%", bx + innerW / 2f, vly, valLbl);
+
                 c.DrawText($"{offset + i + 1}. " + shortName, bx + innerW / 2f, s.Height - 6f, numLbl);
             }
         }

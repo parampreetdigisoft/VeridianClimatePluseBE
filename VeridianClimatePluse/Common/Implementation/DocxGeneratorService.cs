@@ -69,9 +69,7 @@ namespace VeridianClimatePulse.Common.Implementation
             {
                 return BuildDocument(mainPart =>
                 {
-                    var body = mainPart.Document.Body!;
-                    _imgId = 1;
-                    AddProgramDetailsSections(body, mainPart, programDetails, pillars, kpis, peerPrograms, userRole);
+                    AddProgramDetailsSections(mainPart.Document.Body!, mainPart, programDetails, pillars, kpis, peerPrograms, userRole);
                 });
             }
             catch (Exception ex)
@@ -97,11 +95,8 @@ namespace VeridianClimatePulse.Common.Implementation
 
                 return BuildDocument(mainPart =>
                 {
-                    var body = mainPart.Document.Body!;
-                    _imgId = 1;
                     AppendProgramHeader(mainPart, programDetails, pillarData.PillarName);
-                    AddPillarSection(body, mainPart, pillarData, userRole);
-                    FinalizeLastSection(mainPart);
+                    AddPillarSection(mainPart.Document.Body!, mainPart, pillarData, userRole);
                 });
             }
             catch (Exception ex)
@@ -121,9 +116,6 @@ namespace VeridianClimatePulse.Common.Implementation
             {
                 return BuildDocument(mainPart =>
                 {
-                    var body = mainPart.Document.Body!;
-                    _imgId = 1;
-                    bool first = true;
                     foreach (var program in programs)
                     {
                         if (!pillarsDict.TryGetValue(program.ClimateProgramID, out var pillars) || !pillars.Any())
@@ -132,13 +124,9 @@ namespace VeridianClimatePulse.Common.Implementation
                         var programKpis = kpis?.Where(k => k.ClimateProgramID == program.ClimateProgramID).ToList()
                                        ?? new List<KpiChartItem>();
 
-                        if (!first) body.AppendChild(PageBreak());
-                        first = false;
-
-                        AddProgramDetailsSections(body, mainPart, program, pillars, programKpis,
+                        AddProgramDetailsSections(mainPart.Document.Body!, mainPart, program, pillars, programKpis,
                                                new List<PeerProgramHistoryReportDto>(), userRole, isAllPrograms: true);
                     }
-                  string xml = mainPart.Document.OuterXml;
                 });
             }
             catch (Exception ex)
@@ -160,14 +148,12 @@ namespace VeridianClimatePulse.Common.Implementation
             {
                 var mainPart = doc.AddMainDocumentPart();
                 mainPart.Document = new Document(new Body());
-                populate(mainPart);
 
-                // A4 page size + narrow margins + page numbers in footer
-                var body = mainPart.Document.Body!;
-                body.AppendChild(new SectionProperties(
-                    new PageSize  { Width = PageWidthDxa, Height = PageHeightDxa },
-                    new PageMargin { Top = MarginDxa, Right = MarginDxa,
-                                     Bottom = MarginDxa, Left = MarginDxa }));
+                _imgId = 1;
+                _pendingHeaderRelId = null;
+
+                populate(mainPart);
+                FinalizeLastSection(mainPart);
 
                 mainPart.Document.Save();
             }
@@ -186,8 +172,6 @@ namespace VeridianClimatePulse.Common.Implementation
             UserRole userRole,
             bool isAllPrograms = false)
         {
-            // Reset pending header state for this document
-            ResetSectionState();
             var kpiChartItems = kpis.OrderByDescending(x => x.Value).ToList();
             var pillarChartItems = pillars
                 .Select(p => new PillarChartItem(
@@ -204,24 +188,20 @@ namespace VeridianClimatePulse.Common.Implementation
             AppendProgramHeader(mainPart, programDetails, null);
             AddProgramSummarySection(body, mainPart, programDetails, userRole, isAllPrograms);
 
-            // ── 3. Pillar Radial Overview ────────────────────────────────────────────
+            // ── 3. Pillar Radial Overview (same as PDF, including all-programs) ───────
             if (pillars.Any())
             {
                 AppendProgramHeader(mainPart, programDetails, "Pillar Performance Overview");
                 AddPillarOverviewSection(body, mainPart, pillarChartItems);
             }
 
-            // ── 4. Peer Comparison & Trends ─────────────────────────────────────────
             if (!isAllPrograms)
             {
-                // ── 4. Peer Comparison & Trends ─────────────────────────────────────────
                 if (peerPrograms.Any())
                 {
                     AddPeerComparisonSections(body, mainPart, peerPrograms, programDetails, userRole);
-                    //AddPerformanceTrendSections(body, mainPart, peerPrograms, programDetails, userRole);
                 }
 
-                // ── 5. Per-Pillar Detail ─────────────────────────────────────────────────
                 var accessiblePillars = pillars.Where(x =>
                     (x.IsAccess && userRole == UserRole.ProgramUser) || userRole != UserRole.ProgramUser).ToList();
 
@@ -231,15 +211,13 @@ namespace VeridianClimatePulse.Common.Implementation
                     AddPillarSection(body, mainPart, pillar, userRole);
                 }
             }
-          
-            // ── 6. KPI Dashboard (LAST section) ─────────────────────────────────────
+
+            // ── 6. KPI Dashboard (LAST section for this program) ─────────────────────
             if (kpiChartItems.Any())
             {
                 AppendProgramHeader(mainPart, programDetails, "KPI Dashboard");
                 AddKpiDashboardSection(body, mainPart, kpiChartItems, isAllPrograms);
             }
-
-            FinalizeLastSection(mainPart);
         }
 
         // ════════════════════════════════════════════════════════════════════
@@ -999,7 +977,7 @@ namespace VeridianClimatePulse.Common.Implementation
             // Groups of 18 KPIs — bar chart + interpretation cards
             var groups = kpis
                 .Select((k, i) => new { k, i })
-                .GroupBy(x => x.i / 18)
+                .GroupBy(x => x.i / 13)
                 .Select(g => g.Select(x => x.k).ToList())
                 .ToList();
 
@@ -1041,50 +1019,36 @@ namespace VeridianClimatePulse.Common.Implementation
         private string? _pendingHeaderRelId = null;
 
         /// <summary>
-        /// Call once before generating any program sections to reset state.
-        /// </summary>
-        private void ResetSectionState() => _pendingHeaderRelId = null;
-
-        /// <summary>
-        /// Must be called AFTER the last section's content has been appended.
-        /// Attaches the last pending header to the document's final sectPr.
+        /// Attaches the last pending header and A4 page chrome to the document's final sectPr.
+        /// Must run once after all programs/sections have been written.
         /// </summary>
         private void FinalizeLastSection(MainDocumentPart mainPart)
         {
-            if (_pendingHeaderRelId == null) return;
+            var body = mainPart.Document.Body!;
 
-            var sectPr = mainPart.Document.Body!
-                             .Elements<SectionProperties>().LastOrDefault()
-                         ?? mainPart.Document.Body!.AppendChild(new SectionProperties());
+            foreach (var extra in body.Elements<SectionProperties>().ToList())
+                extra.Remove();
 
-            sectPr.RemoveAllChildren<HeaderReference>();
-            sectPr.PrependChild(new HeaderReference { Type = HeaderFooterValues.Even, Id = _pendingHeaderRelId });
-            sectPr.PrependChild(new HeaderReference { Type = HeaderFooterValues.First, Id = _pendingHeaderRelId });
-            sectPr.PrependChild(new HeaderReference { Type = HeaderFooterValues.Default, Id = _pendingHeaderRelId });
-
+            body.AppendChild(BuildSectionProperties(_pendingHeaderRelId, nextPage: false));
             _pendingHeaderRelId = null;
         }
 
-
         /// <summary>
-        /// Creates a header for the upcoming section.
-        /// Automatically closes the PREVIOUS section with a next-page section break
-        /// (which replaces the manual PageBreak() call between sections).
+        /// Creates a header for the upcoming section and closes the previous section
+        /// with a next-page section break so that header always matches the following content.
         /// </summary>
-        private void AppendProgramHeader(MainDocumentPart mainPart,AiProgramSummeryDto data, string? sectionTitle = null)
+        private void AppendProgramHeader(MainDocumentPart mainPart, AiProgramSummeryDto data, string? sectionTitle = null)
         {
             var body = mainPart.Document.Body!;
 
             if (_pendingHeaderRelId != null)
-            {
-                var closingSectPr = BuildSectionProperties(_pendingHeaderRelId);
-                body.AppendChild(new Paragraph(new ParagraphProperties(closingSectPr)));
-            }
+                body.AppendChild(CreateSectionBreakParagraph(_pendingHeaderRelId));
 
             var headerPart = mainPart.AddNewPart<HeaderPart>();
             var header = new Header();
 
             string title = string.IsNullOrEmpty(sectionTitle) ? data.ProgramName : sectionTitle;
+            string headerFill = DarkBlue.TrimStart('#');
 
             string logoPath = Path.Combine(
                 Directory.GetCurrentDirectory(),
@@ -1119,7 +1083,7 @@ namespace VeridianClimatePulse.Common.Implementation
             var leftCell = new TableCell(
                 new TableCellProperties(
                     new TableCellWidth { Width = leftColW.ToString(), Type = TableWidthUnitValues.Dxa },
-                    new Shading { Fill = ReportThemeColors.DarkBlue },
+                    new Shading { Fill = headerFill },
                     new TableCellVerticalAlignment { Val = TableVerticalAlignmentValues.Center },
                     new TableCellMargin(
                         new TopMargin { Width = "200", Type = TableWidthUnitValues.Dxa },
@@ -1142,7 +1106,7 @@ namespace VeridianClimatePulse.Common.Implementation
             var rightCell = new TableCell(
                 new TableCellProperties(
                     new TableCellWidth { Width = logoColW.ToString(), Type = TableWidthUnitValues.Dxa },
-                    new Shading { Fill = ReportThemeColors.DarkBlue },
+                    new Shading { Fill = headerFill },
                     new TableCellVerticalAlignment { Val = TableVerticalAlignmentValues.Center },
                     new TableCellMargin(
                         new TopMargin { Width = "200", Type = TableWidthUnitValues.Dxa },
@@ -1233,16 +1197,42 @@ namespace VeridianClimatePulse.Common.Implementation
         }
 
         /// <summary>
-        /// Builds a SectionProperties with header references and a next-page break.
+        /// Builds section properties. Intermediate sections use next-page breaks.
+        /// The final section must NOT use next-page (it is the last child of Body).
         /// </summary>
-        private static SectionProperties BuildSectionProperties(string headerRelId)
+        private static SectionProperties BuildSectionProperties(string? headerRelId, bool nextPage)
         {
             var sp = new SectionProperties();
-            sp.AppendChild(new SectionType { Val = SectionMarkValues.NextPage });
-            sp.AppendChild(new HeaderReference { Type = HeaderFooterValues.Default, Id = headerRelId });
-            sp.AppendChild(new HeaderReference { Type = HeaderFooterValues.First, Id = headerRelId });
-            sp.AppendChild(new HeaderReference { Type = HeaderFooterValues.Even, Id = headerRelId });
+
+            if (!string.IsNullOrEmpty(headerRelId))
+                sp.AppendChild(new HeaderReference { Type = HeaderFooterValues.Default, Id = headerRelId });
+
+            if (nextPage)
+                sp.AppendChild(new SectionType { Val = SectionMarkValues.NextPage });
+
+            sp.AppendChild(new PageSize { Width = PageWidthDxa, Height = PageHeightDxa });
+            sp.AppendChild(new PageMargin
+            {
+                Top = MarginDxa,
+                Right = MarginDxa,
+                Bottom = MarginDxa,
+                Left = MarginDxa
+            });
+
             return sp;
+        }
+
+        /// <summary>
+        /// Last paragraph of a section. Includes a run so Word does not drop the section break.
+        /// </summary>
+        private static Paragraph CreateSectionBreakParagraph(string headerRelId)
+        {
+            var pPr = new ParagraphProperties();
+            pPr.Append(BuildSectionProperties(headerRelId, nextPage: true));
+
+            return new Paragraph(
+                pPr,
+                new Run(new Text("") { Space = SpaceProcessingModeValues.Preserve }));
         }
         // ── Helper: single-line paragraph for the header ─────────────────────────────
         private static Paragraph HeaderParagraph(
@@ -2109,7 +2099,6 @@ namespace VeridianClimatePulse.Common.Implementation
                 new[] { 450, 1800, 1200, 2800, 1800, 900 },
                 rows,
                 highlightRow: i => IsSameProgram(ranked[i].Program.ProgramName, programDetails.ProgramName)));
-            body.AppendChild(PageBreak());
         }
 
         // ════════════════════════════════════════════════════════════════════════
