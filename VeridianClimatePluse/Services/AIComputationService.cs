@@ -1,4 +1,5 @@
 using AssessmentPlatform.Dtos.AiDto;
+using DocumentFormat.OpenXml.Bibliography;
 using HealthIntelligence.Dtos.AiDto;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -1236,7 +1237,7 @@ namespace VeridianClimatePulse.Services
             {
                 var pillars = await GetAllProgramAIPillars(userID, userRole);
 
-                var kpis = new List<KpiChartItem>();
+                var kpis = await GetAccessKpis(userID, userRole, null);
 
                 var recordAvailable = pillars.Result.Any(x => programDetails.Select(x => x.ClimateProgramID).Contains(x.Key));
                 if (recordAvailable)
@@ -1995,12 +1996,12 @@ namespace VeridianClimatePulse.Services
                 entity.UpdatedAt = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
-                return ResultResponseDto<bool>.Success(true, new[] { "Country AI data updated successfully." });
+                return ResultResponseDto<bool>.Success(true, new[] { "Program AI data updated successfully." });
             }
             catch (Exception ex)
             {
-                await _appLogger.LogAsync("Error in UpdateAICountryScore", ex);
-                return ResultResponseDto<bool>.Failure(new[] { "Failed to update country AI data." });
+                await _appLogger.LogAsync("Error in UpdateAIProgramScore", ex);
+                return ResultResponseDto<bool>.Failure(new[] { "Failed to update program AI data." });
             }
         }
 

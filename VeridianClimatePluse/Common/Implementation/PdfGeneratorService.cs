@@ -113,8 +113,7 @@ namespace VeridianClimatePulse.Common.Implementation
                   : SanitizeText(p.PillarName) ?? "-",  SanitizeText(p.PillarName) ?? "-", p.AIProgress)).ToList();
 
             // -- Section 1 : Global Dashboard ---------------------------------
-            if (!isAllPrograms)
-                AddGlobalDashboardPage(container, programDetails, pillarChartItems, kpis, userRole);
+            AddGlobalDashboardPage(container, programDetails, pillarChartItems, kpis, userRole);
 
 
             // -- Section 2 : Program Summary -------------------------------------
@@ -129,7 +128,7 @@ namespace VeridianClimatePulse.Common.Implementation
                     {
                         column.Spacing(10);
                         column.Item().Element(x =>
-                            ProgramSummeryComposeContent(x, programDetails, userRole));
+                            ProgramSummeryComposeContent(x, programDetails, userRole, isAllPrograms));
                     });
                 });
                 PageFooter(page);
@@ -157,31 +156,33 @@ namespace VeridianClimatePulse.Common.Implementation
                 //AddPerformanceTrendsSection(container, peerPrograms, programDetails, userRole);
             }
 
-            // -- Section 4+ : Per-Pillar Detail ------------------------------
-            var accessiblePillars = pillars.Where(x => x.IsAccess && UserRole.ProgramUser == userRole || UserRole.ProgramUser != userRole).ToList();
-            foreach (var p in accessiblePillars)
+            if (!isAllPrograms)
             {
-                container.Page(page =>
+                // -- Section 4+ : Per-Pillar Detail ------------------------------
+                var accessiblePillars = pillars.Where(x => x.IsAccess && UserRole.ProgramUser == userRole || UserRole.ProgramUser != userRole).ToList();
+                foreach (var p in accessiblePillars)
                 {
-                    ApplyPageDefaults(page);
-                    page.Header().Element(x =>
-                        ProgramComposeHeader(x, programDetails, userRole, SanitizeText(p.PillarName)));
-                    page.Content().Element(content =>
+                    container.Page(page =>
                     {
-                        content.Column(column =>
+                        ApplyPageDefaults(page);
+                        page.Header().Element(x =>
+                            ProgramComposeHeader(x, programDetails, userRole, SanitizeText(p.PillarName)));
+                        page.Content().Element(content =>
                         {
-                            column.Spacing(10);
-                            column.Item().Element(x =>
-                                PillarComposeContent(x, p, userRole));
+                            content.Column(column =>
+                            {
+                                column.Spacing(10);
+                                column.Item().Element(x =>
+                                    PillarComposeContent(x, p, userRole));
+                            });
                         });
+                        PageFooter(page);
                     });
-                    PageFooter(page);
-                });
+                }
             }
 
-
             // -- Section 5 : KPI Dashboard ------------------------------------
-            if (kpiChartItems.Any() || !isAllPrograms)
+            if (kpiChartItems.Any())
             {
                 container.Page(page =>
                 {
@@ -189,7 +190,7 @@ namespace VeridianClimatePulse.Common.Implementation
                     page.Header().Element(x =>
                         ProgramComposeHeader(x, programDetails, userRole, "KPI Dashboard"));
                     page.Content().Element(content =>
-                        KpiDashboardPage(content, kpiChartItems));
+                        KpiDashboardPage(content, kpiChartItems, isAllPrograms));
                     PageFooter(page);
                 });
             }
@@ -847,7 +848,7 @@ namespace VeridianClimatePulse.Common.Implementation
         //  KPI DASHBOARD PAGE  .  numbered bar chart + full-name reference tables
         // -----------------------------------------------------------------------------
 
-        void KpiDashboardPage(IContainer container, List<KpiChartItem> kpis)
+        void KpiDashboardPage(IContainer container, List<KpiChartItem> kpis, bool isAllPrograms = false)
         {
             
             if (!kpis.Any()) return;
@@ -883,7 +884,7 @@ namespace VeridianClimatePulse.Common.Implementation
                 foreach (var group in groups.Where(g => g.Any()))
                 {
                     int localOffset = offset;          // capture for lambda
-                    col.Item().Element(x => DrawKpiGroupSection(x, group, localOffset));
+                    col.Item().Element(x => DrawKpiGroupSection(x, group, localOffset , isAllPrograms));
                     offset += group.Count;
                 }
             });
@@ -921,20 +922,23 @@ namespace VeridianClimatePulse.Common.Implementation
         //  GROUP SECTION  .  bar chart on top, two-column legend table below
         // -----------------------------------------------------------------------------
 
-        void DrawKpiGroupSection(IContainer container, List<KpiChartItem> group, int offset)
+        void DrawKpiGroupSection(IContainer container, List<KpiChartItem> group, int offset, bool isAllPrograms = false )
         {
             container
                 .Border(1).BorderColor(ReportThemeColors.BorderGreenMid)
                 .Column(col =>
                 {
                     // bar chart . numbers printed below each bar
-                    col.Item().Height(148).Element(x => DrawKpiBarChart(x, group, offset));
+                    col.Item().Height(148).Element(x => DrawKpiBarChart(x, group, offset, isAllPrograms));
 
-                    // hairline separator between chart and table
-                    col.Item().Height(1).Background(ReportThemeColors.BorderGreenMid);
+                    if (!isAllPrograms)
+                    {
+                        // hairline separator between chart and table
+                        col.Item().Height(1).Background(ReportThemeColors.BorderGreenMid);
 
-                    // two-column reference table
-                    col.Item().Padding(6).Element(x => DrawKpiReferenceTable(x, group, offset));
+                        // two-column reference table
+                        col.Item().Padding(6).Element(x => DrawKpiReferenceTable(x, group, offset));
+                    }
                 });
         }
 
@@ -942,7 +946,7 @@ namespace VeridianClimatePulse.Common.Implementation
         // -----------------------------------------------------------------------------
         //  BAR CHART  .  sequential index numbers below each bar (not cryptic codes)
         // -----------------------------------------------------------------------------
-        void DrawKpiBarChart(IContainer container, List<KpiChartItem> data, int offset)
+        void DrawKpiBarChart(IContainer container, List<KpiChartItem> data, int offset, bool isAllPrograms = false)
         {
             container
                 .Background(ReportThemeColors.White)
@@ -1024,6 +1028,7 @@ namespace VeridianClimatePulse.Common.Implementation
                     for (int i = 0; i < n; i++)
                     {
                         float v = (float)(data[i].Value);
+                        var shortName = data[i].ShortName;
                         float bx = lp + i * barW + barGap;
 
                         // Calculate bar height for -100 to 100 range
@@ -1099,7 +1104,7 @@ namespace VeridianClimatePulse.Common.Implementation
                         // -- sequential index number below bar (e.g. "1", "2", .) --
                         // Users cross-reference this with the legend table below.
                         canvas.DrawText(
-                            $"{offset + i + 1}",
+                            $"{offset + i + 1}. " + shortName,
                             bx + innerW / 2f,
                             size.Height - 6f,
                             numLblPaint);
@@ -1728,7 +1733,7 @@ namespace VeridianClimatePulse.Common.Implementation
                 .Normalize(NormalizationForm.FormKC);
         }
 
-        void ProgramSummeryComposeContent(IContainer container, AiProgramSummeryDto data, UserRole userRole)
+        void ProgramSummeryComposeContent(IContainer container, AiProgramSummeryDto data, UserRole userRole, bool isAllPrograms = false)
         {
             container.PaddingTop(4).Column(column =>
             {
@@ -1744,123 +1749,126 @@ namespace VeridianClimatePulse.Common.Implementation
                 // =========================
                 column.Item().PaddingTop(10).Element(c =>
                     PillarContentSection(c, "Executive Summary", SanitizeText(data.EvidenceSummary), ReportThemeColors.AccentExecutiveSummary));
-
-                if (!string.IsNullOrWhiteSpace(data.KeyFindings))
+                if (!isAllPrograms)
                 {
+
+                    if (!string.IsNullOrWhiteSpace(data.KeyFindings))
+                    {
+                        column.Item().PaddingTop(8).Element(c =>
+                            PillarContentSection(c, "Key Findings", SanitizeText(data.KeyFindings), ReportThemeColors.AccentKeyDevelopments));
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(data.Recommendations))
+                    {
+                        column.Item().PaddingTop(8).Element(c =>
+                            PillarContentSection(c, "Recommendations", SanitizeText(data.Recommendations), ReportThemeColors.AccentStrategicPolicy));
+                    }
+
+
+                    // =====================================================
+                    // EVIDENCE SECTION
+                    // =====================================================              
+
+
                     column.Item().PaddingTop(8).Element(c =>
-                        PillarContentSection(c, "Key Findings", SanitizeText(data.KeyFindings), ReportThemeColors.AccentKeyDevelopments));
-                }
+                        PillarContentSection(c, "Structural Evidence", SanitizeText(data.StructuralEvidence), ReportThemeColors.AccentStructuralEvidence));
 
-                if (!string.IsNullOrWhiteSpace(data.Recommendations))
-                {
                     column.Item().PaddingTop(8).Element(c =>
-                        PillarContentSection(c, "Recommendations", SanitizeText(data.Recommendations), ReportThemeColors.AccentStrategicPolicy));
+                        PillarContentSection(c, "Operational Evidence", SanitizeText(data.OperationalEvidence), ReportThemeColors.AccentOperationalEvidence));
+
+                    column.Item().PaddingTop(8).Element(c =>
+                        PillarContentSection(c, "Outcome Evidence", SanitizeText(data.OutcomeEvidence), ReportThemeColors.AccentOutcomeEvidence));
+
+                    column.Item().PaddingTop(8).Element(c =>
+                        PillarContentSection(c, "Perception Evidence", SanitizeText(data.PerceptionEvidence), ReportThemeColors.AccentPerceptionEvidence));
+
+                    // =====================================================
+                    // INTEGRITY CHECKS
+                    // =====================================================
+                    //column.Item().PageBreak();
+
+                    //column.Item().PaddingTop(15).Text("Integrity Checks")
+                    //    .FontSize(16).Bold();
+
+                    column.Item().PaddingTop(8).Element(c =>
+                        PillarContentSection(c, "Temporal Scope", SanitizeText(data.TemporalScope), ReportThemeColors.AccentTemporalScope));
+
+                    column.Item().PaddingTop(8).Element(c =>
+                        PillarContentSection(c, "Distortion Screening", SanitizeText(data.DistortionScreening), ReportThemeColors.AccentDistortionScreening));
+
+                    column.Item().PaddingTop(8).Element(c =>
+                        PillarContentSection(c, "Relational Integrity", SanitizeText(data.RelationalIntegrity), ReportThemeColors.AccentRelationalIntegrity));
+
+                    // =====================================================
+                    // STRESS TESTS
+                    // =====================================================
+                    //column.Item().PageBreak();
+
+                    //column.Item().PaddingTop(15).Text("Stress Tests")
+                    //    .FontSize(16).Bold();
+
+                    column.Item().PaddingTop(8).Element(c =>
+                        PillarContentSection(c, "Geopolitical Shock", SanitizeText(data.GeopoliticalShock), ReportThemeColors.AccentGeopoliticalShock));
+
+                    column.Item().PaddingTop(8).Element(c =>
+                        PillarContentSection(c, "Finance Shock", SanitizeText(data.FinanceShock), ReportThemeColors.AccentFinanceShock));
+
+                    column.Item().PaddingTop(8).Element(c =>
+                        PillarContentSection(c, "Legitimacy Shock", SanitizeText(data.LegitimacyShock), ReportThemeColors.AccentLegitimacyShock));
+                    //column.Item().PageBreak();
+
+                    //column.Item().PaddingTop(8).Element(c =>
+                    //    PillarContentSection(c, "Overall Stress Resilience", SanitizeText(data.OverallStressResilience), ReportThemeColors.AccentStressResilience));
+
+                    column.Item().PaddingTop(8).Element(c =>
+                        PillarContentSection(c, "Stress Score Adjustment", SanitizeText(data.StressScoreAdjustment), ReportThemeColors.AccentStressAdjustment));
+
+                    // =====================================================
+                    // GOVERNANCE ADJUSTMENTS
+                    // =====================================================
+                    //column.Item().PageBreak();
+
+                    //column.Item().PaddingTop(15).Text("Governance Adjustments")
+                    //    .FontSize(16).Bold();
+
+                    column.Item().PaddingTop(8).Element(c =>
+                        PillarContentSection(c, "Inclusion & Equity Adjustment", SanitizeText(data.InclusionEquityAdjustment), ReportThemeColors.AccentInclusionEquityAdj));
+
+                    column.Item().PaddingTop(8).Element(c =>
+                        PillarContentSection(c, "Opacity Risk", SanitizeText(data.OpacityRisk), ReportThemeColors.AccentOpacityRisk));
+
+                    column.Item().PaddingTop(8).Element(c =>
+                        PillarContentSection(c, "Non Compensation Note", SanitizeText(data.NonCompensationNote), ReportThemeColors.AccentNonCompensation));
+
+                    // =====================================================
+                    // SYSTEM ANALYSIS
+                    // =====================================================
+                    //column.Item().PageBreak();
+
+                    column.Item().PaddingTop(8).Element(c =>
+                        PillarContentSection(c, "Cross-Pillar System Dynamics", SanitizeText(data.CrossPillarPatterns), ReportThemeColors.AccentCrossPillar));
+
+                    column.Item().PaddingTop(8).Element(c =>
+                        PillarContentSection(c, "Institutional Capacity Assessment", SanitizeText(data.InstitutionalCapacity), ReportThemeColors.DeepTeal));
+
+                    column.Item().PaddingTop(8).Element(c =>
+                        PillarContentSection(c, "Equity Assessment", SanitizeText(data.EquityAssessment), ReportThemeColors.AccentEquityAssessment));
+
+                    //column.Item().PageBreak();
+                    column.Item().PaddingTop(8).Element(c =>
+                        PillarContentSection(c, "Governance Trajectory", SanitizeText(data.GovernanceTrajectory), ReportThemeColors.AccentGovernanceTrajectory));
+
+                    // =====================================================
+                    // STRATEGIC OUTPUT
+                    // =====================================================
+                    //column.Item().PageBreak();                
+
+                    column.Item().PaddingTop(8).Element(c =>
+                        PillarContentSection(c, "Strategic Policy Priorities", SanitizeText(data.StrategicRecommendation), ReportThemeColors.AccentStrategicPolicy));
+
+                    column.Item().PaddingTop(8).Element(c =>
+                        PillarContentSection(c, "Why This Assessment Matters", SanitizeText(data.AssessmentValueNote), ReportThemeColors.AccentAssessmentValue));
                 }
-
-
-                // =====================================================
-                // EVIDENCE SECTION
-                // =====================================================              
-
-
-                column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Structural Evidence", SanitizeText(data.StructuralEvidence), ReportThemeColors.AccentStructuralEvidence));
-
-                column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Operational Evidence", SanitizeText(data.OperationalEvidence), ReportThemeColors.AccentOperationalEvidence));
-
-                column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Outcome Evidence", SanitizeText(data.OutcomeEvidence), ReportThemeColors.AccentOutcomeEvidence));
-
-                column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Perception Evidence", SanitizeText(data.PerceptionEvidence), ReportThemeColors.AccentPerceptionEvidence));
-
-                // =====================================================
-                // INTEGRITY CHECKS
-                // =====================================================
-                //column.Item().PageBreak();
-
-                //column.Item().PaddingTop(15).Text("Integrity Checks")
-                //    .FontSize(16).Bold();
-
-                column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Temporal Scope", SanitizeText(data.TemporalScope), ReportThemeColors.AccentTemporalScope));
-
-                column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Distortion Screening", SanitizeText(data.DistortionScreening), ReportThemeColors.AccentDistortionScreening));
-
-                column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Relational Integrity", SanitizeText(data.RelationalIntegrity), ReportThemeColors.AccentRelationalIntegrity));
-
-                // =====================================================
-                // STRESS TESTS
-                // =====================================================
-                //column.Item().PageBreak();
-
-                //column.Item().PaddingTop(15).Text("Stress Tests")
-                //    .FontSize(16).Bold();
-
-                column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Geopolitical Shock", SanitizeText(data.GeopoliticalShock), ReportThemeColors.AccentGeopoliticalShock));
-
-                column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Finance Shock", SanitizeText(data.FinanceShock), ReportThemeColors.AccentFinanceShock));
-
-                column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Legitimacy Shock", SanitizeText(data.LegitimacyShock), ReportThemeColors.AccentLegitimacyShock));
-                //column.Item().PageBreak();
-
-                //column.Item().PaddingTop(8).Element(c =>
-                //    PillarContentSection(c, "Overall Stress Resilience", SanitizeText(data.OverallStressResilience), ReportThemeColors.AccentStressResilience));
-
-                column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Stress Score Adjustment", SanitizeText(data.StressScoreAdjustment), ReportThemeColors.AccentStressAdjustment));
-
-                // =====================================================
-                // GOVERNANCE ADJUSTMENTS
-                // =====================================================
-                //column.Item().PageBreak();
-
-                //column.Item().PaddingTop(15).Text("Governance Adjustments")
-                //    .FontSize(16).Bold();
-
-                column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Inclusion & Equity Adjustment", SanitizeText(data.InclusionEquityAdjustment), ReportThemeColors.AccentInclusionEquityAdj));
-
-                column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Opacity Risk", SanitizeText(data.OpacityRisk), ReportThemeColors.AccentOpacityRisk));
-
-                column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Non Compensation Note", SanitizeText(data.NonCompensationNote), ReportThemeColors.AccentNonCompensation));
-
-                // =====================================================
-                // SYSTEM ANALYSIS
-                // =====================================================
-                //column.Item().PageBreak();
-
-                column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Cross-Pillar System Dynamics", SanitizeText(data.CrossPillarPatterns), ReportThemeColors.AccentCrossPillar));
-
-                column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Institutional Capacity Assessment", SanitizeText(data.InstitutionalCapacity), ReportThemeColors.DeepTeal));
-
-                column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Equity Assessment", SanitizeText(data.EquityAssessment), ReportThemeColors.AccentEquityAssessment));
-
-                //column.Item().PageBreak();
-                column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Governance Trajectory", SanitizeText(data.GovernanceTrajectory), ReportThemeColors.AccentGovernanceTrajectory));
-
-                // =====================================================
-                // STRATEGIC OUTPUT
-                // =====================================================
-                //column.Item().PageBreak();                
-
-                column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Strategic Policy Priorities", SanitizeText(data.StrategicRecommendation), ReportThemeColors.AccentStrategicPolicy));
-
-                column.Item().PaddingTop(8).Element(c =>
-                    PillarContentSection(c, "Why This Assessment Matters", SanitizeText(data.AssessmentValueNote), ReportThemeColors.AccentAssessmentValue));
             });
         }
 

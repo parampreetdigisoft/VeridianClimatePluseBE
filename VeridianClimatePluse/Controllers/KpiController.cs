@@ -1,12 +1,13 @@
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using VeridianClimatePulse.Common.Models;
 using VeridianClimatePulse.Dtos.ClientDto;
 using VeridianClimatePulse.Dtos.kpiDto;
 using VeridianClimatePulse.Enums;
 using VeridianClimatePulse.IServices;
 using VeridianClimatePulse.Models;
-using System.Security.Claims;
 
 namespace VeridianClimatePulse.Controllers
 {
@@ -239,6 +240,34 @@ namespace VeridianClimatePulse.Controllers
             }
 
             var result = await _kpiService.GetAllKpiPillarMapping(userId.GetValueOrDefault(), userRole);
+            return Ok(result);
+        }
+
+        [HttpPost]
+        [Route("SummarizeKpiPerformance")]
+        [Authorize(Roles = "Admin, Analyst, ProgramUser")]
+        public async Task<IActionResult> SummarizeKpiPerformance([FromBody] SummarizeKpiRequestDto request)
+        {
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+                return Unauthorized("User ID not found in token.");
+
+            var role = GetRoleFromClaims();
+            if (role == null)
+                return Unauthorized("You Don't have access.");
+
+            if (!Enum.TryParse<UserRole>(role, true, out var userRole))
+            {
+                return Unauthorized("You Don't have access.");
+            }
+
+            if (userRole == UserRole.Evaluator)
+            {
+                return Ok(ResultResponseDto<SummarizeKpiResponseDto>.Failure(
+                    new[] { "AI KPI summary is not available for evaluators." }));
+            }
+
+            var result = await _kpiService.SummarizeKpiPerformance(request, userId.GetValueOrDefault(), userRole);
             return Ok(result);
         }
     }

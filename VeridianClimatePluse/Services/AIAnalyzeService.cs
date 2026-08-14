@@ -244,6 +244,13 @@ namespace VeridianClimatePulse.Services
     
                 return result;
         }
+
+        public async Task<KpiSummaryAiResponse?> SummarizeKpiPerformance(KpiSummaryAiRequest request)
+        {
+            var url = aiUrl + AiEndpoints.KpiSummary();
+            return await _httpService.SendAsync<KpiSummaryAiResponse>(HttpMethod.Post, url, request, headers);
+        }
+
         public async Task<ChatProgramAskQuestionResponse> CrossComparision(CrossComparisionRequest request)
         {
             var url = aiUrl + AiEndpoints.CrossComparision();
@@ -336,6 +343,8 @@ namespace VeridianClimatePulse.Services
 
         public static string ChatProgramAsk() => $"{ChatPath}/program";
         public static string ChatGlobalAsk() => $"{ChatPath}/global";
+        public static string KpiSummary() => $"{ChatPath}/kpi-summary";
+
         public static string CrossComparision() => $"{ChatPath}/cross-comparision";
         public static string ProgramSlides() => $"{ChatPath}/executive-slides";
         public static string EmergingTrendsAndIssues(int ProgramCount) =>
@@ -379,6 +388,44 @@ namespace VeridianClimatePulse.Services
         public bool Success { get; set; }
         public string? Message { get; set; }
         public string? Result { get; set; }
+    }
+
+    public class KpiSummaryAiRequest
+    {
+        public string? ProgramName { get; set; }
+        public string LayerName { get; set; } = string.Empty;
+        public string LayerCode { get; set; } = string.Empty;
+        public string? Purpose { get; set; }
+        public decimal? ManualScore { get; set; }
+        public decimal? AiScore { get; set; }
+        public string? ManualCondition { get; set; }
+        public string? AiCondition { get; set; }
+        public List<KpiInterpretationBandAiDto> InterpretationBands { get; set; } = new();
+        public string? CategoryDetails { get; set; }
+    }
+
+    public class KpiInterpretationBandAiDto
+    {
+        public decimal? MinRange { get; set; }
+        public decimal? MaxRange { get; set; }
+        public string? Condition { get; set; }
+        public string? Descriptor { get; set; }
+        public string? StrategicAction { get; set; }
+    }
+
+    public class KpiSummaryAiResponse
+    {
+        public bool Success { get; set; }
+        public string? Message { get; set; }
+        public KpiSummaryAiResultDto? Result { get; set; }
+    }
+
+    public class KpiSummaryAiResultDto
+    {
+        public string Summary { get; set; } = string.Empty;
+        public string? ScoreInterpretation { get; set; }
+        public List<string> KeyTakeaways { get; set; } = new();
+        public string? Outlook { get; set; }
     }
 
     #endregion

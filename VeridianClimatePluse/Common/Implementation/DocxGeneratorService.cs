@@ -196,15 +196,12 @@ namespace VeridianClimatePulse.Common.Implementation
                 .ToList();
 
             // ── 1. Global Dashboard ──────────────────────────────────────────────────
-            if (!isAllPrograms)
-            {
-                AppendProgramHeader(mainPart, programDetails, "Program Performance Dashboard");
-                AddDashboardSection(body, mainPart, programDetails, pillarChartItems, kpiChartItems);
-            }
+            AppendProgramHeader(mainPart, programDetails, "Program Performance Dashboard");
+            AddDashboardSection(body, mainPart, programDetails, pillarChartItems, kpiChartItems);
 
             // ── 2. Program Summary ──────────────────────────────────────────────────────
             AppendProgramHeader(mainPart, programDetails, null);
-            AddProgramSummarySection(body, mainPart, programDetails, userRole);
+            AddProgramSummarySection(body, mainPart, programDetails, userRole, isAllPrograms);
 
             // ── 3. Pillar Radial Overview ────────────────────────────────────────────
             if (pillars.Any())
@@ -214,10 +211,14 @@ namespace VeridianClimatePulse.Common.Implementation
             }
 
             // ── 4. Peer Comparison & Trends ─────────────────────────────────────────
-            if (!isAllPrograms && peerPrograms.Any())
+            if (!isAllPrograms)
             {
-                AddPeerComparisonSections(body, mainPart, peerPrograms, programDetails, userRole);
-                //AddPerformanceTrendSections(body, mainPart, peerPrograms, programDetails, userRole);
+                // ── 4. Peer Comparison & Trends ─────────────────────────────────────────
+                if (peerPrograms.Any())
+                {
+                    AddPeerComparisonSections(body, mainPart, peerPrograms, programDetails, userRole);
+                    //AddPerformanceTrendSections(body, mainPart, peerPrograms, programDetails, userRole);
+                }
             }
 
             // ── 5. Per-Pillar Detail ─────────────────────────────────────────────────
@@ -234,7 +235,7 @@ namespace VeridianClimatePulse.Common.Implementation
             if (kpiChartItems.Any())
             {
                 AppendProgramHeader(mainPart, programDetails, "KPI Dashboard");
-                AddKpiDashboardSection(body, mainPart, kpiChartItems);
+                AddKpiDashboardSection(body, mainPart, kpiChartItems, isAllPrograms);
             }
 
             FinalizeLastSection(mainPart);
@@ -701,7 +702,7 @@ namespace VeridianClimatePulse.Common.Implementation
         //  Program SUMMARY SECTION
         // ════════════════════════════════════════════════════════════════════
 
-        private void AddProgramSummarySection( Body body, MainDocumentPart mainPart, AiProgramSummeryDto data, UserRole userRole)
+        private void AddProgramSummarySection(Body body, MainDocumentPart mainPart, AiProgramSummeryDto data, UserRole userRole, bool isAllPrograms = false)
         {
             // =========================
             // PROGRESS SECTION
@@ -720,73 +721,75 @@ namespace VeridianClimatePulse.Common.Implementation
             // EXECUTIVE SUMMARY
             // =========================
             AppendContentSection(body, "Executive Summary", data.EvidenceSummary, "163329");
+           
+            if (!isAllPrograms)
+            {
+                AppendContentSection(body, "Key Findings", data.KeyFindings, "1f4e79");
+                AppendContentSection(body, "Recommendations", data.Recommendations, "2e9975");
+                // =====================================================
+                // EVIDENCE SECTION
+                // =====================================================
+                AppendContentSection(body, "Structural Evidence", data.StructuralEvidence, "e6ccff");
+                AppendContentSection(body, "Operational Evidence", data.OperationalEvidence, "c2f0f0");
 
-            AppendContentSection(body, "Key Findings", data.KeyFindings, "1f4e79");
-            AppendContentSection(body, "Recommendations", data.Recommendations, "2e9975");
+                //body.AppendChild(PageBreak());
 
-            // =====================================================
-            // EVIDENCE SECTION
-            // =====================================================
-            AppendContentSection(body, "Structural Evidence", data.StructuralEvidence, "e6ccff");
-            AppendContentSection(body, "Operational Evidence", data.OperationalEvidence, "c2f0f0");
+                AppendContentSection(body, "Outcome Evidence", data.OutcomeEvidence, "ffe6cc");
+                AppendContentSection(body, "Perception Evidence", data.PerceptionEvidence, "e6f7ff");
 
-            //body.AppendChild(PageBreak());
+                // =====================================================
+                // INTEGRITY CHECKS
+                // =====================================================
+                //body.AppendChild(PageBreak());
 
-            AppendContentSection(body, "Outcome Evidence", data.OutcomeEvidence, "ffe6cc");
-            AppendContentSection(body, "Perception Evidence", data.PerceptionEvidence, "e6f7ff");
+                AppendContentSection(body, "Temporal Scope", data.TemporalScope, "d9e6ff");
+                AppendContentSection(body, "Distortion Screening", data.DistortionScreening, "f2d9e6");
+                AppendContentSection(body, "Relational Integrity", data.RelationalIntegrity, "f0ffe6");
 
-            // =====================================================
-            // INTEGRITY CHECKS
-            // =====================================================
-            //body.AppendChild(PageBreak());
+                // =====================================================
+                // STRESS TESTS
+                // =====================================================
+                //body.AppendChild(PageBreak());
 
-            AppendContentSection(body, "Temporal Scope", data.TemporalScope, "d9e6ff");
-            AppendContentSection(body, "Distortion Screening", data.DistortionScreening, "f2d9e6");
-            AppendContentSection(body, "Relational Integrity", data.RelationalIntegrity, "f0ffe6");
+                AppendContentSection(body, "Geopolitical Shock", data.GeopoliticalShock, "ffd9cc");
+                AppendContentSection(body, "Finance Shock", data.FinanceShock, "fff2cc");
+                AppendContentSection(body, "Legitimacy Shock", data.LegitimacyShock, "e6f2ff");
 
-            // =====================================================
-            // STRESS TESTS
-            // =====================================================
-            //body.AppendChild(PageBreak());
+                //body.AppendChild(PageBreak());
 
-            AppendContentSection(body, "Geopolitical Shock", data.GeopoliticalShock, "ffd9cc");
-            AppendContentSection(body, "Finance Shock", data.FinanceShock, "fff2cc");
-            AppendContentSection(body, "Legitimacy Shock", data.LegitimacyShock, "e6f2ff");
+                //AppendContentSection(body, "Overall Stress Resilience", data.OverallStressResilience, "e6ffe6");
+                AppendContentSection(body, "Stress Score Adjustment", data.StressScoreAdjustment, "ffe6f2");
 
-            //body.AppendChild(PageBreak());
+                // =====================================================
+                // GOVERNANCE ADJUSTMENTS
+                // =====================================================
+                //body.AppendChild(PageBreak());
 
-            //AppendContentSection(body, "Overall Stress Resilience", data.OverallStressResilience, "e6ffe6");
-            AppendContentSection(body, "Stress Score Adjustment", data.StressScoreAdjustment, "ffe6f2");
+                AppendContentSection(body, "Inclusion & Equity Adjustment", data.InclusionEquityAdjustment, "f9e6ff");
+                AppendContentSection(body, "Opacity Risk", data.OpacityRisk, "fff0e6");
+                AppendContentSection(body, "Non Compensation Note", data.NonCompensationNote, "e6fff9");
 
-            // =====================================================
-            // GOVERNANCE ADJUSTMENTS
-            // =====================================================
-            //body.AppendChild(PageBreak());
+                // =====================================================
+                // SYSTEM ANALYSIS
+                // =====================================================
+                //body.AppendChild(PageBreak());
 
-            AppendContentSection(body, "Inclusion & Equity Adjustment", data.InclusionEquityAdjustment, "f9e6ff");
-            AppendContentSection(body, "Opacity Risk", data.OpacityRisk, "fff0e6");
-            AppendContentSection(body, "Non Compensation Note", data.NonCompensationNote, "e6fff9");
+                AppendContentSection(body, "Cross-Pillar System Dynamics", data.CrossPillarPatterns, "6e9688");
+                AppendContentSection(body, "Institutional Capacity Assessment", data.InstitutionalCapacity, "0d8057");
 
-            // =====================================================
-            // SYSTEM ANALYSIS
-            // =====================================================
-            //body.AppendChild(PageBreak());
+                //body.AppendChild(PageBreak());
 
-            AppendContentSection(body, "Cross-Pillar System Dynamics", data.CrossPillarPatterns, "6e9688");
-            AppendContentSection(body, "Institutional Capacity Assessment", data.InstitutionalCapacity, "0d8057");
+                AppendContentSection(body, "Equity Assessment", data.EquityAssessment, "e8f5e9");
+                AppendContentSection(body, "Governance Trajectory", data.GovernanceTrajectory, "fce4ec");
 
-            //body.AppendChild(PageBreak());
+                // =====================================================
+                // STRATEGIC OUTPUT
+                // =====================================================
+                //body.AppendChild(PageBreak());
 
-            AppendContentSection(body, "Equity Assessment", data.EquityAssessment, "e8f5e9");
-            AppendContentSection(body, "Governance Trajectory", data.GovernanceTrajectory, "fce4ec");
-
-            // =====================================================
-            // STRATEGIC OUTPUT
-            // =====================================================
-            //body.AppendChild(PageBreak());
-
-            AppendContentSection(body, "Strategic Policy Priorities", data.StrategicRecommendation, "2e9975");
-            AppendContentSection(body, "Why This Assessment Matters", data.AssessmentValueNote, "63a68f");
+                AppendContentSection(body, "Strategic Policy Priorities", data.StrategicRecommendation, "2e9975");
+                AppendContentSection(body, "Why This Assessment Matters", data.AssessmentValueNote, "63a68f");
+            }
         }
 
         private static Paragraph CreateRankingHeader(string text)
@@ -866,9 +869,9 @@ namespace VeridianClimatePulse.Common.Implementation
             AiProgramPillarResponse data, UserRole userRole)
         {
             // =========================
-            // PROGRESS SECTION
+            // Score SECTION
             // =========================
-            body.AppendChild(SectionHeading("Progress Metrics", DarkBlue));
+            body.AppendChild(SectionHeading("Score Metrics", DarkBlue));
             body.AppendChild(CreateProgressBar("Score", (float)(data.AIProgress ?? 0), DarkBlue));
             body.AppendChild(Gap(160));
 
@@ -979,7 +982,7 @@ namespace VeridianClimatePulse.Common.Implementation
 
         private void AddKpiDashboardSection(
             Body body, MainDocumentPart mainPart,
-            List<KpiChartItem> kpis)
+            List<KpiChartItem> kpis, bool isAllPrograms = false)
         {
             if (!kpis.Any()) return;
 
@@ -1009,8 +1012,11 @@ namespace VeridianClimatePulse.Common.Implementation
 
                 body.AppendChild(CreateFullWidthImage(mainPart, barPng, 155));
                 body.AppendChild(Gap(80));
-                body.AppendChild(CreateKpiCardTable(mainPart, group));
-                body.AppendChild(Gap(160));
+                if (!isAllPrograms)
+                {
+                    body.AppendChild(CreateKpiCardTable(mainPart, group));
+                    body.AppendChild(Gap(160));
+                }
                 offset += group.Count;
             }
         }

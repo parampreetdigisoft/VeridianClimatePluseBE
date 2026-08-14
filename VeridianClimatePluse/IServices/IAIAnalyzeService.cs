@@ -19,6 +19,8 @@ namespace VeridianClimatePulse.IServices
         Task<ChatProgramAskQuestionResponse> ChatProgramAsk(ChatProgramAskQuestionRequest request);
         Task<ChatProgramAskQuestionResponse> ChatGlobalAsk(ChatGlobalAskQuestionRequest request);
         Task<ChatProgramAskQuestionResponse> CrossComparision(CrossComparisionRequest request);
+        Task<KpiSummaryAiResponse?> SummarizeKpiPerformance(KpiSummaryAiRequest request);
+
         Task<ChatProgramExecutiveSlidesResponse?> GetProgramSlides(int climateProgramID);
         Task<ChatEmergingTrendsResponse?> GetEmergingTrendsAndIssues(int programCount);
         Task<ChatPillarLiveSignalsResponse?> GetPillarLiveSignals();

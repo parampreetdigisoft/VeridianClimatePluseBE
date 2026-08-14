@@ -16,5 +16,7 @@ namespace VeridianClimatePulse.IServices
         Task<ResultResponseDto<CompareProgramResponseDto>> ComparePrograms(CompareProgramsRequestDto c, int userId, UserRole role, bool applyPagination = true);
         Task<Tuple<string, byte[]>> ExportComparePrograms(CompareProgramsRequestDto request, int userId, UserRole role);
         Task<ResultResponseDto<GetMutiplekpiLayerResultsDto>> GetMutiplekpiLayerResults(GetMutiplekpiLayerRequestDto request, int userId, UserRole role, TieredAccessPlan userPlan = TieredAccessPlan.Pending);
+        Task<ResultResponseDto<SummarizeKpiResponseDto>> SummarizeKpiPerformance(SummarizeKpiRequestDto request, int userId, UserRole role);
+
     }
 }

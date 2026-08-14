@@ -75,11 +75,11 @@ namespace VeridianClimatePulse.Services
                         .Distinct()
                         .ToList(),
 
-                    //Countries = activePrograms
+                    //Programs = activePrograms
                     //    .Select(x => new PartnerProgramDto
                     //    {
                     //        ClimateProgramID = x.ClimateProgramID,
-                    //        CountryName = x.CountryName
+                    //        ProgramName = x.ProgramName
                     //    })
                     //    .ToList(),
 

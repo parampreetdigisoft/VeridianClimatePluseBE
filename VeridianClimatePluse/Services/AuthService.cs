@@ -436,7 +436,7 @@ namespace VeridianClimatePulse.Services
                         {
                             return ResultResponseDto<object>.Failure(new[]
                             {
-                                "Premium plan requires at least one country, or all countries."
+                                "Premium plan requires at least one program, or all programs."
                             });
                         }
 

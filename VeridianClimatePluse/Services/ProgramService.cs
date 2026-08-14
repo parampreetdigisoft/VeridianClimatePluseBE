@@ -1025,14 +1025,14 @@ namespace VeridianClimatePulse.Services
             IEnumerable<IGrouping<(int ClimateProgramID, string ProgramName, string Location), GetProgramsProgressAdminDto>> programGroups)
         {
             using var workbook = new XLWorkbook();
-            var ws = workbook.Worksheets.Add("Programs Progress Report");
+            var ws = workbook.Worksheets.Add("Programs Score Report");
 
             bool isRanking = request.IsRanking == true;
 
             // ---------------- Header ----------------
             int totalColumns = isRanking ? 5 : 10;
 
-            ws.Range(1, 1, 1, totalColumns).Merge().Value = "Programs Progress Report";
+            ws.Range(1, 1, 1, totalColumns).Merge().Value = "Programs Score Report";
             ws.Range(2, 1, 2, totalColumns).Merge().Value = $"Generated On: {DateTime.UtcNow:dd-MMM-yyyy HH:mm}";
 
             var headerRange = ws.Range(1, 1, 2, totalColumns);

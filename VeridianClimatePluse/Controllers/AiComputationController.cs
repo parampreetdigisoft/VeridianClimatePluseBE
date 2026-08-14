@@ -339,6 +339,10 @@ namespace VeridianClimatePulse.Controllers
                 
                 if (programDetails.Count > 0)
                 {
+                    if (request.ClimateProgramIDs?.Count > 0)
+                    {
+                        programDetails = programDetails.Where(x => request.ClimateProgramIDs.Contains(x.ClimateProgramID)).ToList();
+                    }
                     string fileName;
                     string contentType;
                     var pdfBytes = await _aIComputationService.GenerateAllProgramDetailsReport(programDetails, userRole, userId.GetValueOrDefault(), request.Format);
