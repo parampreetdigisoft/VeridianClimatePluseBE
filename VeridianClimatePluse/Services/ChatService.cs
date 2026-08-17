@@ -1,4 +1,6 @@
 
+using DocumentFormat.OpenXml.Spreadsheet;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using VeridianClimatePulse.Common.Interface;
 using VeridianClimatePulse.Common.Models;
@@ -198,6 +200,7 @@ namespace VeridianClimatePulse.Services
                 }
 
                 var programRanking = await _commonService.GetProgramRankings(climateProgramID);
+                var progress = await _commonService.GetProgramProgressAsync(userId, (int)userRole, climateProgramID);
                 ProgramRankingResponseDto programResult;
                 List<PillarsUserHistroyResponseDto> pillars;
 
@@ -208,25 +211,39 @@ namespace VeridianClimatePulse.Services
                         var averageScore = programRanking.Average(p => p.ProgramAIScore ?? 0);
                         var totalProgramCount = programRanking.Count();
 
-                        pillars = (
-                            from p in _context.Pillars.Where(x => x.IsActive && !x.IsDeleted)
 
-                            join x in _context.AIPillarScores
-                            on p.PillarID equals x.PillarID into pillarScores
+                        // Get active pillars from database
+                        var activePillars = await _context.Pillars
+                            .Where(x => x.IsActive && !x.IsDeleted)
+                            .Select(p => new { p.PillarID, p.PillarName, p.DisplayOrder, p.ImagePath })
+                            .ToListAsync();
 
-                            from score in pillarScores.DefaultIfEmpty()
+                        // Calculate average pillar scores from progress data (across all programs)
+                        pillars = activePillars.Select(p => new PillarsUserHistroyResponseDto
+                        {
+                            PillarID = p.PillarID,
+                            PillarName = p.PillarName ?? "",
+                            DisplayOrder = p.DisplayOrder,
+                            PillarScore = progress
+                                .Where(prog => prog.PillarID == p.PillarID)
+                                .Any()
+                                ? progress.Where(prog => prog.PillarID == p.PillarID)
+                                    .Average(prog => prog.AIProgress)
+                                : 0,
+                            ImagePath = p.ImagePath
+                        })
+                        .OrderBy(p => p.DisplayOrder)
+                        .ToList();
 
-                            group score by new { p.PillarID, p.PillarName, p.DisplayOrder, p.ImagePath } into g
-
-                            select new PillarsUserHistroyResponseDto
-                            {
-                                PillarID = g.Key.PillarID,
-                                PillarName = g.Key.PillarName ?? "",
-                                DisplayOrder = g.Key.DisplayOrder,
-                                PillarScore = g.Where(s => s != null).Average(s => s.AIProgress ?? 0),
-                                ImagePath = g.Key.ImagePath
-                            }
-                        ).ToList();
+                        // Filter pillars by user access if ProgramUser
+                        if (userRole == UserRole.ProgramUser)
+                        {
+                            var validPillars = _context.ClientPillarMappings
+                                .Where(x => x.UserID == userId)
+                                .Select(x => x.PillarID)
+                                .ToList();
+                            pillars = pillars.Where(x => validPillars.Contains(x.PillarID)).ToList();
+                        }
 
                         programResult = new ProgramRankingResponseDto
                         {
@@ -236,7 +253,7 @@ namespace VeridianClimatePulse.Services
                             DataYear = programRanking.FirstOrDefault()?.DataYear,
                             ProgramRank = 1,
                             TotalProgram = totalProgramCount,
-                            Pillars = pillars.OrderBy(p => p.DisplayOrder).ToList()
+                            Pillars = pillars
                         };
                     }
                     else
@@ -252,28 +269,37 @@ namespace VeridianClimatePulse.Services
                         return ResultResponseDto<ChatProgramExecutiveSlidesResponse>.Failure(new[] { "Program not found." });
                     }
 
-                    pillars = (
-                        from p in _context.Pillars.Where(x => x.IsActive && !x.IsDeleted)
+                    // Get pillar progress data for the specific program
+                    var programProgress = progress.Where(x => x.ClimateProgramID == climateProgramID).ToList();
 
-                        join x in _context.AIPillarScores
-                            .Where(a => a.ClimateProgramID == program.ClimateProgramID)
-                        on p.PillarID equals x.PillarID into pillarScores
+                    // Get active pillars from database
+                    var activePillars = await _context.Pillars
+                        .Where(x => x.IsActive && !x.IsDeleted)
+                        .Select(p => new { p.PillarID, p.PillarName, p.DisplayOrder, p.ImagePath })
+                        .ToListAsync();
 
-                        from score in pillarScores.DefaultIfEmpty()
-
-                        select new PillarsUserHistroyResponseDto
-                        {
-                            PillarID = p.PillarID,
-                            PillarName = p.PillarName ?? "",
-                            DisplayOrder = p.DisplayOrder,
-                            PillarScore = score != null ? score.AIProgress ?? 0 : 0,
-                            ImagePath = p.ImagePath
-                        }
-                    ).ToList();
-
-                    if (userRole == UserRole.ProgramUser && climateProgramID != 0)
+                    // Get pillar scores from progress data for the specific program
+                    pillars = activePillars.Select(p => new PillarsUserHistroyResponseDto
                     {
-                        var validPillars = _context.ClientPillarMappings.Where(x => x.UserID == userId).Select(x => x.PillarID);
+                        PillarID = p.PillarID,
+                        PillarName = p.PillarName ?? "",
+                        DisplayOrder = p.DisplayOrder,
+                        PillarScore = programProgress
+                            .Where(prog => prog.PillarID == p.PillarID && prog.ClimateProgramID == climateProgramID)
+                            .Select(prog => prog.AIProgress)
+                            .FirstOrDefault(),
+                        ImagePath = p.ImagePath
+                    })
+                    .OrderBy(p => p.DisplayOrder)
+                    .ToList();
+
+                    // Filter pillars by user access if ProgramUser
+                    if (userRole == UserRole.ProgramUser)
+                    {
+                        var validPillars = _context.ClientPillarMappings
+                            .Where(x => x.UserID == userId)
+                            .Select(x => x.PillarID)
+                            .ToList();
                         pillars = pillars.Where(x => validPillars.Contains(x.PillarID)).ToList();
                     }
 
@@ -285,7 +311,7 @@ namespace VeridianClimatePulse.Services
                         DataYear = program.DataYear,
                         ProgramRank = program.ProgramRank,
                         TotalProgram = program.TotalPrograms,
-                        Pillars = pillars.OrderBy(p => p.DisplayOrder).ToList()
+                        Pillars = pillars
                     };
                 }
                 if (_cache.TryGetValue(cacheKey, out ChatProgramExecutiveSlidesResponse cachedResult))
