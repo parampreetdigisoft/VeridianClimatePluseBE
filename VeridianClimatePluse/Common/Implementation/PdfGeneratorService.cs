@@ -194,6 +194,27 @@ namespace VeridianClimatePulse.Common.Implementation
                     PageFooter(page);
                 });
             }
+
+            if (!isAllPrograms)
+            {
+                // -- Section 2 : Recommendations -------------------------------------
+                container.Page(page =>
+                {
+                    ApplyPageDefaults(page);
+                    page.Header().Element(x =>
+                        ProgramComposeHeader(x, programDetails, userRole, null));
+                    page.Content().Element(content =>
+                    {
+                        content.Column(column =>
+                        {
+                            column.Spacing(10);
+                            column.Item().Element(x =>
+                                AssessmentRecommendations(x, programDetails, userRole));
+                        });
+                    });
+                    PageFooter(page);
+                });
+            }
         }
 
         // -----------------------------------------------------------------------------
@@ -1751,20 +1772,6 @@ namespace VeridianClimatePulse.Common.Implementation
                     PillarContentSection(c, "Executive Summary", SanitizeText(data.EvidenceSummary), ReportThemeColors.AccentExecutiveSummary));
                 if (!isAllPrograms)
                 {
-
-                    if (!string.IsNullOrWhiteSpace(data.KeyFindings))
-                    {
-                        column.Item().PaddingTop(8).Element(c =>
-                            PillarContentSection(c, "Key Findings", SanitizeText(data.KeyFindings), ReportThemeColors.AccentKeyDevelopments));
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(data.Recommendations))
-                    {
-                        column.Item().PaddingTop(8).Element(c =>
-                            PillarContentSection(c, "Recommendations", SanitizeText(data.Recommendations), ReportThemeColors.AccentStrategicPolicy));
-                    }
-
-
                     // =====================================================
                     // EVIDENCE SECTION
                     // =====================================================              
@@ -1868,10 +1875,29 @@ namespace VeridianClimatePulse.Common.Implementation
 
                     column.Item().PaddingTop(8).Element(c =>
                         PillarContentSection(c, "Why This Assessment Matters", SanitizeText(data.AssessmentValueNote), ReportThemeColors.AccentAssessmentValue));
+
+                    if (!string.IsNullOrWhiteSpace(data.KeyFindings))
+                    {
+                        column.Item().PaddingTop(8).Element(c =>
+                            PillarContentSection(c, "Key Findings", SanitizeText(data.KeyFindings), ReportThemeColors.AccentKeyDevelopments));
+                    }   
+
                 }
             });
         }
 
+        void AssessmentRecommendations(IContainer container, AiProgramSummeryDto data, UserRole userRole, bool isAllCountries = false)
+        {
+            container.PaddingTop(4).Column(column =>
+            {
+                if (!isAllCountries)
+                {
+                    if (!string.IsNullOrWhiteSpace(data.Recommendations))
+                        column.Item().PaddingTop(8).Element(c =>
+                            PillarContentSection(c, "Recommendations", SanitizeText(data.Recommendations), ReportThemeColors.AccentStrategicPolicy));
+                }
+            });
+        }
         void PillarComposeContent(
      IContainer container, AiProgramPillarResponse data, UserRole userRole)
         {

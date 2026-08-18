@@ -212,12 +212,22 @@ namespace VeridianClimatePulse.Common.Implementation
                 }
             }
 
-            // ── 6. KPI Dashboard (LAST section for this program) ─────────────────────
+            // ── 6. KPI Dashboard ────────────────────────────────────────────────────
             if (kpiChartItems.Any())
             {
                 AppendProgramHeader(mainPart, programDetails, "KPI Dashboard");
                 AddKpiDashboardSection(body, mainPart, kpiChartItems, isAllPrograms);
             }
+
+
+            // ── 7. Findings and Recommendations (LAST, after KPI) ───────────────────
+
+            if (!isAllPrograms && !string.IsNullOrEmpty(programDetails.Recommendations))
+            {
+                AppendProgramHeader(mainPart, programDetails, "Recommendations");
+                AppendContentSection(body, "Recommendations", programDetails.Recommendations, "b2dfdb");
+            }
+
         }
 
         // ════════════════════════════════════════════════════════════════════
@@ -703,8 +713,6 @@ namespace VeridianClimatePulse.Common.Implementation
            
             if (!isAllPrograms)
             {
-                AppendContentSection(body, "Key Findings", data.KeyFindings, "1f4e79");
-                AppendContentSection(body, "Recommendations", data.Recommendations, "2e9975");
                 // =====================================================
                 // EVIDENCE SECTION
                 // =====================================================
@@ -768,6 +776,7 @@ namespace VeridianClimatePulse.Common.Implementation
 
                 AppendContentSection(body, "Strategic Policy Priorities", data.StrategicRecommendation, "2e9975");
                 AppendContentSection(body, "Why This Assessment Matters", data.AssessmentValueNote, "63a68f");
+                AppendContentSection(body, "Key Findings", data.KeyFindings, "1f4e79");
             }
         }
 
