@@ -1668,7 +1668,7 @@ namespace VeridianClimatePulse.Common.Implementation
                     row.ConstantItem(60)
                         .AlignRight()
                         .AlignMiddle()
-                        .Background(ReportThemeColors.White)
+                        .Background(ReportThemeColors.DarkBlue)
                         .Padding(4)
                         .Image(logoPath)
                         .FitArea();
@@ -1712,7 +1712,7 @@ namespace VeridianClimatePulse.Common.Implementation
                     row.ConstantItem(60)
                         .AlignRight()
                         .AlignMiddle()
-                        .Background(ReportThemeColors.White)
+                        .Background(ReportThemeColors.DarkBlue)
                         .Padding(1)
                         .Image(logoPath)
                         .FitArea();

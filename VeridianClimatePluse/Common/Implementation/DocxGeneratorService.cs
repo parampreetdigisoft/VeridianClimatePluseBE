@@ -1111,7 +1111,7 @@ namespace VeridianClimatePulse.Common.Implementation
 
             mainRow.Append(leftCell);
 
-            // RIGHT CELL (BLUE BACKGROUND)
+            // RIGHT CELL — logo on same dark-blue background as the header
             var rightCell = new TableCell(
                 new TableCellProperties(
                     new TableCellWidth { Width = logoColW.ToString(), Type = TableWidthUnitValues.Dxa },
@@ -1126,33 +1126,12 @@ namespace VeridianClimatePulse.Common.Implementation
                 )
             );
 
-            // INNER TABLE (WHITE BOX)
-            var innerTable = new Table(
-                new TableProperties(
-                    new TableWidth { Width = "5000", Type = TableWidthUnitValues.Pct }
-                )
-            );
-
-            var innerRow = new TableRow();
-
-            var innerCell = new TableCell(
-                new TableCellProperties(
-                    new Shading { Fill = "FFFFFF" },
-                    new TableCellVerticalAlignment { Val = TableVerticalAlignmentValues.Center },
-                    new TableCellMargin(
-                        new TopMargin { Width = "120", Type = TableWidthUnitValues.Dxa },   // FIX
-                        new BottomMargin { Width = "120", Type = TableWidthUnitValues.Dxa },
-                        new LeftMargin { Width = "120", Type = TableWidthUnitValues.Dxa },
-                        new RightMargin { Width = "120", Type = TableWidthUnitValues.Dxa }
-                    )
-                )
-            );
-
             if (File.Exists(logoPath))
             {
+                var logoBytes = PrepareHeaderLogoPng(File.ReadAllBytes(logoPath), headerFill);
                 var logoPara = EmbedImageInPart(
                     headerPart,
-                    File.ReadAllBytes(logoPath),
+                    logoBytes,
                     logoWidthEmu,
                     logoHeightEmu
                 );
@@ -1161,24 +1140,20 @@ namespace VeridianClimatePulse.Common.Implementation
                     new Justification { Val = JustificationValues.Center },
                     new SpacingBetweenLines
                     {
-                        Before = "0",   // REMOVE extra space
+                        Before = "0",
                         After = "0",
                         Line = "240",
                         LineRule = LineSpacingRuleValues.Auto
                     }
                 );
 
-                innerCell.Append(logoPara);
+                rightCell.Append(logoPara);
             }
             else
             {
-                innerCell.Append(new Paragraph());
+                rightCell.Append(new Paragraph());
             }
 
-            innerRow.Append(innerCell);
-            innerTable.Append(innerRow);
-
-            rightCell.Append(innerTable);
             mainRow.Append(rightCell);
 
             layoutTable.Append(mainRow);
@@ -1265,6 +1240,36 @@ namespace VeridianClimatePulse.Common.Implementation
 
 
         /// <summary>
+        /// Removes the logo's dark/black background so the header fill shows through.
+        /// </summary>
+        private static byte[] PrepareHeaderLogoPng(byte[] pngBytes, string headerFillHex)
+        {
+            using var input = SKBitmap.Decode(pngBytes);
+            if (input == null)
+                return pngBytes;
+
+            var headerColor = SKColor.Parse("#" + headerFillHex);
+            var info = new SKImageInfo(input.Width, input.Height, SKColorType.Rgba8888, SKAlphaType.Premul);
+            using var output = new SKBitmap(info);
+
+            for (int y = 0; y < input.Height; y++)
+            {
+                for (int x = 0; x < input.Width; x++)
+                {
+                    var color = input.GetPixel(x, y);
+                    if (color.Red <= 48 && color.Green <= 48 && color.Blue <= 48)
+                        output.SetPixel(x, y, headerColor.WithAlpha(color.Alpha));
+                    else
+                        output.SetPixel(x, y, color);
+                }
+            }
+
+            using var image = SKImage.FromBitmap(output);
+            using var encoded = image.Encode(SKEncodedImageFormat.Png, 100);
+            return encoded.ToArray();
+        }
+
+        /// <summary>
         /// Mirrors EmbedImage() exactly, but targets a <see cref="HeaderPart"/> instead of
         /// <see cref="MainDocumentPart"/> so the relationship is resolved inside the header.
         /// </summary>
@@ -1278,9 +1283,7 @@ namespace VeridianClimatePulse.Common.Implementation
             string relId = headerPart.GetIdOfPart(imgPart);
             uint id = _imgId++;
 
-            // Build blip with white luminance recolor
             var blip = new A.Blip { Embed = relId };
-            //blip.AppendChild(new A.LuminanceEffect { Brightness = 100000, Contrast = 0 });
 
             var drawing = new Drawing(
                 new DW.Inline(
@@ -1295,7 +1298,7 @@ namespace VeridianClimatePulse.Common.Implementation
                                 new PIC.NonVisualPictureProperties(
                                     new PIC.NonVisualDrawingProperties { Id = 0U, Name = $"img{id}.png" },
                                     new PIC.NonVisualPictureDrawingProperties()),
-                                new PIC.BlipFill(           // uses the white-recolored blip
+                                new PIC.BlipFill(
                                     blip,
                                     new A.Stretch(new A.FillRectangle())),
                                 new PIC.ShapeProperties(

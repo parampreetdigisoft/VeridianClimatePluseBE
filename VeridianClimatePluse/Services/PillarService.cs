@@ -15,6 +15,7 @@ using System.Text.Json;
 using VeridianClimatePulse.Common.Interface;
 using VeridianClimatePulse.Enums;
 using VeridianClimatePulse.Common.Constants;
+using VeridianClimatePulse.Common.Implementation;
 
 namespace VeridianClimatePulse.Services
 {
@@ -569,7 +570,7 @@ namespace VeridianClimatePulse.Services
 
                                     // Right logo
                                     row.ConstantItem(80)
-                                       .Background("#ffffff")
+                                       .Background(ReportThemeColors.DarkBlue)
                                         .AlignCenter()
                                         .AlignMiddle()
                                         .Padding(4)
