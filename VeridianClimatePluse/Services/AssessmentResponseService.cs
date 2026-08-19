@@ -671,7 +671,6 @@ namespace VeridianClimatePulse.Services
                     _ => x => !x.IsDeleted && x.ClimateProgramID == programID
                 };
 
-
                 // 1. Get all StaffProgramMapping IDs for the program
                 var ucmIds = await _context.StaffProgramMappings
                     .Where(predicate)
@@ -682,9 +681,10 @@ namespace VeridianClimatePulse.Services
                     .Where(a => ucmIds.Contains(a.StaffProgramMappingID) && a.IsActive)
                     .SelectMany(x => x.PillarAssessments);
 
-                // 2. Fetch program-wise pillar/question details in one go
+                // 2. Fetch program-wise pillar/question details, now pulling each response'stier weight (from Question.Weight) so we can compute a weighted average
+                //    instead of a plain average. Indeterminate/N/A responses (Score == null) are still excluded from both numerator and denominator.
                 var programPillarQuery =
-                    from p in _context.Pillars.Where(x=>!x.IsDeleted)
+                    from p in _context.Pillars.Where(x => !x.IsDeleted)
                     join pa in pillarAssessments on p.PillarID equals pa.PillarID into paGroup
                     from pa in paGroup.DefaultIfEmpty()
                     select new
@@ -692,36 +692,56 @@ namespace VeridianClimatePulse.Services
                         p.PillarID,
                         p.PillarName,
                         UserID = pa != null && pa.Responses
-                                .Where(r => r.Score.HasValue && (int)r.Score.Value <= (int)ScoreValue.Score1)
+                                .Where(r => r.Score.HasValue)
                                 .Count() > 0 ? pa.Assessment.StaffProgramMapping.UserID : 0,
-                        Score = pa != null
+
+                        // Σ (Score × Weight) for this assessment's answered responses
+                        WeightedScoreSum = pa != null
                             ? pa.Responses
-                                .Where(r => r.Score.HasValue && (int)r.Score.Value <= (int)ScoreValue.Score1)
-                                .Sum(r => (int?)r.Score ?? 0)
-                            : 0,
-                        ScoreCount = pa != null ? pa.Responses.Where(r => r.Score.HasValue && (int)r.Score.Value <= (int)ScoreValue.Score1).Count() : 0,
-                        TotalQuestion = p.Questions.Count(x=>!x.IsDeleted),
+                                .Where(r => r.Score.HasValue)
+                                .Sum(r => (decimal?)(r.Score.Value * r.Question.Weight)) ?? 0m
+                            : 0m,
+
+                        // Σ (Weight) for this assessment's answered responses
+                        WeightSum = pa != null
+                            ? pa.Responses
+                                .Where(r => r.Score.HasValue)
+                                .Sum(r => (decimal?)r.Question.Weight) ?? 0m
+                            : 0m,
+
+                        ScoreCount = pa != null ? pa.Responses.Where(r => r.Score.HasValue).Count() : 0,
+                        TotalQuestion = p.Questions.Count(x => !x.IsDeleted),
                         AnsQuestion = pa != null ? pa.Responses.Count() : 0,
                         HasAnswer = pa != null
                     };
+
                 var list = await programPillarQuery.Distinct().ToListAsync();
-                var programPillars = (list)
+
+                var programPillars = list
                     .GroupBy(x => new { x.PillarID, x.PillarName })
                     .Select(g =>
                     {
-                        var totalAnsScoreOfPillar = g.Sum(x => x.Score);
-                        var ScoreCount = g.Sum(x => x.ScoreCount);
+                        var totalWeightedScore = g.Sum(x => x.WeightedScoreSum);   // Σ (Score × Weight)
+                        var totalWeight = g.Sum(x => x.WeightSum);                 // Σ (Weight)
                         var ansUserCount = g.Where(x => x.UserID > 0).Distinct().Count();
                         var totalQuestionsInPillar = g.Max(x => x.TotalQuestion) * ansUserCount;
 
-                        decimal progress = ScoreCount != 0 && ansUserCount > 0 ? Convert.ToDecimal(totalAnsScoreOfPillar) / ScoreCount : 0m;
+                        // Step 4: weighted average on the -4..+4 scale
+                        decimal pillarAvgRaw = totalWeight != 0m
+                            ? totalWeightedScore / totalWeight
+                            : 0m;
+
+                        // Step 5: convert -4..+4 average to a 0-100 pillar score
+                        decimal pillarScore0to100 = totalWeight != 0m
+                            ? ((pillarAvgRaw + 4m) / 8m) * 100m
+                            : 0m;
 
                         return new ProgramPillarQuestionHistoryResponseDto
                         {
                             PillarID = g.Key.PillarID,
                             PillarName = g.Key.PillarName,
-                            Score = totalAnsScoreOfPillar,
-                            ScoreProgress = progress,
+                            Score = totalWeightedScore,     
+                            ScoreProgress = pillarScore0to100,
                             AnsPillar = g.Sum(x => x.HasAnswer ? 1 : 0),
                             TotalQuestion = totalQuestionsInPillar,
                             AnsQuestion = g.Sum(x => x.AnsQuestion)
@@ -729,28 +749,11 @@ namespace VeridianClimatePulse.Services
                     })
                     .ToList();
 
-                //// 3. Get assessment count in one query
-                //var assessmentCount = await _context.Assessments
-                //    .CountAsync(x => ucmIds.Contains(x.StaffProgramMappingID) && x.IsActive);
-
-                //// 4. Total pillars and questions (static across program)
-                //var pillarStats = await _context.Pillars
-                //    .Select(p => new { QuestionsCount = p.Questions.Count(x=>!x.IsDeleted) })
-                //    .ToListAsync();
-                //int totalPillars = pillarStats.Count;
-                //int totalQuestions = pillarStats.Sum(p => p.QuestionsCount);
-
                 // 5. Final payload
                 var payload = new GetProgramQuestionHistoryResponseDto
                 {
                     ClimateProgramID = programID,
-                    //TotalAssessment = assessmentCount,
-                    //Score = programPillars.Sum(x => x.Score),
-                    ScoreProgress = programPillars.Average(x => x.ScoreProgress),
-                    //TotalPillar = totalPillars * ucmIds.Count,
-                    //TotalAnsPillar = programPillars.Sum(x => x.AnsPillar),
-                    //TotalQuestion = totalQuestions * ucmIds.Count,
-                    //AnsQuestion = programPillars.Sum(x => x.AnsQuestion),
+                    ScoreProgress = programPillars.Count > 0 ? programPillars.Average(x => x.ScoreProgress) : 0m,
                     Pillars = programPillars
                 };
 
