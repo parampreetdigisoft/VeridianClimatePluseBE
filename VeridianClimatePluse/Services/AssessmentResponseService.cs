@@ -537,7 +537,7 @@ namespace VeridianClimatePulse.Services
                     int pillarID = ws.Cell(11, 12).GetValue<int>();
 
                     if (staffProgramMappingID == 0 || pillarID == 0)
-                        continue; // empty or corrupt sheet � skip
+                        continue; // empty or corrupt sheet - skip
 
                     // Validate that the file belongs to the uploading user
                     if (!_context.StaffProgramMappings.Any(x =>
@@ -887,7 +887,7 @@ namespace VeridianClimatePulse.Services
                                               x.UserID == r.TransferToUserID);
 
                 if (programAssigned == null)
-                    return ResultResponseDto<string>.Failure(new[] { "This assessment can�t be imported because the selected user hasn�t been assigned to this program yet." });
+                    return ResultResponseDto<string>.Failure(new[] { "This assessment can't be imported because the selected user hasn't been assigned to this program yet." });
 
                 // Load existing assessment for that user/program/year (with pillars/responses)
                 var existingAssessment = await _context.Assessments

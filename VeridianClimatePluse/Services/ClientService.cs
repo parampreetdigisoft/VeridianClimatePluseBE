@@ -217,6 +217,7 @@ namespace VeridianClimatePulse.Services
                     {
                         ClimateProgramID = c.ClimateProgramID,
                         ProgramName = c.ProgramName,
+                        Year = c.Year,
                         Location = c.Location,
                         Image = c.Image,
                         IsActive = c.IsActive,

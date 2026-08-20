@@ -441,12 +441,17 @@ namespace VeridianClimatePulse.Services
                 var fileName = (from m in _context.StaffProgramMappings.Where(us => us.UserID == userId)
                                 join p in _context.ClimatePrograms on m.ClimateProgramID equals p.ClimateProgramID
                                 join u in _context.Users.Where(x => x.UserID == userId && !x.IsDeleted) on m.UserID equals u.UserID
+                                join assignedByUser in _context.Users.Where(x => !x.IsDeleted) on m.AssignedByUserId equals assignedByUser.UserID into assignedUsers
+                                from assignedByUser in assignedUsers.DefaultIfEmpty()
                                 where m.StaffProgramMappingID == staffProgramMappingID
                                 select new
                                 {
                                     ProgramName = p.ProgramName,
                                     FullName = u.FullName,
-                                    Year = p.Year
+                                    Year = p.Year,
+                                    Role = u.Role,
+                                    AssignedByUsername = assignedByUser != null ? assignedByUser.FullName : null,
+                                    AssignedByRole = assignedByUser.Role
                                 }).FirstOrDefault();
 
                 var sheetName = fileName?.ProgramName + "_" + fileName?.FullName;
@@ -518,7 +523,7 @@ namespace VeridianClimatePulse.Services
 
                 // -- Row 1 : Title -------------------------------------
                 var title = ws.Range("A1:D1").Merge();
-                title.Value = "Veridian Climate Pulse � Program Assessment";
+                title.Value = "Veridian Climate Pulse - Program Assessment";
                 title.Style.Font.Bold = true;
                 title.Style.Font.FontSize = 13;
                 title.Style.Font.FontColor = XLColor.White;
@@ -543,8 +548,8 @@ namespace VeridianClimatePulse.Services
                 ws.Cell(3, 3).Value = "Program Year:";
                 ws.Cell(3, 4).Value = file?.Year;
                 ws.Cell(3, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-                ws.Cell(4, 1).Value = "Evaluator:";
-                ws.Cell(4, 2).Value = file?.FullName?.ToString() ?? "";
+                ws.Cell(4, 1).Value = "AssignedBy:";
+                ws.Cell(4, 2).Value = $"{file?.AssignedByUsername ?? ""} ({file?.AssignedByRole ?? ""})";
 
                 foreach (int r in new[] { 3, 4 })
                 {
@@ -687,13 +692,13 @@ namespace VeridianClimatePulse.Services
                     ansCell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                     ansCell.Style.Border.OutsideBorderColor = ColAccentBlue;
 
-                    // DATA VALIDATION � list via Named Range (cross-sheet refs don't work in ClosedXML dv.Value)
+                    // DATA VALIDATION - list via Named Range (cross-sheet refs don't work in ClosedXML dv.Value)
                     if (optionTexts.Any())
                     {
                         var dv = ansCell.GetDataValidation();
                         dv.Clear();
                         dv.AllowedValues = XLAllowedValues.List;
-                        // Reference the Named Range we created above � this IS supported by ClosedXML
+                        // Reference the Named Range we created above - this IS supported by ClosedXML
                         // and produces a real clickable dropdown arrow in Excel / LibreOffice.
                         dv.Value = namedRangeKey;
                         dv.IgnoreBlanks = true;
@@ -742,7 +747,7 @@ namespace VeridianClimatePulse.Services
                     ws.Cell(commentRow, 4).Style.Border.OutsideBorderColor = ColInputBorder;
                     ws.Row(commentRow).Height = 40;
 
-                    // -- Source row (row+2) � also carries hidden IDs --
+                    // -- Source row (row+2) - also carries hidden IDs --
                     int sourceRow = ansRow + 2;
 
                     ws.Cell(sourceRow, 1).Style.Fill.BackgroundColor = qBg;
@@ -763,7 +768,7 @@ namespace VeridianClimatePulse.Services
                     ws.Cell(sourceRow, 4).Style.Border.OutsideBorderColor = ColInputBorder;
                     ws.Row(sourceRow).Height = 25;
 
-                    // Hidden IDs (cols K�O = 11�15)
+                    // Hidden IDs (cols K-O = 11-15)
                     ws.Cell(sourceRow, 11).Value = StaffProgramMappingID;
                     ws.Cell(sourceRow, 12).Value = pillar.PillarID;
                     ws.Cell(sourceRow, 13).Value = q.QuestionID;

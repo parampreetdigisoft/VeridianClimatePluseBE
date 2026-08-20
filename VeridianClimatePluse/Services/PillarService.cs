@@ -12,10 +12,9 @@ using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 using QuestPDF.Fluent;
 using System.Text.Json;
-using VeridianClimatePulse.Common.Interface;
-using VeridianClimatePulse.Enums;
 using VeridianClimatePulse.Common.Constants;
 using VeridianClimatePulse.Common.Implementation;
+using VeridianClimatePulse.Common.Interface;
 
 namespace VeridianClimatePulse.Services
 {
@@ -877,46 +876,40 @@ namespace VeridianClimatePulse.Services
                     .Where(u => userIds.Contains(u.UserID))
                     .ToDictionaryAsync(u => u.UserID, u => u.FullName);
 
-                // =========================
-                // 2. AI DATA — now weighted by Tier, same as pillar score formula
-                // =========================
-                var aiQuestionScores = await (
-                    from aq in _context.AIEstimatedQuestionScores
-                    join q in _context.Questions on aq.QuestionID equals q.QuestionID
-                    where aq.ClimateProgramID == request.ClimateProgramID
-                        && (!request.PillarID.HasValue || aq.PillarID == request.PillarID)
-                    select new
-                    {
-                        aq.PillarID,
-                        aq.AIScore,     // assumed -4..+4 nullable decimal
-                        Weight = q.Weight
-                    }
-                    ).ToListAsync();
 
-                var aiDataList = aiQuestionScores
-                    .Where(x => x.AIScore.HasValue)
+                // =========================
+                // 2. AI DATA
+                // =========================
+                var aiDataList = await _context.AIPillarScores
+                    .Where(x => x.ClimateProgramID == request.ClimateProgramID
+                        && (!request.PillarID.HasValue || x.PillarID == request.PillarID))
                     .GroupBy(x => x.PillarID)
-                    .Select(g =>
+                    .Select(g => new
                     {
-                        var weightedSum = g.Sum(x => x.AIScore!.Value * (decimal)x.Weight);
-                        var totalWeight = g.Sum(x => (decimal)x.Weight);
-
-                        var progress = totalWeight > 0
-                            ? ((weightedSum / totalWeight) + 4m) / 8m * 100m
-                            : 0m;
-
-                        return new
-                        {
-                            PillarID = g.Key,
-                            Score = Math.Round(progress, 0),
-                            ScoreProgress = progress,
-                            Count = g.Count()
-                        };
+                        PillarID = g.Key,
+                        Score = g.Sum(x => x.AIScore ?? 0),
+                        ScoreProgress = g.Average(x => x.AIProgress ?? 0),
+                        HasCriticalFailure = g.Any(x=>x.HasCriticalFailure),
+                        Count = _context.AIEstimatedQuestionScores.Where(x => x.PillarID == g.Key && x.ClimateProgramID == request.ClimateProgramID).Count()
                     })
-                    .ToList();
+                    .ToListAsync();
+                
+                bool programHasCriticalFailure = aiDataList.Any(x => x.HasCriticalFailure);
+                var aiData = aiDataList.ToDictionary(
+                    x => x.PillarID,
+                    x => new PillarsUserHistroyResponseDto
+                    {
+                        UserID = int.MaxValue,
+                        FullName = "AI_Result",
+                        Score = programHasCriticalFailure ? 0 : Convert.ToDecimal(Math.Round(x.Score, 0)),
+                        ScoreProgress = programHasCriticalFailure ? 0 : x.ScoreProgress,
+                        AnsQuestion = x.Count,
+                        AnsPillar = 1
+                    }
+                );
 
                 // =========================
-                // 3. ALL PILLARS
+                // 3. ALL PILLARS (MAIN FIX)
                 // =========================
                 var pillars = await _context.Pillars
                     .Where(p => p.IsActive && !p.IsDeleted && (!request.PillarID.HasValue || p.PillarID == request.PillarID))
@@ -928,19 +921,6 @@ namespace VeridianClimatePulse.Services
                         TotalQuestion = p.Questions.Count(x => !x.IsDeleted)
                     })
                     .ToListAsync();
-
-                var aiData = aiDataList.ToDictionary(
-                    x => x.PillarID,
-                    x => new PillarsUserHistroyResponseDto
-                    {
-                        UserID = int.MaxValue,
-                        FullName = "AI_Result",
-                        Score = Convert.ToDecimal(x.Score),
-                        ScoreProgress = x.ScoreProgress,
-                        AnsQuestion = x.Count,
-                        AnsPillar = 1
-                    }
-                );
 
                 // =========================
                 // 4. FINAL RESULT (FROM PILLARS)
@@ -956,13 +936,9 @@ namespace VeridianClimatePulse.Services
                             .GroupBy(x => x.UserID)
                             .Select(userGroup =>
                             {
-                                // FIX: previous filter `(int)r.Score.Value <= (int)ScoreValue.Score1`
-                                // was wrong — it silently dropped valid higher scores instead of
-                                // excluding N/A / Indeterminate. Exclude those explicitly instead.
                                 var responses = userGroup
                                     .SelectMany(x => x.Responses)
-                                    .Where(r => r.Score.HasValue &&
-                                                (int)r.Score.Value <= (int)ScoreValue.Score1)
+                                    .Where(r => r.Score.HasValue)
                                     .ToList();
 
                                 // Step 1 & 2: Σ(Score × Weight)
@@ -973,12 +949,12 @@ namespace VeridianClimatePulse.Services
 
                                 // Step 4 & 5: Weighted avg (-4 to +4) -> converted to 0-100 scale
                                 var progress = totalWeight > 0
-                                    ? (((decimal)weightedSum / (decimal)totalWeight) + 4m) / 8m * 100m
+                                    ? ((((decimal)weightedSum / (decimal)totalWeight) + 4m) / 8m) * 100m
                                     : 0m;
 
                                 var hasCriticalFailure = responses.Any(r => r.Weight == double.Parse(Constants.CriticalIndicatorWeight) && r.Score!.Value <= decimal.Parse(Constants.LeastCriticalIndicatorValue));
 
-                                if (hasCriticalFailure && progress > 0m)
+                                if (hasCriticalFailure)
                                 {
                                     progress = 0m;
                                 }

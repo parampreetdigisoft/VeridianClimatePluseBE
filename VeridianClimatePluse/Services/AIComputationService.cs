@@ -10,7 +10,6 @@ using VeridianClimatePulse.Backgroundjob;
 using VeridianClimatePulse.Common.Implementation;
 using VeridianClimatePulse.Common.Interface;
 using VeridianClimatePulse.Common.Models;
-using VeridianClimatePulse.Common.Models.settings;
 using VeridianClimatePulse.Data;
 using VeridianClimatePulse.Dtos.AiDto;
 using VeridianClimatePulse.Dtos.CommonDto;
@@ -384,7 +383,7 @@ namespace VeridianClimatePulse.Services
                         .Sum();
                     c.EvaluatorScore = pillarScore;
                     c.Discrepancy = Math.Abs(pillarScore - (c.AIProgress ?? 0));
-                    c.AICompletionRate = totalQuestions == 0 ? 0 :answeredQuestion * 100.0M / totalQuestions;
+                    c.AICompletionRate = totalQuestions == 0 ? 0 :(answeredQuestion * 100.0M) / totalQuestions;
                 }
 
                 var finalResutl = new AiProgramPillarResponseDto

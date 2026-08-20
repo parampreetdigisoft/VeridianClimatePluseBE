@@ -34,6 +34,7 @@ namespace VeridianClimatePulse.Models
         public string? InstitutionalAssessment { get; set; }
         public string? DataGapAnalysis { get; set; }
         public string? RedFlag { get; set; }
+        public bool HasCriticalFailure { get; set; } = false;
 
         [Required]
         public DateTime UpdatedAt { get; set; }
