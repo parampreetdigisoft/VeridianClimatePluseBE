@@ -71,7 +71,7 @@ namespace VeridianClimatePulse.Services
 
                 var accessibleLayerIds = await GetAccessibleLayerIds(userId);
                 var kpiResults = await LoadLayerResults(climateProgramID, layerIds);
-                var vcpAIScores = await LoadProgramVcpScores(climateProgramID);
+                var vcpAIScores = await LoadProgramAIVcpScore(climateProgramID, userRole);
                 var vcpManualScores = await LoadProgramVcpManualScores(userId, climateProgramID, userRole);
                 var primaryMappings = OrderMappings(mappings.Where(x => x.PriorityLevel == 1));
                 var secondaryMappings = OrderMappings(mappings.Where(x => x.PriorityLevel != 1));
@@ -256,14 +256,19 @@ namespace VeridianClimatePulse.Services
                 .ToList();
         }
 
-        private async Task<ProgramVcpScores> LoadProgramVcpScores(int climateProgramID)
+        private async Task<ProgramVcpScores> LoadProgramAIVcpScore(int climateProgramID, UserRole userRole)
         {
-            var scores = await _context.AIProgramScores
+            var query = _context.AIProgramScores
                 .AsNoTracking()
-                .Where(x =>
-                    x.ClimateProgramID == climateProgramID &&
-                    x.IsVerified)
-                .Select(x => new { x.Year, x.AIProgress })
+                .Where(x => x.ClimateProgramID == climateProgramID);
+
+            if (userRole == UserRole.ProgramUser)
+            {
+                query = query.Where(x => x.IsVerified);
+            }
+
+            var scores = await query
+                .Select(x => new { x.AIProgress })
                 .FirstOrDefaultAsync();
 
             return new ProgramVcpScores
