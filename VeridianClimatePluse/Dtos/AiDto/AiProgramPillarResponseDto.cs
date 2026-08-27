@@ -6,6 +6,7 @@ namespace VeridianClimatePulse.Dtos.AiDto
     public class AiProgramPillarResponseDto
     {
         public List<AiProgramPillarResponse> Pillars { get; set; }
+        public decimal? AIProgress { get; set; }
     }
     public class AiProgramPillarResponse
     {

@@ -1054,10 +1054,15 @@ namespace VeridianClimatePulse.Services
                 .OrderBy(x => !x.IsAccess)
                 .ThenBy(x => x.DisplayOrder)
                 .ToList();
+                // Fetch AI Progress from AIProgramScore table
+                var aiProgramScore = await _context.AIProgramScores
+                    .Where(x => x.ClimateProgramID == request.ClimateProgramID)
+                    .FirstOrDefaultAsync();
 
                 var finalResutl = new AiProgramPillarResponseDto
                 {
-                    Pillars = result
+                    Pillars = result,
+                    AIProgress = aiProgramScore?.AIProgress
                 };
 
                 var resposne = ResultResponseDto<AiProgramPillarResponseDto>.Success(finalResutl, new[] { "Pillar get successfully", });
