@@ -1,7 +1,7 @@
 using AssessmentPlatform.Models;
-
 using Microsoft.EntityFrameworkCore;
 using VeridianClimatePulse.Common.Models;
+using VeridianClimatePulse.Dtos.AssessmentDto;
 using VeridianClimatePulse.Dtos.ProgramDto;
 using VeridianClimatePulse.Models;
 using VeridianClimatePulse.Common.Models.views;
@@ -45,6 +45,7 @@ namespace VeridianClimatePulse.Data
         public DbSet<AssistantChatHistory> AssistantChatHistory { get; set; }
         public DbSet<AIAssistantFAQ> AIAssistantFAQ { get; set; }
         public DbSet<DocumentChunks> DocumentChunks { get; set; }
+        public DbSet<GetAssessmentResponseDto> GetAssessmentResponseDto { get; set; }
         public DbSet<DocumentTOC> DocumentTOC { get; set; }
         public DbSet<DashboardMode> DashboardModes { get; set; } = default!;
         public DbSet<DashboardModeKPIMapping> DashboardModeKPIMappings { get; set; } = default!;
@@ -180,6 +181,12 @@ namespace VeridianClimatePulse.Data
             {
                 entity.HasKey(e => e.ChunkID);
                 entity.ToTable("DocumentChunks");
+            });
+
+            modelBuilder.Entity<GetAssessmentResponseDto>(eb =>
+            {
+                eb.HasNoKey();   // it's a projection, not a table row - no PK
+                eb.ToView(null); // not mapped to any table/view, only used via FromSqlRaw
             });
 
             modelBuilder.Entity<DashboardMode>(entity =>

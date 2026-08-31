@@ -1,4 +1,5 @@
 using VeridianClimatePulse.Common.Models.views;
+using VeridianClimatePulse.Dtos.AssessmentDto;
 using VeridianClimatePulse.Dtos.PillarDto;
 using VeridianClimatePulse.Dtos.ProgramDto;
 using VeridianClimatePulse.Models;
@@ -13,6 +14,7 @@ namespace VeridianClimatePulse.Common.Interface
         Task<List<ProgramRankingResultDto>> GetProgramRankings(int climateProgramID);
         Task<List<GetPillarDTO>> GetPillars();
         void ClearPillarCache();
+        Task<List<GetAssessmentResponseDto>> GetUserDetailsAssignedToProgram(int climateProgramID = 0);
         Task<List<GetDashboardModeResult>> GetDashboardModeResults(int userId, int role, int dashboardModeID, int climateProgramID = 0);
     }
 }

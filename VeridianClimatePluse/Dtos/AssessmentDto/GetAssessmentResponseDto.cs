@@ -9,14 +9,12 @@ namespace VeridianClimatePulse.Dtos.AssessmentDto
         public DateTime? CreatedAt { get; set; }
         public int ClimateProgramID { get; set; }
         public string ProgramName { get; set; }
-        public bool IsActive { get; set; } = true;
         public int UserID { get; set; }
         public string UserName { get; set; }
         public string UserRole { get; set; }
         public decimal Score { get; set; }
         public string AssignedByUser { get; set; }
         public int AssignedByUserId { get; set; }
-        public int AssessmentYear { get; set; } 
         public AssessmentPhase? AssessmentPhase { get; set; }
     }
 

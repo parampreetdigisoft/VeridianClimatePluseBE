@@ -2,6 +2,7 @@ using VeridianClimatePulse.Common.Interface;
 using VeridianClimatePulse.Common.Models.settings;
 using VeridianClimatePulse.Common.Models.views;
 using VeridianClimatePulse.Data;
+using VeridianClimatePulse.Dtos.AssessmentDto;
 using VeridianClimatePulse.Dtos.ProgramDto;
 using VeridianClimatePulse.IServices;
 using Microsoft.Data.SqlClient;
@@ -70,6 +71,25 @@ namespace VeridianClimatePulse.Common.Implementation
             {
                 await _appLogger.LogAsync("Error in Executing usp_getProgramsProgressByUserId", ex);
                 return new List<EvaluationProgramProgressResultDto>();
+            }
+        }
+
+        public async Task<List<GetAssessmentResponseDto>> GetUserDetailsAssignedToProgram(int climateProgramID = 0)
+        {
+            try
+            {
+                return await _context.GetAssessmentResponseDto
+                 .FromSqlRaw(
+                     "EXEC usp_GetUsersAssignedToProgram  @climateProgramID",
+                     new SqlParameter("@climateProgramID", climateProgramID)
+                 )
+                 .AsNoTracking()
+                 .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                await _appLogger.LogAsync("Error in Executing usp_GetUsersAssignedToProgram", ex);
+                return new List<GetAssessmentResponseDto>();
             }
         }
 

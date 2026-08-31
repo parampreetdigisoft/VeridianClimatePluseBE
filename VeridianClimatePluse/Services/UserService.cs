@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using VeridianClimatePulse.Common.Implementation;
+using VeridianClimatePulse.Common.Interface;
 using VeridianClimatePulse.Common.Models;
 using VeridianClimatePulse.Data;
 using VeridianClimatePulse.Dtos.AssessmentDto;
@@ -18,11 +19,13 @@ namespace VeridianClimatePulse.Services
         private readonly IAppLogger _appLogger;
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _env;
-        public UserService(ApplicationDbContext context, IAppLogger appLogger, IWebHostEnvironment env)
+        private readonly ICommonService _commonService;
+        public UserService(ApplicationDbContext context, IAppLogger appLogger, IWebHostEnvironment env, ICommonService commonService)
         {
             _context = context;
             _appLogger = appLogger;
             _env = env;
+            _commonService = commonService;
         }
         public User? GetByEmail(string email)
         {
@@ -189,48 +192,8 @@ namespace VeridianClimatePulse.Services
         {
             try
             {
-                var query =
-                from u in _context.Users
-                where !u.IsDeleted
-                join uc in _context.StaffProgramMappings
-                        .Where(x => !x.IsDeleted && x.ClimateProgramID == climateProgramID)
-                    on u.UserID equals uc.UserID
-                join c in _context.ClimatePrograms.Where(x => !x.IsDeleted)
-                    on uc.ClimateProgramID equals c.ClimateProgramID
-                join createdBy in _context.Users.Where(x => !x.IsDeleted)
-                    on uc.AssignedByUserId equals createdBy.UserID into createdByUser
-                from createdBy in createdByUser.DefaultIfEmpty()
-
-                    // LEFT JOIN to Assessments
-                join a in _context.Assessments
-                        .Include(q => q.PillarAssessments)
-                            .ThenInclude(q => q.Responses).Where(x=>x.IsActive)
-                    on uc.StaffProgramMappingID equals a.StaffProgramMappingID into userAssessment
-                from a in userAssessment.DefaultIfEmpty()
-
-                select new GetAssessmentResponseDto
-                {
-                    AssessmentID = a != null ? a.AssessmentID : 0,
-                    StaffProgramMappingID = uc.StaffProgramMappingID,
-                    CreatedAt = a != null ? a.CreatedAt : null,
-                    ClimateProgramID = c.ClimateProgramID,
-                    ProgramName = c.ProgramName,
-                    UserID = u.UserID,
-                    UserName = u.FullName,
-                    Score = a != null
-                        ? a.PillarAssessments.SelectMany(x => x.Responses)
-                            .Where(r => r.Score.HasValue && (int)r.Score.Value <= (int)ScoreValue.Score1)
-                            .Sum(r => (int?)r.Score ?? 0)
-                        : 0,
-                    AssignedByUser = createdBy != null ? createdBy.FullName : "",
-                    AssignedByUserId = createdBy != null ? createdBy.UserID : 0,
-                    AssessmentYear = a != null ? a.UpdatedAt.Year : 0,
-                    AssessmentPhase = a != null ? a.AssessmentPhase : null
-                };
-
-                var users = await query.Distinct().ToListAsync();
-
-                return ResultResponseDto<List<GetAssessmentResponseDto>>.Success(users, new[] { "user get successfully" });
+                var users = await _commonService.GetUserDetailsAssignedToProgram(climateProgramID);
+                return ResultResponseDto<List<GetAssessmentResponseDto>>.Success(users, new[] { "User fetched successfully" });
             }
             catch (Exception ex)
             {
@@ -238,6 +201,7 @@ namespace VeridianClimatePulse.Services
                 return ResultResponseDto<List<GetAssessmentResponseDto>>.Failure(new string[] { "There is an error please try later" });
             }
         }
+
         public async Task<ResultResponseDto<UpdateUserResponseDto>> GetUserInfo(int userId)
         {
             try

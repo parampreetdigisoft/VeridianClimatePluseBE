@@ -426,7 +426,6 @@ namespace VeridianClimatePulse.Services
                         AssignedByUser = b.AssignedByUser ?? "",
                         AssignedByUserId = b.AssignedByUserId,
                         AssessmentPhase = b.AssessmentPhase,
-                        AssessmentYear = b.UpdatedAt.Year,
                         Score = overallScore,
                         TotalNA = totalNA,
                         TotalIndeterminate = totalIndeterminate
