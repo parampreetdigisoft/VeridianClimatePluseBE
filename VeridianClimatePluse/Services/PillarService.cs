@@ -889,20 +889,18 @@ namespace VeridianClimatePulse.Services
                         PillarID = g.Key,
                         Score = g.Sum(x => x.AIScore ?? 0),
                         ScoreProgress = g.Average(x => x.AIProgress ?? 0),
-                        HasCriticalFailure = g.Any(x=>x.HasCriticalFailure),
                         Count = _context.AIEstimatedQuestionScores.Where(x => x.PillarID == g.Key && x.ClimateProgramID == request.ClimateProgramID).Count()
                     })
                     .ToListAsync();
-                
-                bool programHasCriticalFailure = aiDataList.Any(x => x.HasCriticalFailure);
+
                 var aiData = aiDataList.ToDictionary(
                     x => x.PillarID,
                     x => new PillarsUserHistroyResponseDto
                     {
                         UserID = int.MaxValue,
                         FullName = "AI_Result",
-                        Score = programHasCriticalFailure ? 0 : Convert.ToDecimal(Math.Round(x.Score, 0)),
-                        ScoreProgress = programHasCriticalFailure ? 0 : x.ScoreProgress,
+                        Score =  Convert.ToDecimal(Math.Round(x.Score, 0)),
+                        ScoreProgress =  x.ScoreProgress,
                         AnsQuestion = x.Count,
                         AnsPillar = 1
                     }
