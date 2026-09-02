@@ -30,7 +30,7 @@ namespace VeridianClimatePulse.Dtos.ProgramDto
         public int TotalAns { get; set; }
         public int TotalAssessments { get; set; }
         public int Year { get; set; }
-        public int HasCriticalFailure { get; set; }
+        public int ManualCriticalFailureCount { get; set; }
         public decimal ScoreProgress { get; set; }
     }
 }

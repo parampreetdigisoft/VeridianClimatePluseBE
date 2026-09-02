@@ -13,7 +13,6 @@ namespace VeridianClimatePulse.IServices
         Task<PaginationResponse<PartnerProgramResponseDto>> GetPartnerPrograms(PartnerProgramRequestDto r);
         Task<ProgramResponse> GetProgramsAndPrograms_WithStaleSupport();
         Task<ResultResponseDto<List<PromotedPillarsResponseDto>>> GetPromotedPrograms();
-        Task<ResultResponseDto<List<PillarDmiResultDto>>> GetPillarsDmi();
         Task<ResultResponseDto<EmergingTrendsResult>> GetEmergingTrendsAndIssues();
         /// <summary>
         /// Fetches emerging trends from AI, enriches programs, and caches on success only.

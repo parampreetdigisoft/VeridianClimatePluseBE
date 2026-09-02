@@ -34,5 +34,18 @@ namespace VeridianClimatePulse.Common.Implementation
             // Decode HTML entities (e.g., &mdash;)
             return WebUtility.HtmlDecode(noTags);
         }
+
+        public static int GetCriticalFailurePenalty(int? criticalFailureCount)
+        {
+            int count = criticalFailureCount ?? 0;
+
+            return count switch
+            {
+                <= 0 => 0,
+                1 => 5,
+                2 => 10,
+                _ => 20
+            };
+        }
     }
 }

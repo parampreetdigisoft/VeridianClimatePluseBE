@@ -569,12 +569,10 @@ namespace VeridianClimatePulse.Services
                             Year = yearGroup.Key,
 
                             // {Program} level score
-                            ScoreProgress = yearGroup.Any(x => x.HasCriticalFailure == 1) 
-                                ? 0 
-                                : Math.Round(
+                            ScoreProgress = Math.Round(
                                     yearGroup.Select(x => x.ScoreProgress)
                                              .DefaultIfEmpty(0)
-                                             .Sum()/pillarCount, 2),
+                                             .Sum() / pillarCount, 2),
 
                             // Pillar level score
                             Pillars = pillars

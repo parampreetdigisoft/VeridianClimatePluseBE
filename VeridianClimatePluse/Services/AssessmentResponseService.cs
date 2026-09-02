@@ -288,36 +288,36 @@ namespace VeridianClimatePulse.Services
                 var pillarCount = (await _commonService.GetPillars()).Count;
 
                 var baseRecords = await (
-      from a in _context.Assessments
-      where a.IsActive
-            && (!request.ClimateProgramID.HasValue || a.StaffProgramMapping.ClimateProgramID == request.ClimateProgramID.Value)
-            && (role == UserRole.Admin || allowedMappingIds.Contains(a.StaffProgramMappingID))
+                  from a in _context.Assessments
+                  where a.IsActive
+                        && (!request.ClimateProgramID.HasValue || a.StaffProgramMapping.ClimateProgramID == request.ClimateProgramID.Value)
+                        && (role == UserRole.Admin || allowedMappingIds.Contains(a.StaffProgramMappingID))
 
-      join c in _context.ClimatePrograms.Where(x => !x.IsDeleted)
-          on a.StaffProgramMapping.ClimateProgramID equals c.ClimateProgramID
+                  join c in _context.ClimatePrograms.Where(x => !x.IsDeleted)
+                      on a.StaffProgramMapping.ClimateProgramID equals c.ClimateProgramID
 
-      join u in _context.Users.Where(x =>
-              !x.IsDeleted &&
-              (!request.Role.HasValue || x.Role == request.Role.Value))
-          on a.StaffProgramMapping.UserID equals u.UserID
+                  join u in _context.Users.Where(x =>
+                          !x.IsDeleted &&
+                          (!request.Role.HasValue || x.Role == request.Role.Value))
+                      on a.StaffProgramMapping.UserID equals u.UserID
 
-      join createdBy in _context.Users.Where(x => !x.IsDeleted)
-          on a.StaffProgramMapping.AssignedByUserId equals createdBy.UserID
+                  join createdBy in _context.Users.Where(x => !x.IsDeleted)
+                      on a.StaffProgramMapping.AssignedByUserId equals createdBy.UserID
 
-      select new
-      {
-          a.AssessmentID,
-          a.StaffProgramMappingID,
-          a.CreatedAt,
-          a.AssessmentPhase,
-          c.ClimateProgramID,
-          c.ProgramName,
-          u.UserID,
-          a.UpdatedAt,
-          Role = (UserRole)u.Role,
-          u.FullName,
-          AssignedByUser = createdBy.FullName,
-          AssignedByUserId = createdBy.UserID
+                      select new
+                      {
+                          a.AssessmentID,
+                          a.StaffProgramMappingID,
+                          a.CreatedAt,
+                          a.AssessmentPhase,
+                          c.ClimateProgramID,
+                          c.ProgramName,
+                          u.UserID,
+                          a.UpdatedAt,
+                          Role = (UserRole)u.Role,
+                          u.FullName,
+                          AssignedByUser = createdBy.FullName,
+                          AssignedByUserId = createdBy.UserID
                         })
                     .ToListAsync();
 
@@ -392,13 +392,17 @@ namespace VeridianClimatePulse.Services
                         var totalWeight = g.Sum(r => r.Weight);
                         if (totalWeight <= 0) return 0m;
 
+                        var criticalFailureCount = g.Count(r =>
+                            r.Weight == Constants.CriticalIndicatorWeight &&
+                            r.Score <= Constants.LeastCriticalIndicatorValue);
+                        var criticalFailurePenalty = CommonStaticMethods.GetCriticalFailurePenalty(criticalFailureCount);
+
                         // Step 4: Average on -4 to +4 scale
                         var pillarAvg = weightedScoreSum / totalWeight;
-                        
                         // Step 5: Convert to 0-100 scale
                         var pillarScore = (((decimal)pillarAvg + 4m) / 8m) * 100m;
                        
-                        return pillarScore;
+                        return pillarScore - criticalFailurePenalty;
                     }).ToList();
 
                     // Overall Score = SUM(PillarScores) / TotalPillars
@@ -406,12 +410,6 @@ namespace VeridianClimatePulse.Services
                         ? Math.Round(pillarScores.Sum() / pillarCount, 2)
                         : 0m;
 
-                    var hasCriticalFailure = scoredResponses.Any(r => r.Weight == double.Parse(Constants.CriticalIndicatorWeight) && r.Score <= decimal.Parse(Constants.LeastCriticalIndicatorValue));
-
-                    if (hasCriticalFailure && overallScore > 0m)
-                    {
-                        overallScore = 0m;
-                    }
 
                     return new GetProgramAssessmentResponseDto
                     {

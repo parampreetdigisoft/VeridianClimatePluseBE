@@ -2,7 +2,7 @@
 {
     public static class Constants
     {
-        public static string LeastCriticalIndicatorValue = "-2";
-        public static string CriticalIndicatorWeight = "3";
+        public const int LeastCriticalIndicatorValue = -2;
+        public const int CriticalIndicatorWeight = 3;
     }
 }

@@ -90,13 +90,6 @@ namespace VeridianClimatePulse.Controllers
             return Ok(data);
         }
 
-        [HttpGet("getPillarsDmi")]
-        public async Task<IActionResult> GetPillarsDmi()
-        {
-            var data = await _publicService.GetPillarsDmi();
-            return Ok(data);
-        }
-
         [HttpGet("emergingTrendsAndIssues")]
         public async Task<IActionResult> GetEmergingTrendsAndIssues()
         {

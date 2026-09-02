@@ -940,6 +940,10 @@ namespace VeridianClimatePulse.Services
                                     .SelectMany(x => x.Responses)
                                     .Where(r => r.Score.HasValue)
                                     .ToList();
+                                var criticalFailureCount = responses.Count(r =>
+                                     r.Weight == Constants.CriticalIndicatorWeight &&
+                                     r.Score <= Constants.LeastCriticalIndicatorValue);
+                                var criticalFailurePenalty = CommonStaticMethods.GetCriticalFailurePenalty(criticalFailureCount);
 
                                 // Step 1 & 2: Σ(Score × Weight)
                                 var weightedSum = responses.Sum(r => r.Score!.Value * r.Weight);
@@ -949,15 +953,8 @@ namespace VeridianClimatePulse.Services
 
                                 // Step 4 & 5: Weighted avg (-4 to +4) -> converted to 0-100 scale
                                 var progress = totalWeight > 0
-                                    ? ((((decimal)weightedSum / (decimal)totalWeight) + 4m) / 8m) * 100m
+                                    ? ((((decimal)weightedSum / (decimal)totalWeight) + 4m) / 8m) * 100m - criticalFailurePenalty
                                     : 0m;
-
-                                var hasCriticalFailure = responses.Any(r => r.Weight == double.Parse(Constants.CriticalIndicatorWeight) && r.Score!.Value <= decimal.Parse(Constants.LeastCriticalIndicatorValue));
-
-                                if (hasCriticalFailure)
-                                {
-                                    progress = 0m;
-                                }
 
                                 return new PillarsUserHistroyResponseDto
                                 {
