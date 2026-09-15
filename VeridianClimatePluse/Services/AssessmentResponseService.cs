@@ -145,7 +145,7 @@ namespace VeridianClimatePulse.Services
                     };
                     _context.Assessments.Add(assessment);
                 }
-                if (assessment.AssessmentPhase == AssessmentPhase.Completed && request.PillarID != 22)
+                if (assessment.AssessmentPhase == AssessmentPhase.Completed)
                 {
                     return ResultResponseDto<string>.Failure(new[] { "Need approval to edit this pillar" });
                 }
